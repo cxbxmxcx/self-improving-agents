@@ -1,0 +1,175 @@
+{
+  "schema_version": "1.0",
+  "description": "Evaluation harness for HelixAgent v1's SPO loop. Twenty questions across four difficulty bands. v0 establishes a baseline; v1's improved system prompt is judged against v0 pairwise on these questions.",
+  "bands": {
+    "1": "Single-paper factual. v0 should win these. Control questions.",
+    "2": "Term-disambiguation. Same word means different things in different papers. v0 conflates; v1's routing prompt should learn context.",
+    "3": "Multi-hop synthesis. Answer requires combining multiple papers. v0 retrieves one; v1 needs to recognize decomposition.",
+    "4": "Trap questions. Answer is NOT in the corpus. v0 will hallucinate; v1 should learn to abstain."
+  },
+  "questions": [
+    {
+      "id": "Q1",
+      "band": 1,
+      "question": "What is the headline benchmark result reported for the Darwin Goedel Machine on SWE-Bench?",
+      "reference_answer": "The DGM improves from 20.0% to 50.0% on SWE-Bench (Zhang et al. 2025).",
+      "expected_failure_mode_v0": "none; baseline should answer correctly",
+      "tags": ["single-paper", "factual", "dgm"]
+    },
+    {
+      "id": "Q2",
+      "band": 1,
+      "question": "What four operators does ExpeL use to manage memory entries?",
+      "reference_answer": "ADD, UPVOTE, DOWNVOTE, EDIT (Zhao et al. 2024).",
+      "expected_failure_mode_v0": "none; baseline should answer correctly",
+      "tags": ["single-paper", "factual", "expel", "memory"]
+    },
+    {
+      "id": "Q3",
+      "band": 1,
+      "question": "What does GEPA stand for and at which conference was it presented?",
+      "reference_answer": "Genetic-Pareto reflective mutation. ICLR 2026 (Oral). Agrawal et al. 2025.",
+      "expected_failure_mode_v0": "none; baseline should answer correctly",
+      "tags": ["single-paper", "factual", "gepa"]
+    },
+    {
+      "id": "Q4",
+      "band": 1,
+      "question": "According to Huang et al. (ICLR 2024), what happens to self-correction performance without oracle stopping?",
+      "reference_answer": "It degrades. The paper shows that without an external signal indicating when to stop revising, LLM self-correction tends to make answers worse, not better.",
+      "expected_failure_mode_v0": "none; baseline should answer correctly",
+      "tags": ["single-paper", "factual", "reflection-critique"]
+    },
+    {
+      "id": "Q5",
+      "band": 1,
+      "question": "What is the storage unit MemRL learns Q-values over?",
+      "reference_answer": "Intent-Experience-Utility (IEU) triplets.",
+      "expected_failure_mode_v0": "none; baseline should answer correctly",
+      "tags": ["single-paper", "factual", "memrl", "memory"]
+    },
+
+    {
+      "id": "Q6",
+      "band": 2,
+      "question": "How does the meaning of 'reflection' in Reflexion differ from the meaning of 'reflection' in GEPA?",
+      "reference_answer": "In Reflexion, reflection is verbal self-critique that an agent generates after a failed attempt and reads back on its next attempt; it operates on a single trace. In GEPA, reflective mutation uses textual feedback to mutate prompts in a population-based Pareto search; it operates on a corpus of variants, not a single trace.",
+      "expected_failure_mode_v0": "retrieves chunks from only one of the two papers and conflates the terms",
+      "tags": ["disambiguation", "reflection", "reflexion", "gepa"]
+    },
+    {
+      "id": "Q7",
+      "band": 2,
+      "question": "Distinguish 'search' as used by GEPA from 'search' as used by AFlow.",
+      "reference_answer": "GEPA performs genetic-Pareto evolutionary search over a population of prompts, with reflective mutation as the variation operator. AFlow performs Monte Carlo Tree Search over workflow code, a tree search that explores program structure rather than a population.",
+      "expected_failure_mode_v0": "treats 'search' as one concept and returns generic search-method passages",
+      "tags": ["disambiguation", "search", "gepa", "aflow"]
+    },
+    {
+      "id": "Q8",
+      "band": 2,
+      "question": "What does 'memory' mean in MemRL versus what it means in ExpeL?",
+      "reference_answer": "MemRL treats memory as the artifact under Q-learning: the archive of (Intent, Experience, Utility) triplets is the episodic store, and the search method is value-function learning over those entries. ExpeL treats memory as insight entries managed by vote operators (ADD, UPVOTE, DOWNVOTE, EDIT); the search is insight extraction from trajectories, not value learning.",
+      "expected_failure_mode_v0": "returns generic 'memory in agents' passages without distinguishing the two systems",
+      "tags": ["disambiguation", "memory", "memrl", "expel"]
+    },
+    {
+      "id": "Q9",
+      "band": 2,
+      "question": "Compare 'self-improvement' in the Darwin Goedel Machine with 'self-improvement' in HyperAgents.",
+      "reference_answer": "DGM is empirical evolutionary archive search over agent code: it relaxes Schmidhuber's proof requirement to empirical evaluation, with the agent code itself as the artifact. HyperAgents goes one level higher: the search method itself becomes an editable artifact, so the meta-procedure is mutable, not just the agent code below it.",
+      "expected_failure_mode_v0": "retrieves DGM passages or HyperAgents passages but not both; misses the meta-level distinction",
+      "tags": ["disambiguation", "self-improvement", "dgm", "hyperagents"]
+    },
+    {
+      "id": "Q10",
+      "band": 2,
+      "question": "What does 'verification' mean in Process Reward Models versus in formal-proof systems like Schmidhuber's Goedel Machine?",
+      "reference_answer": "Process Reward Models verify trajectories by scoring each step with a learned reward model, producing graded probabilistic confidence. Formal verification in the Goedel Machine sense is deductive: a property is either proven or not, returning 1.0 or 0.0. PRMs approximate this limit case with a tractable learned signal.",
+      "expected_failure_mode_v0": "conflates probabilistic scoring with formal proof or returns only PRM passages",
+      "tags": ["disambiguation", "verification", "prm", "schmidhuber"]
+    },
+
+    {
+      "id": "Q11",
+      "band": 3,
+      "question": "Which papers in the corpus cite Schmidhuber's Goedel Machine as motivation, and how does each relax its proof requirement?",
+      "reference_answer": "The Darwin Goedel Machine (Zhang et al. 2025) relaxes the proof requirement to empirical evaluation over an archive of candidate agents. ShinkaEvolve (Lange et al. 2025) uses sample-efficient evolutionary search guided by benchmark scoring rather than formal verification. HyperAgents extends DGM's relaxation by making the meta-procedure itself mutable, so the system improves both the agent and the search method that improves the agent.",
+      "expected_failure_mode_v0": "retrieves Schmidhuber or one descendant; misses the chain of relaxations across papers",
+      "tags": ["multi-hop", "genealogy", "schmidhuber", "dgm", "shinkaevolve", "hyperagents"]
+    },
+    {
+      "id": "Q12",
+      "band": 3,
+      "question": "Trace the genealogy from APE (2022) to GEPA (2025). What does each successor escape that its predecessor required?",
+      "reference_answer": "APE (Zhou et al. 2022) required labeled training data to evaluate candidate prompts. SPO (Xiang et al. 2025) escaped the labeled-data requirement via pairwise self-supervision using an LLM judge. GEPA (Agrawal et al. 2025) escaped SPO's single-thread hill-climb by adding population-based Pareto-front selection and reflective mutation guided by textual feedback.",
+      "expected_failure_mode_v0": "answers about one paper in isolation rather than tracing the lineage",
+      "tags": ["multi-hop", "genealogy", "ape", "spo", "gepa"]
+    },
+    {
+      "id": "Q13",
+      "band": 3,
+      "question": "What multi-agent failure modes does the MAST taxonomy (Cemri et al. 2025) identify, and how do AutoGen and MetaGPT's architectural choices each invite a subset of those failures?",
+      "reference_answer": "MAST organizes 14 failure modes across 3 categories: specification (poorly defined sub-agent roles and task boundaries), inter-agent coordination (handoff loss, conflicting decisions, redundant work), and verification (no end-to-end check that the system succeeded). AutoGen's open-ended conversation pattern invites coordination failures because sub-agents can loop or talk past each other without a fixed handoff contract. MetaGPT mitigates some specification failures by encoding role SOPs but is still exposed to verification failures because role outputs are not independently checked. The synthesis: failure mode depends on architectural choice, not on multi-agent in general.",
+      "expected_failure_mode_v0": "retrieves MAST passages or AutoGen passages but not both; misses the cross-paper analysis",
+      "tags": ["multi-hop", "comparison", "mast", "autogen", "metagpt", "multi-agent"]
+    },
+    {
+      "id": "Q14",
+      "band": 3,
+      "question": "What do ShinkaEvolve and the Darwin Goedel Machine have in common as a search strategy, and where do they differ in sample efficiency?",
+      "reference_answer": "Both use evolutionary archive search with an LLM acting as the mutation operator over a population of candidate artifacts. The Darwin Goedel Machine is the empirical proof-of-concept that demonstrates open-ended self-improvement on benchmarks like SWE-Bench and Polyglot, but at high cost (around $22K for the reported run). ShinkaEvolve is the sample-efficient counterpart, achieving SOTA on Erdos circle-packing with around 150 samples, designed specifically to make this style of search reachable without DGM's compute budget.",
+      "expected_failure_mode_v0": "describes one paper without comparing or merges them without distinguishing efficiency",
+      "tags": ["multi-hop", "comparison", "shinkaevolve", "dgm"]
+    },
+    {
+      "id": "Q15",
+      "band": 3,
+      "question": "Which papers in the corpus argue that naive reflection fails, and what does each propose as the fix?",
+      "reference_answer": "Huang et al. (ICLR 2024) shows self-correction degrades without oracle stopping; the implicit fix is an external stopping signal. Self-Correction Bench shows that appending the word 'Wait' to the prompt reduces self-correction failures by 89.3%; the fix is a deliberation cue. Reflexion proposes verbal reinforcement with episodic memory of past failures, so reflection has anchoring information from outside the current trace. The synthesis across these papers: reflection needs an external anchor (an oracle, a cue, or a memory) to compound rather than degrade.",
+      "expected_failure_mode_v0": "summarizes one critique paper; misses the synthesis across multiple",
+      "tags": ["multi-hop", "synthesis", "reflection", "self-correction"]
+    },
+
+    {
+      "id": "Q16",
+      "band": 4,
+      "question": "What was the SWE-Bench score reported by HyperAgents in the original paper?",
+      "reference_answer": "Not reported in the corpus. The HyperAgents paper reports an imp@50 transfer result around 0.630, not a SWE-Bench score. The correct response is to say the corpus does not contain a HyperAgents SWE-Bench number rather than to invent or transpose one from another paper.",
+      "expected_failure_mode_v0": "retrieves DGM's SWE-Bench number and misattributes it to HyperAgents",
+      "tags": ["trap", "hallucination-bait", "hyperagents", "swe-bench"]
+    },
+    {
+      "id": "Q17",
+      "band": 4,
+      "question": "What benchmark did AlphaEvolve use to evaluate its Gemini matrix-multiply kernel, and what speedup did it report?",
+      "reference_answer": "Not in the corpus. AlphaEvolve is a DeepMind tech report that the book references narratively but does not include in the retrievable corpus. The agent should respond that no paper in the corpus discusses AlphaEvolve, rather than synthesize a plausible answer from the evolutionary-search papers that are included (DGM, ShinkaEvolve).",
+      "expected_failure_mode_v0": "retrieves DGM or ShinkaEvolve passages and fabricates an AlphaEvolve answer by analogy",
+      "tags": ["trap", "out-of-corpus", "alphaevolve"]
+    },
+    {
+      "id": "Q18",
+      "band": 4,
+      "question": "Which paper in the corpus introduces the Free Energy Principle?",
+      "reference_answer": "None. The Free Energy Principle is a Friston framework referenced in the book's 'Theory in mind' sidebars but not present as a paper in the AI agent corpus. The agent should respond that no paper in the corpus introduces it.",
+      "expected_failure_mode_v0": "retrieves the most thematically similar paper and credits it falsely",
+      "tags": ["trap", "out-of-corpus", "free-energy"]
+    },
+    {
+      "id": "Q19",
+      "band": 4,
+      "question": "What does the AgentPRM paper say about reward hacking in production?",
+      "reference_answer": "AgentPRM is about step-level process reward modeling for agent trajectories, not reward hacking. The two are related concepts (both involve reward signals) but they are not the same topic. The agent should distinguish them rather than conflate them, even if it has to retrieve a reward-hacking passage from a different paper.",
+      "expected_failure_mode_v0": "conflates 'reward' across both topics and answers as if AgentPRM discussed reward hacking",
+      "tags": ["trap", "topic-conflation", "agentprm", "reward-hacking"]
+    },
+    {
+      "id": "Q20",
+      "band": 4,
+      "question": "What is the recommended hook ordering policy in the HelixAgent framework according to Schmidhuber 2003?",
+      "reference_answer": "Category error. HelixAgent is the running project of the book Self-Improving Agents, not a system described in any corpus paper. Schmidhuber 2003 is about Goedel Machines and predates HelixAgent entirely. The agent should recognize that the question presupposes a connection that does not exist.",
+      "expected_failure_mode_v0": "retrieves Schmidhuber passages and fabricates a plausible-sounding policy",
+      "tags": ["trap", "category-error", "schmidhuber", "helixagent"]
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(docx)",
+      "Bash(pandoc *)",
+      "PowerShell(Get-Command *)",
+      "PowerShell(python \"C:\\\\Users\\\\Micheal Lanham\\\\.claude\\\\skills\\\\docx\\\\scripts\\\\office\\\\unpack.py\" \"C:\\\\Book_Code\\\\self-improving-agents\\\\SelfImprovingAgents_ManningProposal_v15.docx\" \"C:\\\\Book_Code\\\\self-improving-agents\\\\.proposal_unpacked\")",
+      "Bash(.venv/Scripts/python.exe *)",
+      "PowerShell(Remove-Item *)",
+      "WebFetch(domain:arxiv.org)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:cognition.ai)",
+      "WebFetch(domain:storage.googleapis.com)",
+      "WebFetch(domain:www.anthropic.com)",
+      "Bash(curl -s http://localhost:8533/_stcore/health)",
+      "Bash(powershell *)"
+    ]
+  }
+}

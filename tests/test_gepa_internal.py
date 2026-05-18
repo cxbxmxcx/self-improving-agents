@@ -1,0 +1,163 @@
+"""GEPA's internal population evaluation (Option Y).
+
+Tests that GEPA.propose() runs a full population x generations evolution
+internally and yields only the winner.
+"""
+
+from __future__ import annotations
+
+from unittest.mock import patch
+
+import pytest
+
+from helix.archive import SQLiteArchive
+from helix.artifact import ArtifactKind, genesis
+from helix.eval.dataset import EvalQuestion, EvalSet
+from helix.eval.source import FixedEvalSet
+from helix.search.base import SearchBudget, SearchKind
+from helix.search.gepa import GEPA
+from helix.signal import Cost, GapMeasurement, Preference, SignalKind
+from helix.signals.reflection import Reflection
+
+
+class _StubAgent:
+    def __init__(self, prompt) -> None:
+        self.prompt = prompt
+
+    async def run(self, task: str):
+        from helix.trajectory import Outcome, Trajectory
+        t = Trajectory(task=task)
+        t.complete(f"stub answer to: {task[:30]}", Outcome.COMPLETED)
+        return t.final_output, t
+
+
+async def _build_agent(prompt, **kwargs):
+    return _StubAgent(prompt)
+
+
+class _StubSignal:
+    """Always says candidate wins by a margin."""
+    @property
+    def kind(self):
+        return SignalKind.LLM_JUDGE_PAIRWISE
+    @property
+    def cost_estimate(self):
+        return Cost()
+    async def measure(self, candidate, trajectory=None, reference=None, ground_truth=None):
+        return GapMeasurement(
+            score=1.0, preference=Preference.LEFT, feedback="stub fb", confidence=1.0, cost=Cost(tokens=10),
+        )
+
+
+def _eval_set() -> EvalSet:
+    return EvalSet(questions=[
+        EvalQuestion(id="Q1", band=1, question="x?", reference_answer="x"),
+        EvalQuestion(id="Q2", band=2, question="y?", reference_answer="y"),
+    ])
+
+
+@pytest.mark.asyncio
+async def test_gepa_requires_agent_factory():
+    with pytest.raises(ValueError):
+        GEPA(eval_source=FixedEvalSet(_eval_set()))
+
+
+@pytest.mark.asyncio
+async def test_gepa_requires_eval_source():
+    with pytest.raises(ValueError):
+        GEPA(agent_factory=_build_agent)
+
+
+@pytest.mark.asyncio
+async def test_gepa_yields_a_single_winner_after_internal_evolution():
+    """GEPA.propose() should produce population_size x generations candidates
+    internally, then yield ONE winner. The Improver model expects one
+    candidate per round; GEPA's complexity stays internal."""
+    archive = SQLiteArchive(":memory:")
+    seed = genesis("prompt.test", ArtifactKind.PROMPT, "seed content")
+
+    # Patch _mutate_from and _crossover so we don't call the LLM.
+    async def fake_mutate(self, parent, parent_feedback, sibling, archive):
+        next_v = await archive.next_version(parent.id) if hasattr(archive, "next_version") else parent.version + 1
+        child = parent.mutate(
+            new_content=f"mutated from v{parent.version} (sib={sibling.version if sibling else None})",
+            created_by="gepa_mutation",
+            version=next_v,
+        )
+        if hasattr(archive, "_store_artifact"):
+            archive._store_artifact(child)
+            archive._conn.commit()
+        return child, 0
+
+    async def fake_crossover(self, a, b, archive):
+        next_v = await archive.next_version(a.id) if hasattr(archive, "next_version") else a.version + 1
+        child = a.mutate(
+            new_content=f"crossover v{a.version} x v{b.version}",
+            created_by="gepa_crossover",
+            version=next_v,
+        )
+        if hasattr(archive, "_store_artifact"):
+            archive._store_artifact(child)
+            archive._conn.commit()
+        return child, 0
+
+    gepa = GEPA(
+        proposer_model="claude-haiku-4-5",  # unused with patches
+        reflector=Reflection(model="claude-haiku-4-5"),  # unused
+        agent_factory=_build_agent,
+        eval_source=FixedEvalSet(_eval_set()),
+        population_size=3,
+        generations=2,
+        max_concurrent_questions=5,
+    )
+
+    with patch.object(GEPA, "_mutate_from", fake_mutate), patch.object(GEPA, "_crossover", fake_crossover):
+        yielded = []
+        async for variant in gepa.propose(
+            seed=seed, signal=_StubSignal(), archive=archive, budget=SearchBudget()
+        ):
+            yielded.append(variant)
+
+    # Exactly one variant yielded.
+    assert len(yielded) == 1
+    # Archive should contain seed plus generation-0 (3) plus generation-1 (3) = 7
+    metrics = await archive.diversity_metrics()
+    assert metrics.n_variants >= 6  # at least 6 mutations (seed isn't stored by mutate path)
+
+
+@pytest.mark.asyncio
+async def test_gepa_records_all_intermediate_candidates_to_archive():
+    archive = SQLiteArchive(":memory:")
+    seed = genesis("prompt.test", ArtifactKind.PROMPT, "seed")
+
+    async def fake_mutate(self, parent, parent_feedback, sibling, archive):
+        next_v = await archive.next_version(parent.id)
+        child = parent.mutate(new_content=f"v{next_v}", created_by="gepa_mutation", version=next_v)
+        archive._store_artifact(child)
+        archive._conn.commit()
+        return child, 0
+
+    async def fake_crossover(self, a, b, archive):
+        next_v = await archive.next_version(a.id)
+        child = a.mutate(new_content=f"xv{next_v}", created_by="gepa_crossover", version=next_v)
+        archive._store_artifact(child)
+        archive._conn.commit()
+        return child, 0
+
+    gepa = GEPA(
+        proposer_model="claude-haiku-4-5",
+        reflector=Reflection(model="claude-haiku-4-5"),
+        agent_factory=_build_agent,
+        eval_source=FixedEvalSet(_eval_set()),
+        population_size=2,
+        generations=2,
+    )
+
+    with patch.object(GEPA, "_mutate_from", fake_mutate), patch.object(GEPA, "_crossover", fake_crossover):
+        async for _ in gepa.propose(seed=seed, signal=_StubSignal(), archive=archive, budget=SearchBudget()):
+            pass
+
+    # Every gen-0 and gen-1 candidate should have a measurement in the archive.
+    measurements = archive._conn.execute("SELECT COUNT(*) AS c FROM measurements").fetchone()
+    # 4 candidates (2 per gen * 2 gens) each got a candidate measurement recorded.
+    assert measurements["c"] >= 4
