@@ -216,3 +216,23 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Helix workspace
+# Ignore extraction scratch files
+.proposal_extracted.md
+.proposal_text.txt
+.proposal_unpacked/
+
+# Ignore ad-hoc LanceDB databases used for testing, but keep the shipped
+# corpus at data/helix_corpus.lance/ tracked in git so readers get it for free.
+*.lance/
+!data/helix_corpus.lance/
+
+# Sentence-transformers / Hugging Face caches
+.cache/
+
+# Eval harness output, persistent archives, SPO round logs (regenerable)
+chapters/*/runs/
+*.sqlite
+*.sqlite-journal
+
