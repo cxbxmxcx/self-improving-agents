@@ -7,19 +7,24 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
-from helix.dashboard.data import list_round_log, list_variants
+from helix.dashboard.data import filter_variants_by_focus, list_round_log, list_variants
 
 
-def render_rounds(archive_path: str) -> None:
+def render_rounds(archive_path: str, focus: str | None = None) -> None:
     rounds = list_round_log(archive_path)
     variants = list_variants(archive_path)
+    if focus:
+        variants = filter_variants_by_focus(variants, focus)
 
     if not rounds and not variants:
         st.info("No round log and no archive contents.")
         return
 
     st.subheader(":clock1: Round history")
-    st.caption("Per-round score progression and promotion outcomes over time.")
+    caption = "Per-round score progression and promotion outcomes over time."
+    if focus:
+        caption += f" Archive timeline filtered to `{focus}`."
+    st.caption(caption)
 
     # If we have a JSONL round log (from spo_loop.py), use it; otherwise
     # synthesize a timeline from the archive's measurement history.

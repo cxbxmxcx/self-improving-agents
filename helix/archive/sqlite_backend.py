@@ -95,9 +95,19 @@ CREATE INDEX IF NOT EXISTS idx_traj_artifact ON trajectories(artifact_id, versio
 class SQLiteArchive:
     """SQLite-backed Archive. Conforms to the Archive Protocol."""
 
-    def __init__(self, path: str | Path = ":memory:", bus: EventBus | None = None) -> None:
+    def __init__(
+        self,
+        path: str | Path = ":memory:",
+        bus: EventBus | None = None,
+        check_same_thread: bool = True,
+    ) -> None:
         self.path = str(path)
-        self._conn = sqlite3.connect(self.path)
+        # check_same_thread=False is required when the archive is shared
+        # across threads (e.g. by Streamlit, which reruns pages on different
+        # threads). The dashboard reads only; concurrent writes are not
+        # supported. Production use that needs durability should stick with
+        # the default and serialize access at the call site.
+        self._conn = sqlite3.connect(self.path, check_same_thread=check_same_thread)
         self._conn.row_factory = sqlite3.Row
         self._conn.executescript(_SCHEMA)
         self._conn.commit()
@@ -627,6 +637,41 @@ class SQLiteArchive:
                     "feedback": q.get("feedback", ""),
                 })
         return out
+
+    async def purge_failed_trajectories(self) -> int:
+        """Delete cached trajectories that are zero-step or carry an error in
+        their metadata. Returns the number of rows deleted.
+
+        Pre-fix runs (before the FAILED-outcome change) cached errored agent
+        runs as if they had succeeded. Those poison the cache: the next round
+        will hit them and the judge will rate them against real reference
+        answers. This helper cleans them out so subsequent rounds re-run from
+        scratch.
+        """
+        # Have to inspect each trajectory_json because the JSON column isn't
+        # natively queryable in vanilla SQLite. Bulk-fetch ids then delete.
+        rows = self._conn.execute(
+            "SELECT artifact_id, version, question_id, trajectory_json FROM trajectories"
+        ).fetchall()
+        to_delete: list[tuple[str, int, str]] = []
+        for r in rows:
+            try:
+                tj = json.loads(r["trajectory_json"])
+            except Exception:
+                to_delete.append((r["artifact_id"], int(r["version"]), r["question_id"]))
+                continue
+            steps = tj.get("steps", [])
+            outcome = tj.get("outcome", "")
+            meta = tj.get("metadata", {}) or {}
+            if not steps or outcome == "failed" or "error" in meta:
+                to_delete.append((r["artifact_id"], int(r["version"]), r["question_id"]))
+        for aid, ver, qid in to_delete:
+            self._conn.execute(
+                "DELETE FROM trajectories WHERE artifact_id = ? AND version = ? AND question_id = ?",
+                (aid, ver, qid),
+            )
+        self._conn.commit()
+        return len(to_delete)
 
     async def all_cached_trajectories(self) -> list[dict]:
         """List every cached trajectory in the archive for dashboard browsing.

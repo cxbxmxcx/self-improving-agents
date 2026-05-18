@@ -16,8 +16,9 @@ from __future__ import annotations
 
 from typing import Any
 
-import litellm
 from pydantic import BaseModel, Field
+
+from helix.llm_call import acompletion as helix_acompletion
 
 from helix.artifact import Artifact
 from helix.signal import (
@@ -103,7 +104,7 @@ the candidate prompt? Reply as JSON with two fields:
   "feedback": the critique string
   "confidence": float in [0, 1]"""
 
-        response = await litellm.acompletion(
+        response = await helix_acompletion(
             model=self.model,
             messages=[
                 {"role": "system", "content": self.prompt},

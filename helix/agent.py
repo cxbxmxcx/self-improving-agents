@@ -17,9 +17,8 @@ from __future__ import annotations
 import json
 from typing import Any
 
-import litellm
-
 from helix._caching import cacheable_system_message
+from helix.llm_call import acompletion as helix_acompletion
 from helix.artifact import Artifact
 from helix.hooks import HookPoint, HookRegistry
 from helix.memory.working import WorkingMemory
@@ -108,7 +107,7 @@ class Agent:
                     trajectory=trajectory,
                 )
 
-                response = await litellm.acompletion(
+                response = await helix_acompletion(
                     model=self.model,
                     messages=memory.messages(),
                     tools=tool_specs,

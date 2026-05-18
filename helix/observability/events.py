@@ -268,6 +268,20 @@ class ProposalDecided(Event):
 # ---------------------------------------------------------------------------
 
 @dataclass
+class RateLimitWaited(Event):
+    """The rate budget made a caller sleep before issuing an LLM call.
+
+    Emitted by helix.rate_budget.TokenBucket when adding the next call would
+    exceed the per-minute cap. The caller resumes after wait_sec.
+    """
+    event_type: str = "rate_limit_waited"
+    provider: str = ""
+    model: str = ""
+    wait_sec: float = 0.0
+    reason: str = ""  # "tokens_cap" | "rpm_cap"
+
+
+@dataclass
 class BudgetExceeded(Event):
     """The active SearchBudget has been exhausted mid-round.
 

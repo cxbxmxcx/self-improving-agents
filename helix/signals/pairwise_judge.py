@@ -21,10 +21,10 @@ import json
 from collections.abc import Callable
 from typing import Any
 
-import litellm
 from pydantic import BaseModel, Field
 
 from helix._caching import cacheable_system_message
+from helix.llm_call import acompletion as helix_acompletion
 from helix.artifact import Artifact
 from helix.signal import (
     Cost,
@@ -165,7 +165,7 @@ class PairwiseJudge:
         prompt = self._render_prompt(question, reference_answer, left, right)
         # The rubric is identical across the 20 judge calls in one round, so
         # marking it cacheable saves 70-90% on input tokens for Anthropic.
-        response = await litellm.acompletion(
+        response = await helix_acompletion(
             model=self.model,
             messages=[
                 cacheable_system_message(self.rubric, self.model),

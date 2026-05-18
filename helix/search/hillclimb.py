@@ -17,9 +17,8 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING
 
-import litellm
-
 from helix.artifact import Artifact
+from helix.llm_call import acompletion as helix_acompletion
 from helix.observability.bus import EventBus, get_bus
 from helix.observability.events import (
     MutationProposed,
@@ -183,7 +182,7 @@ Latest feedback: {feedback or 'none'}
 
 Produce a single improved candidate."""
 
-        response = await litellm.acompletion(
+        response = await helix_acompletion(
             model=self.proposer_model,
             messages=[
                 {"role": "system", "content": self.proposer_prompt},

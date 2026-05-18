@@ -1,26 +1,59 @@
-"""Per-question verdicts page: filter and drill into judge decisions."""
+"""Per-question verdicts panel: filter and drill into judge decisions."""
 
 from __future__ import annotations
 
 import pandas as pd
 import streamlit as st
 
-from helix.dashboard.data import list_question_verdicts
+from helix.dashboard.data import (
+    get_failed_trajectories,
+    list_question_verdicts,
+    parse_focus,
+)
 
 
-def render_verdicts(archive_path: str) -> None:
+def render_verdicts(archive_path: str, focus: str | None = None) -> None:
     verdicts = list_question_verdicts(archive_path)
     if not verdicts:
         st.info("No per-question verdicts in the archive yet.")
         return
 
     st.subheader(":judge: Per-question verdicts")
-    st.caption(
+    caption = (
         "Every pairwise judge decision recorded across every round. "
         "LEFT = candidate won; RIGHT = reference won; TIE = neither."
     )
+    if focus:
+        caption = f"Focused on `{focus}`. " + caption
+    st.caption(caption)
 
     df = pd.DataFrame(verdicts)
+
+    # Mark verdicts where the candidate's underlying trajectory failed.
+    failed = get_failed_trajectories(archive_path)
+    failed_keys = {(f["artifact_id"], f["version"], f["question_id"]) for f in failed}
+    df["candidate_failed"] = df.apply(
+        lambda r: (r["artifact_id"], int(r["version"]), r["question_id"]) in failed_keys,
+        axis=1,
+    )
+    n_failed_source = int(df["candidate_failed"].sum())
+    if n_failed_source > 0:
+        st.warning(
+            f":warning: **{n_failed_source} of {len(df)} verdicts** were judged from "
+            "trajectories that failed (empty agent answer). These verdicts effectively "
+            "mean 'the candidate produced nothing,' not 'the candidate produced something "
+            "worse than the reference.' Purge failed trajectories from the Replay panel "
+            "and re-run rounds to get clean verdicts."
+        )
+
+    # Apply focus filter
+    parsed = parse_focus(focus)
+    if parsed is not None:
+        fid, _kind = parsed
+        df = df[df["artifact_id"] == fid]
+        if df.empty:
+            st.info("No verdicts for this focus.")
+            return
 
     # ---------------- filters ----------------
     col1, col2, col3, col4 = st.columns(4)
@@ -72,7 +105,8 @@ def render_verdicts(archive_path: str) -> None:
     # ---------------- table ----------------
     display_cols = [
         "version", "created_by", "question_id", "band",
-        "preference", "confidence", "role", "feedback", "recorded_at",
+        "preference", "confidence", "candidate_failed", "role",
+        "feedback", "recorded_at",
     ]
     available_cols = [c for c in display_cols if c in filtered.columns]
     st.dataframe(
@@ -81,6 +115,12 @@ def render_verdicts(archive_path: str) -> None:
         hide_index=True,
         column_config={
             "confidence": st.column_config.NumberColumn(format="%.2f"),
+            "candidate_failed": st.column_config.CheckboxColumn(
+                "⚠ failed",
+                help="If True, the underlying trajectory was a failed run "
+                "(empty answer) — the verdict reflects 'no answer' not "
+                "'worse answer'.",
+            ),
             "feedback": st.column_config.TextColumn(width="large"),
         },
     )
