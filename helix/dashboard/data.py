@@ -41,8 +41,13 @@ def _run(coro):
 
 @st.cache_resource
 def open_archive_cached(path: str) -> SQLiteArchive:
-    """Connect to the SQLite archive at `path`. Cached so we don't reconnect."""
-    return SQLiteArchive(path)
+    """Connect to the SQLite archive at `path`. Cached so we don't reconnect.
+
+    Streamlit reruns pages on different threads; pass check_same_thread=False
+    so a single archive handle can serve every render. Read-only from the
+    dashboard's perspective; concurrent writes would still be unsafe.
+    """
+    return SQLiteArchive(path, check_same_thread=False)
 
 
 @st.cache_data(ttl=30)
@@ -121,6 +126,126 @@ def list_round_log(archive_path: str) -> list[dict]:
     return rows
 
 
+@st.cache_data(ttl=30)
+def get_champions_per_family(archive_path: str) -> dict[str, dict]:
+    """Return {focus_key: variant_dict} mapping each (id, kind) family to its
+    champion. Champion = artifact with the highest latest score within that
+    family. Returns an empty dict for families with no measured artifacts.
+
+    The focus_key matches the format used by the artifact-focus sidebar:
+    `<id> (<kind>)`.
+    """
+    variants = list_variants(archive_path)
+    by_family: dict[tuple[str, str], list[dict]] = {}
+    for v in variants:
+        if v["measurement"] and v["measurement"].get("score") is not None:
+            by_family.setdefault((v["id"], v["kind"]), []).append(v)
+
+    out: dict[str, dict] = {}
+    for (aid, kind), candidates in by_family.items():
+        champ = max(candidates, key=lambda x: x["measurement"]["score"])
+        out[f"{aid} ({kind})"] = champ
+    return out
+
+
+def get_champion_refs(archive_path: str) -> set[tuple[str, int]]:
+    """Return {(artifact_id, version), ...} of every per-family champion.
+
+    Used by the Lineage panel to give champion nodes special styling.
+    """
+    champs = get_champions_per_family(archive_path)
+    return {(c["id"], c["version"]) for c in champs.values()}
+
+
+@st.cache_data(ttl=30)
+def list_artifact_focus_options(archive_path: str) -> list[str]:
+    """Return unique `<id> (<kind>)` strings for the focus selector.
+
+    Helix supports multiple artifact types under improvement in parallel
+    (prompt, skill, tool_description, rubric, ...). The dashboard surfaces
+    every (artifact_id, kind) pair so a user can scope panels to one
+    artifact at a time.
+    """
+    variants = list_variants(archive_path)
+    seen: set[tuple[str, str]] = set()
+    for v in variants:
+        seen.add((v["id"], v["kind"]))
+    return [f"{aid} ({kind})" for aid, kind in sorted(seen)]
+
+
+def parse_focus(focus: str | None) -> tuple[str, str] | None:
+    """Convert a focus selector string back into (artifact_id, kind)."""
+    if not focus:
+        return None
+    if "(" in focus and focus.endswith(")"):
+        aid, rest = focus.split("(", 1)
+        return aid.strip(), rest[:-1].strip()
+    return None
+
+
+def filter_variants_by_focus(variants: list[dict], focus: str | None) -> list[dict]:
+    """Filter a variant list to only artifacts matching the focus."""
+    parsed = parse_focus(focus)
+    if parsed is None:
+        return variants
+    aid, kind = parsed
+    return [v for v in variants if v["id"] == aid and v["kind"] == kind]
+
+
+def purge_failed_trajectories(archive_path: str) -> int:
+    """Delete zero-step / errored trajectories from the cache. Returns count."""
+    arc = open_archive_cached(archive_path)
+    n = _run(arc.purge_failed_trajectories())
+    clear_caches()
+    return n
+
+
+@st.cache_data(ttl=30)
+def get_failed_trajectories(archive_path: str) -> list[dict]:
+    """Every cached trajectory that errored, with parsed error type.
+
+    Returns rows with: artifact_id, version, question_id, recorded_at,
+    error_type (parsed from metadata.error), error_message.
+    """
+    import json as _json
+    arc = open_archive_cached(archive_path)
+    rows = arc._conn.execute(
+        "SELECT artifact_id, version, question_id, trajectory_json, recorded_at FROM trajectories"
+    ).fetchall()
+    out: list[dict] = []
+    for r in rows:
+        try:
+            tj = _json.loads(r["trajectory_json"])
+        except Exception:
+            continue
+        steps = tj.get("steps", [])
+        outcome = tj.get("outcome", "")
+        meta = tj.get("metadata", {}) or {}
+        err = meta.get("error")
+        if err or outcome == "failed" or (not steps and not tj.get("final_output")):
+            err_type = "unknown"
+            if err and ":" in err:
+                err_type = err.split(":", 1)[0].strip()
+            elif outcome == "failed":
+                err_type = "failed_outcome"
+            elif not steps:
+                err_type = "zero_step"
+            out.append({
+                "artifact_id": r["artifact_id"],
+                "version": int(r["version"]),
+                "question_id": r["question_id"],
+                "recorded_at": r["recorded_at"],
+                "error_type": err_type,
+                "error_message": (err or "(no error message; zero-step trajectory)")[:500],
+            })
+    return out
+
+
+@st.cache_data(ttl=30)
+def count_failed_trajectories(archive_path: str) -> int:
+    return len(get_failed_trajectories(archive_path))
+
+
 def clear_caches() -> None:
     """Drop all Streamlit caches; called by the sidebar Refresh button."""
     list_variants.clear()
@@ -132,6 +257,10 @@ def clear_caches() -> None:
     get_trajectory.clear()
     get_best.clear()
     list_round_log.clear()
+    list_artifact_focus_options.clear()
+    get_failed_trajectories.clear()
+    count_failed_trajectories.clear()
+    get_champions_per_family.clear()
 
 
 # ---------------------------------------------------------------------------

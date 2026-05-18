@@ -33,9 +33,8 @@ import time
 from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING
 
-import litellm
-
 from helix.artifact import Artifact
+from helix.llm_call import acompletion as helix_acompletion
 from helix.eval.dataset import EvalQuestion
 from helix.eval.source import EvalSource
 from helix.observability.bus import EventBus, get_bus
@@ -110,7 +109,7 @@ class GEPA:
         objectives: list[str] | None = None,
         mutation_prompt: str = DEFAULT_GEPA_MUTATION_PROMPT,
         crossover_prompt: str = DEFAULT_GEPA_CROSSOVER_PROMPT,
-        max_concurrent_questions: int = 5,
+        max_concurrent_questions: int = 2,
         bus: EventBus | None = None,
     ) -> None:
         if agent_factory is None:
@@ -335,7 +334,7 @@ Reflective feedback from the most recent measurement: {parent_feedback or 'none'
 
 Produce a single mutated offspring."""
 
-        response = await litellm.acompletion(
+        response = await helix_acompletion(
             model=self.proposer_model,
             messages=[
                 {"role": "system", "content": self.mutation_prompt},
@@ -390,7 +389,7 @@ Parent B:
 
 Produce a single offspring combining A's strengths and B's strengths."""
 
-        response = await litellm.acompletion(
+        response = await helix_acompletion(
             model=self.proposer_model,
             messages=[
                 {"role": "system", "content": self.crossover_prompt},
@@ -448,9 +447,11 @@ Produce a single offspring combining A's strengths and B's strengths."""
                 t0 = time.perf_counter()
                 try:
                     answer, trajectory = await agent.run(q.question)
-                except Exception:
+                except Exception as exc:
+                    from helix.trajectory import Outcome
                     trajectory = Trajectory(task=q.question)
-                    trajectory.complete(None)
+                    trajectory.complete(None, outcome=Outcome.FAILED)
+                    trajectory.metadata["error"] = f"{type(exc).__name__}: {exc}"
                     answer = None
                 elapsed = time.perf_counter() - t0
                 num_tool = sum(1 for s in trajectory.steps if s.kind == StepKind.TOOL_CALL)

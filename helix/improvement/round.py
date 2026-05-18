@@ -109,11 +109,16 @@ async def _run_one_question(
     )
     agent = await _maybe_await(agent_factory())
     t0 = time.perf_counter()
+    errored = False
     try:
         answer, trajectory = await agent.run(q.question)
     except Exception as exc:  # noqa: BLE001
+        errored = True
+        from helix.trajectory import Outcome
         trajectory = Trajectory(task=q.question)
-        trajectory.complete(None)
+        # Mark FAILED, not COMPLETED. The judge sees the absence of an
+        # answer as the candidate failing this question, which is correct.
+        trajectory.complete(None, outcome=Outcome.FAILED)
         answer = None
         trajectory.metadata["error"] = f"{type(exc).__name__}: {exc}"
     elapsed = time.perf_counter() - t0
@@ -129,8 +134,16 @@ async def _run_one_question(
         )
     )
 
-    # Cache fresh results for next round.
-    if archive_for_cache is not None and cache_artifact is not None and hasattr(archive_for_cache, "store_trajectory"):
+    # Cache fresh successful results only. Caching a failed run would poison
+    # the next round: cache hit returns the empty trajectory and the judge
+    # would re-rate the non-answer instead of the agent making a fresh
+    # attempt under better conditions (e.g. when rate limits have lifted).
+    if (
+        not errored
+        and archive_for_cache is not None
+        and cache_artifact is not None
+        and hasattr(archive_for_cache, "store_trajectory")
+    ):
         try:
             await archive_for_cache.store_trajectory(cache_artifact, q.id, trajectory, answer)
         except Exception:

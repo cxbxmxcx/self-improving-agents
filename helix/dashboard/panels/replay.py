@@ -105,40 +105,142 @@ def _render_trajectory(traj_dict: dict) -> None:
     st.markdown(f"**Task:** {traj_dict.get('task', '(no task)')}")
     outcome = traj_dict.get("outcome", "unknown")
     final = traj_dict.get("final_output", "")
+    metadata = traj_dict.get("metadata", {}) or {}
+    error_msg = metadata.get("error")
+    steps = traj_dict.get("steps", [])
+
     c1, c2 = st.columns(2)
     c1.metric("Outcome", outcome)
-    c2.metric("Steps", len(traj_dict.get("steps", [])))
+    c2.metric("Steps", len(steps))
 
+    # ---------------- failed trajectory: show the error prominently ----------------
+    if error_msg or (outcome == "failed") or (outcome == "completed" and not steps and not final):
+        st.error(
+            f":warning: This trajectory did not complete normally.\n\n"
+            f"**Reason:** `{error_msg or 'unknown — completed with 0 steps and no output'}`\n\n"
+            f"Common causes: provider rate limit, network timeout, malformed tool args, "
+            f"or an unhandled exception in the agent loop. Errored trajectories from new "
+            f"runs are no longer cached, but pre-fix archives may still contain them — "
+            f"use the Purge button (Overview tab) to clear them."
+        )
+        if final and isinstance(final, str):
+            with st.expander("Raw error payload"):
+                st.code(final, language="text")
+        return
+
+    # ---------------- successful trajectory ----------------
     st.markdown("**Final output:**")
     if isinstance(final, str):
-        st.success(final[:3000]) if outcome == "completed" else st.warning(final[:3000] or "(no output)")
+        if outcome == "completed":
+            st.success(final[:3000] or "(empty output)")
+        else:
+            st.warning(final[:3000] or "(no output)")
+    elif final is None:
+        st.warning("(no output)")
     else:
-        st.json(final)
+        # Defensive: never let st.json() crash if the value isn't valid
+        try:
+            st.json(final)
+        except Exception:
+            st.code(str(final)[:3000], language="text")
 
     st.markdown("---")
     st.markdown("**Step trace:**")
-    for i, step in enumerate(traj_dict.get("steps", [])):
+    for i, step in enumerate(steps):
         _render_step(step, i, expanded=False)
 
 
-def render_replay(archive_path: str) -> None:
+def render_replay(archive_path: str, focus: str | None = None) -> None:
+    from helix.dashboard.data import (
+        count_failed_trajectories,
+        get_failed_trajectories,
+        parse_focus,
+        purge_failed_trajectories,
+    )
     trajectories = list_cached_trajectories(archive_path)
     variants = list_variants(archive_path)
+
+    # ---------------- failed-runs banner + purge button at the top ----------------
+    n_failed = count_failed_trajectories(archive_path)
+    if n_failed > 0:
+        st.error(
+            f":warning: **{n_failed} cached trajectories failed.** "
+            "Most common cause: provider rate limits during a previous run. "
+            "Purging removes them so the next round re-runs those questions "
+            "with the rate-budget-aware LLM wrapper now in place."
+        )
+        c1, c2 = st.columns([1, 4])
+        with c1:
+            if st.button(
+                f":wastebasket: Purge {n_failed} failed",
+                type="primary",
+                use_container_width=True,
+                key="replay_purge_btn",
+            ):
+                n = purge_failed_trajectories(archive_path)
+                st.success(f"Purged {n} failed trajectory rows. Refreshing...")
+                st.rerun()
+        with c2:
+            with st.expander(":mag: Inspect failed trajectories"):
+                failed = get_failed_trajectories(archive_path)
+                if failed:
+                    import pandas as pd
+                    fdf = pd.DataFrame(failed)
+                    # Group by error type
+                    by_type = fdf["error_type"].value_counts().reset_index()
+                    by_type.columns = ["error_type", "count"]
+                    st.dataframe(by_type, use_container_width=True, hide_index=True)
+                    st.caption(f"Top {min(20, len(fdf))} failed entries:")
+                    st.dataframe(
+                        fdf[["artifact_id", "version", "question_id", "error_type", "error_message"]].head(20),
+                        use_container_width=True,
+                        hide_index=True,
+                    )
+        st.markdown("---")
+
     if not trajectories:
         st.info("No cached trajectories yet. Run a chapter script that uses trajectory caching.")
         return
 
+    # Filter trajectories by focus
+    parsed = parse_focus(focus)
+    if parsed is not None:
+        fid, _kind = parsed
+        trajectories = [t for t in trajectories if t["artifact_id"] == fid]
+        if not trajectories:
+            st.info("No cached trajectories for this focus.")
+            return
+
     st.subheader(":rewind: Trajectory replay")
-    st.caption(
+    caption = (
         "See exactly what the agent did on a given question, with full "
         "step-by-step detail. Optional cross-trajectory diff shows how a "
         "different prompt changed agent behavior."
     )
+    if focus:
+        caption = f"Focused on `{focus}`. " + caption
+    st.caption(caption)
+
+    # If no focus, also let the user pick artifact id from the trajectories
+    if parsed is None:
+        artifact_ids = sorted({t["artifact_id"] for t in trajectories})
+        chosen_id = st.selectbox(
+            "Artifact id",
+            artifact_ids,
+            help="The trajectories are keyed by (artifact_id, version, question). Pick the artifact id first.",
+            key="replay_artifact_id",
+        )
+        trajectories = [t for t in trajectories if t["artifact_id"] == chosen_id]
+    else:
+        chosen_id = parsed[0]
 
     # ---------------- picker for primary trajectory ----------------
     st.markdown("### Pick a trajectory")
     versions = sorted({t["version"] for t in trajectories})
     questions = sorted({t["question_id"] for t in trajectories})
+    if not versions or not questions:
+        st.info("No trajectories to display for the current selection.")
+        return
 
     c1, c2 = st.columns(2)
     with c1:
@@ -146,16 +248,9 @@ def render_replay(archive_path: str) -> None:
     with c2:
         primary_question = st.selectbox("Question", questions, key="primary_q")
 
-    primary = get_trajectory(archive_path, "prompt.helixagent.system", primary_version, primary_question)
-    if not primary:
-        # try other artifact ids
-        for t in trajectories:
-            if t["version"] == primary_version and t["question_id"] == primary_question:
-                primary = get_trajectory(archive_path, t["artifact_id"], primary_version, primary_question)
-                break
-
+    primary = get_trajectory(archive_path, chosen_id, primary_version, primary_question)
     if primary is None:
-        st.warning(f"No cached trajectory for version v{primary_version} on {primary_question}.")
+        st.warning(f"No cached trajectory for {chosen_id} v{primary_version} on {primary_question}.")
         return
 
     # ---------------- toggle: compare with another ----------------
@@ -177,12 +272,7 @@ def render_replay(archive_path: str) -> None:
                                           help="Same question — comparing what different prompts produce.")
 
         if compare_mode and other_version is not None:
-            other = get_trajectory(archive_path, "prompt.helixagent.system", other_version, other_question)
-            if not other:
-                for t in trajectories:
-                    if t["version"] == other_version and t["question_id"] == other_question:
-                        other = get_trajectory(archive_path, t["artifact_id"], other_version, other_question)
-                        break
+            other = get_trajectory(archive_path, chosen_id, other_version, other_question)
 
             st.markdown("---")
             cl, cr = st.columns(2)

@@ -35,10 +35,12 @@ class ImproverPolicy:
     questions_per_round: int | None = None  # None = all available
     budget_per_round: SearchBudget = field(default_factory=SearchBudget)
     promote_threshold_win_rate: float = 0.5  # candidate must beat this to be promoted
-    # Parallelism cap for agent runs and judge calls inside one round. Sized
-    # to stay well inside Anthropic/OpenAI tier rate limits while delivering
-    # 5x wall-clock speedup over sequential.
-    max_concurrent_questions: int = 5
+    # Parallelism cap for agent runs and judge calls inside one round.
+    # Default of 2 keeps peak token throughput well inside Anthropic's
+    # entry-tier 450K tokens/min budget. The token-aware rate budget
+    # (helix.rate_budget) provides the second line of defense. Raise this
+    # to 5+ once you've tiered up your account.
+    max_concurrent_questions: int = 2
     # Per-question cap on agent loop iterations and tool calls. Protects
     # against runaway costs from a single question.
     max_iterations_per_question: int = 10

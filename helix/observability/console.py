@@ -26,6 +26,7 @@ from helix.observability.events import (
     MutationProposed,
     PairPassQuestionCompleted,
     PairPassQuestionStarted,
+    RateLimitWaited,
     SearchCompleted,
     SearchStarted,
     SearchStrategySwitched,
@@ -52,6 +53,7 @@ class ConsoleRenderer:
         "search_strategy_switched",
         "signal_identified",
         "artifact_measured",
+        "rate_limit_waited",
     }
 
     VERBOSE_INCLUDE = DEFAULT_INTERESTING | {
@@ -114,6 +116,11 @@ class ConsoleRenderer:
                 f"  [search {event.search_kind:<14}] propose DONE   "
                 f"winner=v{event.winner_version}  candidates_evaluated={event.candidates_evaluated}  "
                 f"tokens={event.cost_tokens}"
+            )
+        if isinstance(event, RateLimitWaited):
+            return (
+                f"  [rate budget] :hourglass: waited {event.wait_sec:.1f}s  "
+                f"({event.provider}/{event.model})  reason={event.reason}"
             )
         if isinstance(event, SearchStrategySwitched):
             return (
