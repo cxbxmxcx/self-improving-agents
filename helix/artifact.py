@@ -35,6 +35,33 @@ class ArtifactKind(str, Enum):
     MONITOR = "monitor"
     CODE = "code"
 
+    @property
+    def layer(self) -> int:
+        """The improvement-layer this kind belongs to (1-4).
+
+        L1 prompt: PROMPT, SKILL, TOOL_DESCRIPTION, RUBRIC.
+        L2 memory: MEMORY_ENTRY.
+        L3 metacognition: PLANNER, MONITOR.
+        L4 code: CODE.
+
+        Online improvers refuse to target L3 or L4 artifacts because those
+        layers carry changes too structural to apply without a deploy gate.
+        See DESIGN_NOTES.md section 10.
+        """
+        return _LAYER_BY_KIND[self]
+
+
+_LAYER_BY_KIND: dict[ArtifactKind, int] = {
+    ArtifactKind.PROMPT: 1,
+    ArtifactKind.SKILL: 1,
+    ArtifactKind.TOOL_DESCRIPTION: 1,
+    ArtifactKind.RUBRIC: 1,
+    ArtifactKind.MEMORY_ENTRY: 2,
+    ArtifactKind.PLANNER: 3,
+    ArtifactKind.MONITOR: 3,
+    ArtifactKind.CODE: 4,
+}
+
 
 ParentRef = tuple[str, int] | None
 

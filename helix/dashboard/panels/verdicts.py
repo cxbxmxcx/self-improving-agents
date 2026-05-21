@@ -18,7 +18,7 @@ def render_verdicts(archive_path: str, focus: str | None = None) -> None:
         st.info("No per-question verdicts in the archive yet.")
         return
 
-    st.subheader(":judge: Per-question verdicts")
+    st.subheader("⚖ Per-question verdicts")
     caption = (
         "Every pairwise judge decision recorded across every round. "
         "LEFT = candidate won; RIGHT = reference won; TIE = neither."
@@ -39,7 +39,7 @@ def render_verdicts(archive_path: str, focus: str | None = None) -> None:
     n_failed_source = int(df["candidate_failed"].sum())
     if n_failed_source > 0:
         st.warning(
-            f":warning: **{n_failed_source} of {len(df)} verdicts** were judged from "
+            f"⚠ **{n_failed_source} of {len(df)} verdicts** were judged from "
             "trajectories that failed (empty agent answer). These verdicts effectively "
             "mean 'the candidate produced nothing,' not 'the candidate produced something "
             "worse than the reference.' Purge failed trajectories from the Replay panel "
@@ -127,7 +127,7 @@ def render_verdicts(archive_path: str, focus: str | None = None) -> None:
 
     # ---------------- per-question heatmap ----------------
     st.markdown("---")
-    st.subheader(":chart_with_upwards_trend: Verdict heatmap by question x version")
+    st.subheader("📈 Verdict heatmap by question x version")
     pivot = (
         df.groupby(["question_id", "version"])["preference"]
         .agg(lambda s: s.iloc[-1])  # latest verdict per (question, version)

@@ -72,6 +72,19 @@ what v1 adds.
 pytest
 ```
 
+## Talk to an agent
+
+```
+streamlit run helix/chat_ui/app.py
+```
+
+A production-style chat UI. Sidebar picks the agent (from `agents/*.py`),
+sets identity (session_id / user_id / org_id), and points at an archive so
+the agent uses the current champion prompt. Thumbs / regenerate / copy
+buttons under each agent response feed the FeedbackStore. Default agent is
+`agents/helpdesk.py` — a RAG assistant with episodic, semantic, and
+procedural memory.
+
 ## Explore a run in the dashboard
 
 After running any chapter script that populates `chapters/ch02/runs/helix_archive.sqlite`,

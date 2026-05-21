@@ -214,6 +214,42 @@ class ImproverRoundCompleted(Event):
 
 
 @dataclass
+class CandidateWins(Event):
+    """A candidate beat the reference in an improvement round.
+
+    Fires after the candidate's measurement has been recorded in the
+    archive. Whether the candidate becomes the live champion is decided
+    by handlers on this event (see helix.improvement.promotion). Offline
+    mode handlers no-op; online mode handlers call archive.promote.
+    """
+    event_type: str = "candidate_wins"
+    improver_id: str = ""
+    target_artifact_id: str = ""
+    candidate_version: int = 0
+    reference_version: int = 0
+    candidate_score: float | None = None
+    reference_score: float | None = None
+    mode: str = "offline"  # "offline" | "online"
+    auto_promote: bool = False  # whether the default handler should promote
+
+
+@dataclass
+class Promoted(Event):
+    """The live champion for an artifact id just changed.
+
+    Distinct from CandidateWins: a CandidateWins says the loop found an
+    improvement; a Promoted says that improvement is now what the agent
+    serves. Online winners produce both events back to back. Offline
+    winners produce CandidateWins only until a human acts.
+    """
+    event_type: str = "promoted"
+    artifact_id: str = ""
+    version: int = 0
+    approver: str = ""  # user id, or "improver:<id>" when automatic
+    reason: str = ""
+
+
+@dataclass
 class PairPassQuestionStarted(Event):
     event_type: str = "pair_pass_question_started"
     improver_id: str = ""

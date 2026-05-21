@@ -159,7 +159,7 @@ def render_lineage(archive_path: str, focus: str | None = None) -> None:
         )
         return
 
-    st.subheader(":evergreen_tree: Lineage tree")
+    st.subheader("🌲 Lineage tree")
     if focus:
         st.caption(
             f"Focused on `{focus}`. Each node is one version of this artifact. "
@@ -255,7 +255,7 @@ def render_lineage(archive_path: str, focus: str | None = None) -> None:
 
     # ---------------- selected-node detail panel ----------------
     st.markdown("---")
-    st.subheader(":mag: Selected artifact")
+    st.subheader("🔍 Selected artifact")
 
     # Translate the clicked node id back to a version dict.
     selected = None
@@ -300,7 +300,7 @@ def render_lineage(archive_path: str, focus: str | None = None) -> None:
     # ---------------- render the selected artifact's detail ----------------
     is_champion = (selected["id"], selected["version"]) in champion_refs
     if is_champion:
-        st.success(":crown: This is the current champion of its artifact family.")
+        st.success("👑 This is the current champion of its artifact family.")
 
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Version", f"v{selected['version']}")
@@ -320,7 +320,7 @@ def render_lineage(archive_path: str, focus: str | None = None) -> None:
     else:
         st.caption(f"Genesis artifact  •  search method: `{selected['search_method']}`")
 
-    with st.expander(":scroll: Content", expanded=True):
+    with st.expander("📜 Content", expanded=True):
         content = selected["content"]
         if isinstance(content, str):
             st.code(content, language="text")
@@ -328,5 +328,5 @@ def render_lineage(archive_path: str, focus: str | None = None) -> None:
             st.json(content)
 
     if selected["measurement"] and selected["measurement"].get("feedback"):
-        with st.expander(":speech_balloon: Latest judge feedback"):
+        with st.expander("💬 Latest judge feedback"):
             st.text(selected["measurement"]["feedback"])

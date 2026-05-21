@@ -22,10 +22,30 @@ import streamlit as st
 
 from helix.dashboard.data import (
     get_champions_per_family,
+    get_live_champion,
     get_measurement_history,
+    get_promotion_history,
     list_variants,
     parse_focus,
+    promote_artifact,
 )
+
+
+def _do_promote(archive_path: str, artifact_id: str, version: int, score) -> None:
+    """Call promote_artifact with a dashboard-appropriate approver tag.
+
+    The dashboard doesn't carry a user id the way the chat UI does, so we
+    record the approver as 'dashboard' and put the score in the reason so
+    the audit trail still says why this version was chosen.
+    """
+    score_text = f" (score {score:.3f})" if score is not None else ""
+    promote_artifact(
+        archive_path=archive_path,
+        artifact_id=artifact_id,
+        version=version,
+        approver="dashboard",
+        reason=f"manual promotion via dashboard{score_text}",
+    )
 
 
 def _lineage_path(variants: list[dict], champion: dict) -> list[dict]:
@@ -76,9 +96,9 @@ def _render_one_champion(
     score = measurement.get("score")
 
     # ---------------- header ----------------
-    st.markdown(f"### :crown: Champion: `{family_key}`")
+    st.markdown(f"### 👑 Champion: `{family_key}`")
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Version", f"v{champion['version']}")
+    c1.metric("Best candidate", f"v{champion['version']}")
     c2.metric("Score", f"{score:.3f}" if score is not None else "—")
     c3.metric("Created by", champion["created_by"])
     c4.metric("Search method", champion["search_method"])
@@ -86,6 +106,54 @@ def _render_one_champion(
         f"Artifact id: `{champion['id']}`  •  kind: `{champion['kind']}`  "
         f"•  content_hash: `{champion['content_hash'][:12]}`"
     )
+
+    # ---------------- live champion vs best candidate ----------------
+    # The chapter draws the line between candidate ranking and deployment.
+    # 'Best candidate' (above) is what the archive ranks highest by score.
+    # 'Live champion' (here) is what the running agent actually serves;
+    # it changes only when something calls archive.promote(). When the two
+    # differ, an offline improver has produced a candidate that beats the
+    # current live version but no one has promoted it yet.
+    live = get_live_champion(archive_path, champion["id"])
+    live_version = live["version"] if live else None
+    best_version = champion["version"]
+
+    if live_version == best_version:
+        st.success(
+            f"✅ Live champion **v{best_version}** is also the best candidate. "
+            f"Nothing pending."
+        )
+    elif live is None:
+        st.warning(
+            f"⚠️ No promotion recorded for `{champion['id']}` yet. "
+            f"The running agent serves the genesis prompt; best candidate "
+            f"**v{best_version}** ({score:.3f}) is waiting for a promotion."
+            if score is not None else
+            f"⚠️ No promotion recorded for `{champion['id']}` yet."
+        )
+        if st.button(
+            f"👑 Promote v{best_version} → live",
+            key=f"promote_genesis_{family_key}_{best_version}",
+            type="primary",
+        ):
+            _do_promote(archive_path, champion["id"], best_version, score)
+            st.rerun()
+    else:
+        st.warning(
+            f"⚠️ Live champion is **v{live_version}** but best candidate is "
+            f"**v{best_version}** ({score:.3f}). An offline improver has "
+            f"produced a winner pending review."
+            if score is not None else
+            f"⚠️ Live champion is **v{live_version}**, best candidate is "
+            f"**v{best_version}** (no score)."
+        )
+        if st.button(
+            f"👑 Promote v{best_version} → live",
+            key=f"promote_{family_key}_{best_version}",
+            type="primary",
+        ):
+            _do_promote(archive_path, champion["id"], best_version, score)
+            st.rerun()
 
     # ---------------- lineage path ----------------
     path = _lineage_path(variants, champion)
@@ -101,7 +169,7 @@ def _render_one_champion(
     st.markdown(" → ".join(path_pieces))
 
     # ---------------- content ----------------
-    with st.expander(":scroll: Full champion content", expanded=True):
+    with st.expander("📜 Full champion content", expanded=True):
         content = champion["content"]
         if isinstance(content, str):
             st.code(content, language="text")
@@ -159,7 +227,7 @@ def _render_one_champion(
         if wins:
             for q in wins:
                 with st.expander(
-                    f":trophy: {q.get('question_id', '?')} (band {q.get('band', '?')})"
+                    f"🏆 {q.get('question_id', '?')} (band {q.get('band', '?')})"
                     f" — confidence {q.get('confidence', 0):.2f}"
                 ):
                     fb = q.get("feedback", "")
@@ -198,6 +266,17 @@ def _render_one_champion(
     c3.metric("Family tokens", f"{total_tokens:,}")
     c4.metric("Champion confidence", f"{measurement.get('confidence', 0):.2f}")
 
+    # ---------------- promotion history ----------------
+    promo_history = get_promotion_history(archive_path, champion["id"])
+    if promo_history:
+        st.markdown("---")
+        with st.expander(f"📜 Promotion history ({len(promo_history)} promotion(s))"):
+            for p in promo_history:
+                st.markdown(
+                    f"- **v{p['version']}** by `{p['approver']}` "
+                    f"at *{p['promoted_at']}* — {p['reason']}"
+                )
+
 
 def render_champion(archive_path: str, focus: str | None = None) -> None:
     variants = list_variants(archive_path)
@@ -210,7 +289,7 @@ def render_champion(archive_path: str, focus: str | None = None) -> None:
         st.info("No measured artifacts yet — no champion to declare. Run an improvement round.")
         return
 
-    st.subheader(":crown: Champion Summary")
+    st.subheader("👑 Champion Summary")
     st.caption(
         "What the platform actually produced for you. Each artifact family "
         "(unique id + kind) has one current champion: the highest-scoring "

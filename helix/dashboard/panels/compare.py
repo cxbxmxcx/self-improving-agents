@@ -50,7 +50,7 @@ def render_compare(archive_path: str, focus: str | None = None) -> None:
         )
         return
 
-    st.subheader(":balance_scale: Compare two artifacts")
+    st.subheader("⚖ Compare two artifacts")
     st.caption(
         f"Side-by-side diff of artifact content plus measurement comparison. "
         f"{'Focused on `' + focus + '`. ' if focus else ''}"
@@ -83,7 +83,7 @@ def render_compare(archive_path: str, focus: str | None = None) -> None:
         return
 
     # ---------------- score comparison ----------------
-    st.markdown("### :bar_chart: Latest measurements")
+    st.markdown("### 📊 Latest measurements")
     c1, c2, c3 = st.columns(3)
     a_m = a["measurement"]
     b_m = b["measurement"]
@@ -100,13 +100,13 @@ def render_compare(archive_path: str, focus: str | None = None) -> None:
     c3.metric("Winner by score", winner)
 
     # ---------------- content diff ----------------
-    st.markdown("### :memo: Content diff")
+    st.markdown("### 📝 Content diff")
     a_content = a["content"] if isinstance(a["content"], str) else str(a["content"])
     b_content = b["content"] if isinstance(b["content"], str) else str(b["content"])
     _render_diff_side_by_side(a_content, b_content)
 
     # ---------------- side-by-side text ----------------
-    st.markdown("### :scroll: Side-by-side content")
+    st.markdown("### 📜 Side-by-side content")
     cl, cr = st.columns(2)
     with cl:
         st.caption(f"v{a['version']} ({a['created_by']})")
@@ -116,7 +116,7 @@ def render_compare(archive_path: str, focus: str | None = None) -> None:
         st.code(b_content, language="text")
 
     # ---------------- measurement histories ----------------
-    st.markdown("### :chart_with_upwards_trend: Measurement history")
+    st.markdown("### 📈 Measurement history")
     a_hist = get_measurement_history(archive_path, a["id"], a["version"])
     b_hist = get_measurement_history(archive_path, b["id"], b["version"])
 

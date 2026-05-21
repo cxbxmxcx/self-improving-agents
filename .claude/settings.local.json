@@ -14,7 +14,10 @@
       "WebFetch(domain:storage.googleapis.com)",
       "WebFetch(domain:www.anthropic.com)",
       "Bash(curl -s http://localhost:8533/_stcore/health)",
-      "Bash(powershell *)"
+      "Bash(powershell *)",
+      "PowerShell(python \"C:\\\\Users\\\\Micheal Lanham\\\\.claude\\\\skills\\\\docx\\\\scripts\\\\office\\\\unpack.py\" \"C:\\\\Book_Code\\\\self-improving-agents\\\\CH01_Lanham5_Self-Improving_Agents.docx\" \"C:\\\\Book_Code\\\\self-improving-agents\\\\.ch01_unpacked\" 2>&1 | Select-Object -Last 10)",
+      "Bash(ls .venv)",
+      "Bash(ls venv *)"
     ]
   }
 }

@@ -23,9 +23,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from helix.artifact import Artifact, ArtifactKind
-from helix.archive.archive import DiversityMetrics, SamplingStrategy
+from helix.archive.archive import DiversityMetrics, PromotionRecord, SamplingStrategy
 from helix.observability.bus import EventBus, get_bus
-from helix.observability.events import ArtifactCreated, ArtifactMeasured
+from helix.observability.events import ArtifactCreated, ArtifactMeasured, Promoted
 from helix.search.base import Variant
 from helix.signal import GapMeasurement
 
@@ -89,6 +89,17 @@ CREATE TABLE IF NOT EXISTS trajectories (
     PRIMARY KEY (artifact_id, version, question_id)
 );
 CREATE INDEX IF NOT EXISTS idx_traj_artifact ON trajectories(artifact_id, version);
+
+CREATE TABLE IF NOT EXISTS promotions (
+    rowid INTEGER PRIMARY KEY AUTOINCREMENT,
+    artifact_id TEXT NOT NULL,
+    version INTEGER NOT NULL,
+    approver TEXT NOT NULL,
+    reason TEXT NOT NULL,
+    promoted_at TEXT NOT NULL,
+    FOREIGN KEY (artifact_id, version) REFERENCES artifacts(artifact_id, version)
+);
+CREATE INDEX IF NOT EXISTS idx_promo_artifact ON promotions(artifact_id, promoted_at);
 """
 
 
@@ -694,6 +705,110 @@ class SQLiteArchive:
                 "answer": r["answer"],
                 "recorded_at": r["recorded_at"],
             }
+            for r in rows
+        ]
+
+    # ---------------- promotion (live champion) ----------------
+
+    async def promote(
+        self,
+        artifact_id: str,
+        version: int,
+        approver: str,
+        reason: str,
+    ) -> PromotionRecord:
+        """Make (artifact_id, version) the live champion.
+
+        Inserts a row into the promotions table and emits a Promoted event.
+        The 'live champion' for an artifact id is simply the most recent
+        promotion row, so a rollback is just another promote() call with
+        an earlier version and reason='rollback'.
+
+        Raises ValueError if the (artifact_id, version) pair does not exist
+        in the artifacts table.
+        """
+        exists = self._conn.execute(
+            "SELECT 1 FROM artifacts WHERE artifact_id = ? AND version = ?",
+            (artifact_id, version),
+        ).fetchone()
+        if exists is None:
+            raise ValueError(
+                f"Cannot promote ({artifact_id}, v{version}): no such artifact in archive"
+            )
+
+        promoted_at = datetime.now(timezone.utc).isoformat()
+        self._conn.execute(
+            """
+            INSERT INTO promotions (artifact_id, version, approver, reason, promoted_at)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (artifact_id, version, approver, reason, promoted_at),
+        )
+        self._conn.commit()
+
+        await self._bus.publish(
+            Promoted(
+                artifact_id=artifact_id,
+                version=version,
+                approver=approver,
+                reason=reason,
+            )
+        )
+
+        return PromotionRecord(
+            artifact_id=artifact_id,
+            version=version,
+            approver=approver,
+            reason=reason,
+            promoted_at=promoted_at,
+        )
+
+    async def live_champion(self, artifact_id: str) -> Artifact | None:
+        """Return the most recently promoted version of this artifact id.
+
+        Returns None if no promotion has ever been recorded; callers fall
+        back to the genesis artifact in that case (typically held by the
+        agent spec).
+        """
+        row = self._conn.execute(
+            """
+            SELECT version FROM promotions
+            WHERE artifact_id = ?
+            ORDER BY rowid DESC LIMIT 1
+            """,
+            (artifact_id,),
+        ).fetchone()
+        if row is None:
+            return None
+
+        art_row = self._conn.execute(
+            "SELECT * FROM artifacts WHERE artifact_id = ? AND version = ?",
+            (artifact_id, int(row["version"])),
+        ).fetchone()
+        if art_row is None:
+            # Defensive: the promotion row points at a missing artifact.
+            return None
+        return self._row_to_artifact(art_row)
+
+    async def promotion_history(self, artifact_id: str) -> list[PromotionRecord]:
+        """All promotions for this artifact id, oldest first."""
+        rows = self._conn.execute(
+            """
+            SELECT artifact_id, version, approver, reason, promoted_at
+            FROM promotions
+            WHERE artifact_id = ?
+            ORDER BY rowid ASC
+            """,
+            (artifact_id,),
+        ).fetchall()
+        return [
+            PromotionRecord(
+                artifact_id=r["artifact_id"],
+                version=int(r["version"]),
+                approver=r["approver"],
+                reason=r["reason"],
+                promoted_at=r["promoted_at"],
+            )
             for r in rows
         ]
 
