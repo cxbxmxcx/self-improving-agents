@@ -79,14 +79,14 @@ def _placeholder_screen() -> None:
 def main() -> None:
     st.set_page_config(
         page_title="Helix Dashboard",
-        page_icon=":dna:",
+        page_icon="🧬",
         layout="wide",
         initial_sidebar_state="expanded",
     )
 
     # ---------------- sidebar: archive picker + load ----------------
     with st.sidebar:
-        st.title(":dna: Helix")
+        st.title("🧬 Helix")
         st.caption("Explorer for self-improving agent runs")
         st.markdown("---")
 
@@ -100,7 +100,7 @@ def main() -> None:
 
         load_col, refresh_col = st.columns(2)
         with load_col:
-            if st.button(":open_file_folder: Load", use_container_width=True, type="primary"):
+            if st.button("📂 Load", use_container_width=True, type="primary"):
                 if Path(archive_path).exists():
                     clear_caches()
                     st.session_state["loaded_archive"] = archive_path
@@ -111,7 +111,7 @@ def main() -> None:
                     st.error("File not found at that path.")
 
         with refresh_col:
-            if st.button(":arrows_counterclockwise: Refresh", use_container_width=True,
+            if st.button("🔄 Refresh", use_container_width=True,
                          disabled=not st.session_state.get("loaded_archive")):
                 clear_caches()
                 st.rerun()
@@ -125,7 +125,7 @@ def main() -> None:
                 st.markdown(
                     f'<div style="background:#E64B35; color:white; padding:8px 12px; '
                     f'border-radius:6px; margin-top:8px; font-weight:600; font-size:0.9em;">'
-                    f':warning: {n_failed} failed runs'
+                    f'⚠ {n_failed} failed runs'
                     f'<br><span style="font-weight:normal; font-size:0.85em;">'
                     f'See Replay panel to inspect or purge.'
                     f'</span></div>',

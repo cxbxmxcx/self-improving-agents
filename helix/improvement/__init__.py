@@ -15,12 +15,13 @@ Agent picks up the new champion on its next request without any code change.
 """
 
 from helix.improvement.improver import Improver, ImproverStatus
-from helix.improvement.policy import ImproverPolicy, Schedule
+from helix.improvement.policy import ImproverMode, ImproverPolicy, Schedule
 from helix.improvement.round import RoundResult, run_improvement_round
 
 __all__ = [
     "Improver",
     "ImproverStatus",
+    "ImproverMode",
     "ImproverPolicy",
     "Schedule",
     "RoundResult",

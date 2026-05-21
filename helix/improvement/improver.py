@@ -31,7 +31,12 @@ from helix.agent import Agent
 from helix.archive.archive import Archive
 from helix.artifact import Artifact
 from helix.eval.source import EvalSource
-from helix.improvement.policy import ImproverPolicy, Schedule
+from helix.improvement.policy import ImproverMode, ImproverPolicy, Schedule
+from helix.improvement.promotion import (
+    ensure_default_handler_registered,
+    register_improver_archive,
+    unregister_improver_archive,
+)
 from helix.improvement.round import RoundResult, run_improvement_round
 from helix.observability.bus import EventBus, get_bus
 from helix.search.base import Search
@@ -87,8 +92,29 @@ class Improver:
         self.improver_id = improver_id or f"imp-{uuid.uuid4().hex[:8]}"
         self.bus = bus or get_bus()
 
+        # Online safety check: refuse to construct if mode=ONLINE and the
+        # target artifact is L3 (metacognition) or L4 (code). Those layers
+        # need a deploy gate; auto-applying changes there is the failure
+        # mode Chapter 1 warns about. DESIGN_NOTES.md section 10.
+        if self.policy.mode == ImproverMode.ONLINE and seed_fallback is not None:
+            layer = seed_fallback.kind.layer
+            if layer >= 3:
+                raise ValueError(
+                    f"Improver {self.improver_id}: cannot run in ONLINE mode "
+                    f"against an L{layer} artifact (kind={seed_fallback.kind.value}). "
+                    f"Online mode is restricted to L1 (prompt) and L2 (memory) "
+                    f"artifacts. Use OFFLINE mode for L3/L4 work."
+                )
+
+        # Wire this Improver into the default promotion handler so the
+        # bus-level handler can look up the archive when it fires.
+        # DESIGN_NOTES.md section 10.
+        register_improver_archive(self.improver_id, self.archive)
+        ensure_default_handler_registered(self.bus)
+
         self._task: asyncio.Task | None = None
         self._stop_event = asyncio.Event()
+        self._paused = False  # toggled by BackgroundImproverRunner; suppresses scheduled rounds
         self._in_flight = 0
         self._rounds_completed = 0
         self._last_round_at: float | None = None
@@ -161,6 +187,13 @@ class Improver:
                 if self.policy.schedule == Schedule.MANUAL:
                     # Manual mode just keeps the task alive; trigger_round
                     # is the only way rounds fire.
+                    await asyncio.sleep(0.5)
+                    continue
+
+                if self._paused:
+                    # Paused by an external controller (BackgroundImproverRunner).
+                    # In-flight rounds finish; new scheduled rounds are suppressed
+                    # until resumed. trigger_round() still works.
                     await asyncio.sleep(0.5)
                     continue
 
@@ -256,6 +289,8 @@ class Improver:
                 questions_per_round=self.policy.questions_per_round,
                 max_concurrent_questions=self.policy.max_concurrent_questions,
                 bus=self.bus,
+                mode=self.policy.mode.value,
+                auto_promote=self.policy.auto_promote,
             )
             self._rounds_completed += 1
             self._last_round_at = t0

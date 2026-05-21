@@ -36,6 +36,21 @@ class DiversityMetrics:
     score_range: tuple[float | None, float | None]
 
 
+@dataclass(frozen=True)
+class PromotionRecord:
+    """One row in the archive's promotion log.
+
+    The deployment-facing audit trail: which artifact version became live,
+    who promoted it (a user id, or 'improver:<id>' when an online improver
+    auto-promoted), why, and when.
+    """
+    artifact_id: str
+    version: int
+    approver: str
+    reason: str
+    promoted_at: str  # ISO-8601 UTC
+
+
 @runtime_checkable
 class Archive(Protocol):
     """The Archive protocol. SPEC section 5.2.
@@ -72,3 +87,37 @@ class Archive(Protocol):
     async def list_question_verdicts(self) -> list[dict]: ...
 
     async def all_cached_trajectories(self) -> list[dict]: ...
+
+    # ---------------- promotion (deployment-facing live champion) ----------------
+
+    async def promote(
+        self,
+        artifact_id: str,
+        version: int,
+        approver: str,
+        reason: str,
+    ) -> "PromotionRecord":
+        """Make (artifact_id, version) the live champion for this artifact id.
+
+        Records an immutable promotion row and emits a Promoted event.
+        Approver is a user id for human gates, or 'improver:<id>' when an
+        online improver auto-promotes.
+        """
+        ...
+
+    async def live_champion(self, artifact_id: str) -> Artifact | None:
+        """Return the currently-live version of this artifact id.
+
+        The live champion is what the running agent uses on the next request.
+        Returns None if no promotion has ever been recorded; callers then
+        fall back to the genesis artifact.
+        """
+        ...
+
+    async def promotion_history(self, artifact_id: str) -> list["PromotionRecord"]:
+        """All promotions for this artifact id, oldest first.
+
+        The audit trail of which versions have been live and when.
+        Rollbacks appear as ordinary promotions of an earlier version.
+        """
+        ...

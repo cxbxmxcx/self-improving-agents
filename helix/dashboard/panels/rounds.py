@@ -20,7 +20,7 @@ def render_rounds(archive_path: str, focus: str | None = None) -> None:
         st.info("No round log and no archive contents.")
         return
 
-    st.subheader(":clock1: Round history")
+    st.subheader("🕐 Round history")
     caption = "Per-round score progression and promotion outcomes over time."
     if focus:
         caption += f" Archive timeline filtered to `{focus}`."
@@ -50,7 +50,7 @@ def _render_from_round_log(rounds: list[dict]) -> None:
 
     # ---------------- score timeline ----------------
     if "mean_score" in df.columns and "round" in df.columns:
-        st.subheader(":chart_with_upwards_trend: Score progression")
+        st.subheader("📈 Score progression")
         fig = px.line(
             df,
             x="round",
@@ -73,7 +73,7 @@ def _render_from_round_log(rounds: list[dict]) -> None:
         st.plotly_chart(fig, use_container_width=True)
 
     # ---------------- per-round table ----------------
-    st.subheader(":scroll: Round details")
+    st.subheader("📜 Round details")
     cols = [c for c in [
         "round", "candidate_version", "mean_score", "win_rate",
         "n_wins", "n_losses", "n_ties", "promoted",
@@ -99,7 +99,7 @@ def _render_from_archive(variants: list[dict]) -> None:
         for v in scored
     ])
 
-    st.subheader(":chart_with_upwards_trend: Latest score by version")
+    st.subheader("📈 Latest score by version")
     fig = px.bar(
         df,
         x="version",
@@ -111,5 +111,5 @@ def _render_from_archive(variants: list[dict]) -> None:
     fig.update_layout(height=400)
     st.plotly_chart(fig, use_container_width=True)
 
-    st.subheader(":scroll: All artifacts")
+    st.subheader("📜 All artifacts")
     st.dataframe(df.sort_values("version"), use_container_width=True, hide_index=True)

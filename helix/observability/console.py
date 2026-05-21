@@ -119,7 +119,7 @@ class ConsoleRenderer:
             )
         if isinstance(event, RateLimitWaited):
             return (
-                f"  [rate budget] :hourglass: waited {event.wait_sec:.1f}s  "
+                f"  [rate budget] ⏳ waited {event.wait_sec:.1f}s  "
                 f"({event.provider}/{event.model})  reason={event.reason}"
             )
         if isinstance(event, SearchStrategySwitched):

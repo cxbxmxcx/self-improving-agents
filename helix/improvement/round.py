@@ -40,6 +40,7 @@ from helix.eval.source import EvalSource
 from helix.observability.bus import EventBus, get_bus
 from helix.observability.events import (
     BudgetExceeded,
+    CandidateWins,
     ImproverRoundCompleted,
     ImproverRoundStarted,
     JudgeQuestionCompleted,
@@ -375,6 +376,8 @@ async def run_improvement_round(
     questions_per_round: int | None = None,
     max_concurrent_questions: int = 5,
     bus: EventBus | None = None,
+    mode: str = "offline",     # "offline" | "online"; carried into CandidateWins
+    auto_promote: bool = True, # whether the default handler should auto-promote
 ) -> RoundResult:
     """One self-contained improvement round.
 
@@ -503,19 +506,38 @@ async def run_improvement_round(
     )
     await archive.record(reference_variant, reference_agg)
 
-    # 6) Decide promotion: candidate wins outright if its win rate > threshold
-    # Promotion is whatever archive.best() will return next round. The
-    # archive orders by latest measurement score, so the candidate is
-    # promoted iff its score beats the reference's. The win-rate threshold
-    # is a separate confidence signal exposed in the metadata for callers
-    # who want a stricter check, but it does NOT gate promotion (because
-    # archive.best() doesn't know about it).
+    # 6) Decide if the candidate "won" this round (score beats the reference).
+    # Whether that win becomes a live promotion is a separate decision made
+    # by handlers on the CandidateWins event. Online improvers' default
+    # handler calls archive.promote(); offline improvers' default handler
+    # no-ops and waits for a human to promote via the dashboard or chat UI.
+    # See DESIGN_NOTES.md section 10.
     cand_score = candidate_agg.score or 0.0
     ref_score = reference_agg.score or 0.0
-    promoted = cand_score > ref_score
+    candidate_won_round = cand_score > ref_score
     confidence_above_threshold = (
         (candidate_agg.confidence or 0.0) >= promote_threshold_win_rate
     )
+
+    if candidate_won_round:
+        await bus.publish(
+            CandidateWins(
+                improver_id=improver_id,
+                target_artifact_id=current_best.id,
+                candidate_version=candidate_prompt.version,
+                reference_version=current_best.version,
+                candidate_score=candidate_agg.score,
+                reference_score=reference_agg.score,
+                mode=mode,
+                auto_promote=auto_promote,
+            )
+        )
+
+    # The `promoted` flag on RoundResult / ImproverRoundCompleted retains
+    # its historical meaning ("candidate beat reference in this round").
+    # The new live-champion state is tracked separately in the promotions
+    # table; callers wanting that read it via archive.live_champion(id).
+    promoted = candidate_won_round
 
     elapsed = time.perf_counter() - t_round_start
     await bus.publish(

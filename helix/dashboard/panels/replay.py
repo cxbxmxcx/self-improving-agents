@@ -24,13 +24,13 @@ def _render_step(step: dict, idx: int, expanded: bool = False) -> None:
     timestamp = step.get("timestamp", "")
 
     icon = {
-        "model_call": ":robot_face:",
-        "tool_call": ":wrench:",
-        "tool_result": ":inbox_tray:",
-        "hook_fire": ":zap:",
-        "artifact_load": ":scroll:",
-        "human_input": ":bust_in_silhouette:",
-    }.get(kind, ":question:")
+        "model_call": "🤖",
+        "tool_call": "🔧",
+        "tool_result": "📥",
+        "hook_fire": "⚡",
+        "artifact_load": "📜",
+        "human_input": "👤",
+    }.get(kind, "❓")
 
     # Build a one-line summary
     summary = _summarize_step(kind, payload)
@@ -116,7 +116,7 @@ def _render_trajectory(traj_dict: dict) -> None:
     # ---------------- failed trajectory: show the error prominently ----------------
     if error_msg or (outcome == "failed") or (outcome == "completed" and not steps and not final):
         st.error(
-            f":warning: This trajectory did not complete normally.\n\n"
+            f"⚠ This trajectory did not complete normally.\n\n"
             f"**Reason:** `{error_msg or 'unknown — completed with 0 steps and no output'}`\n\n"
             f"Common causes: provider rate limit, network timeout, malformed tool args, "
             f"or an unhandled exception in the agent loop. Errored trajectories from new "
@@ -164,7 +164,7 @@ def render_replay(archive_path: str, focus: str | None = None) -> None:
     n_failed = count_failed_trajectories(archive_path)
     if n_failed > 0:
         st.error(
-            f":warning: **{n_failed} cached trajectories failed.** "
+            f"⚠ **{n_failed} cached trajectories failed.** "
             "Most common cause: provider rate limits during a previous run. "
             "Purging removes them so the next round re-runs those questions "
             "with the rate-budget-aware LLM wrapper now in place."
@@ -172,7 +172,7 @@ def render_replay(archive_path: str, focus: str | None = None) -> None:
         c1, c2 = st.columns([1, 4])
         with c1:
             if st.button(
-                f":wastebasket: Purge {n_failed} failed",
+                f"🗑 Purge {n_failed} failed",
                 type="primary",
                 use_container_width=True,
                 key="replay_purge_btn",
@@ -181,7 +181,7 @@ def render_replay(archive_path: str, focus: str | None = None) -> None:
                 st.success(f"Purged {n} failed trajectory rows. Refreshing...")
                 st.rerun()
         with c2:
-            with st.expander(":mag: Inspect failed trajectories"):
+            with st.expander("🔍 Inspect failed trajectories"):
                 failed = get_failed_trajectories(archive_path)
                 if failed:
                     import pandas as pd
@@ -211,7 +211,7 @@ def render_replay(archive_path: str, focus: str | None = None) -> None:
             st.info("No cached trajectories for this focus.")
             return
 
-    st.subheader(":rewind: Trajectory replay")
+    st.subheader("⏪ Trajectory replay")
     caption = (
         "See exactly what the agent did on a given question, with full "
         "step-by-step detail. Optional cross-trajectory diff shows how a "
@@ -289,7 +289,7 @@ def render_replay(archive_path: str, focus: str | None = None) -> None:
             # ---------------- answer diff ----------------
             if other:
                 st.markdown("---")
-                st.subheader(":mag: Answer-level diff")
+                st.subheader("🔍 Answer-level diff")
                 a_ans = primary["trajectory"].get("final_output") or ""
                 b_ans = other["trajectory"].get("final_output") or ""
                 differ = difflib.HtmlDiff(wrapcolumn=80)

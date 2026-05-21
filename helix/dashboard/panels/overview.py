@@ -28,7 +28,7 @@ def render_overview(archive_path: str, focus: str | None = None) -> None:
         return
 
     # ---------------- top metrics across the whole archive ----------------
-    st.subheader(":bar_chart: Archive summary")
+    st.subheader("📊 Archive summary")
     col1, col2, col3, col4 = st.columns(4)
     scored = [v for v in all_variants if v["measurement"]]
     scores = [v["measurement"]["score"] for v in scored if v["measurement"]["score"] is not None]
@@ -39,7 +39,7 @@ def render_overview(archive_path: str, focus: str | None = None) -> None:
 
     # ---------------- per-kind breakdown ----------------
     st.markdown("---")
-    st.subheader(":file_folder: Artifacts by kind")
+    st.subheader("📁 Artifacts by kind")
     by_kind = pd.DataFrame([
         {"kind": v["kind"], "id": v["id"], "version": v["version"]}
         for v in all_variants
@@ -56,10 +56,10 @@ def render_overview(archive_path: str, focus: str | None = None) -> None:
     # ---------------- focus-scoped champion ----------------
     st.markdown("---")
     if focus:
-        st.subheader(f":trophy: Champion for `{focus}`")
+        st.subheader(f"🏆 Champion for `{focus}`")
         variants = filter_variants_by_focus(all_variants, focus)
     else:
-        st.subheader(":trophy: Overall champion")
+        st.subheader("🏆 Overall champion")
         variants = all_variants
 
     measured = [v for v in variants if v["measurement"] and v["measurement"].get("score") is not None]
@@ -75,7 +75,7 @@ def render_overview(archive_path: str, focus: str | None = None) -> None:
             f"Artifact id: `{champ['id']}`  •  content_hash: `{champ['content_hash'][:12]}`"
         )
 
-        with st.expander(":scroll: Champion content", expanded=True):
+        with st.expander("📜 Champion content", expanded=True):
             content = champ["content"]
             if isinstance(content, str):
                 st.code(content, language="text")
@@ -86,7 +86,7 @@ def render_overview(archive_path: str, focus: str | None = None) -> None:
 
     # ---------------- by-method breakdown ----------------
     st.markdown("---")
-    st.subheader(":hammer_and_wrench: Artifacts by Search method")
+    st.subheader("🛠 Artifacts by Search method")
     df_source = filter_variants_by_focus(all_variants, focus) if focus else all_variants
     df = pd.DataFrame([
         {
@@ -109,7 +109,7 @@ def render_overview(archive_path: str, focus: str | None = None) -> None:
 
     # ---------------- trajectory cache summary (informational) ----------------
     st.markdown("---")
-    st.subheader(":broom: Trajectory cache")
+    st.subheader("🧹 Trajectory cache")
     trajectories = list_cached_trajectories(archive_path)
     failed = get_failed_trajectories(archive_path)
     c1, c2, c3 = st.columns([1, 1, 2])
@@ -126,7 +126,7 @@ def render_overview(archive_path: str, focus: str | None = None) -> None:
 
     # ---------------- failed-runs breakdown by error type ----------------
     if failed:
-        st.markdown(":warning: **Failed runs by error type**")
+        st.markdown("⚠ **Failed runs by error type**")
         fdf = pd.DataFrame(failed)
         by_type = fdf["error_type"].value_counts().reset_index()
         by_type.columns = ["error_type", "count"]
@@ -149,7 +149,7 @@ def render_overview(archive_path: str, focus: str | None = None) -> None:
     # ---------------- recent rounds ----------------
     if rounds:
         st.markdown("---")
-        st.subheader(":clock1: Recent rounds")
+        st.subheader("🕐 Recent rounds")
         round_df = pd.DataFrame(rounds)
         cols = [c for c in [
             "round", "candidate_version", "mean_score", "win_rate",

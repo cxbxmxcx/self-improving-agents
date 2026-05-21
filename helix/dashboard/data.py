@@ -109,6 +109,67 @@ def get_best(archive_path: str, k: int = 1) -> list[dict]:
 
 
 @st.cache_data(ttl=30)
+def get_live_champion(archive_path: str, artifact_id: str) -> dict | None:
+    """Return the currently-promoted version of artifact_id, or None if no
+    promotion has been recorded.
+
+    Distinct from get_best (which returns the highest-scoring candidate).
+    The live champion is what the running agent serves; offline improvers'
+    high-scoring candidates appear in get_best but not here until a human
+    promotes them. DESIGN_NOTES.md section 10.
+    """
+    arc = open_archive_cached(archive_path)
+    art = _run(arc.live_champion(artifact_id))
+    if art is None:
+        return None
+    return {
+        "id": art.id,
+        "version": art.version,
+        "kind": art.kind.value,
+        "content": art.content,
+        "created_by": art.created_by,
+        "content_hash": art.content_hash,
+    }
+
+
+@st.cache_data(ttl=30)
+def get_promotion_history(archive_path: str, artifact_id: str) -> list[dict]:
+    """Return all promotion rows for artifact_id, oldest first.
+
+    Each row carries (version, approver, reason, promoted_at). Rollbacks
+    appear as ordinary promotion rows pointing at an earlier version.
+    """
+    arc = open_archive_cached(archive_path)
+    recs = _run(arc.promotion_history(artifact_id))
+    return [
+        {
+            "version": r.version,
+            "approver": r.approver,
+            "reason": r.reason,
+            "promoted_at": r.promoted_at,
+        }
+        for r in recs
+    ]
+
+
+def promote_artifact(
+    archive_path: str,
+    artifact_id: str,
+    version: int,
+    approver: str,
+    reason: str,
+) -> None:
+    """Wrapper around archive.promote() that also clears the cache so the
+    dashboard refreshes on rerun. Not @st.cache_data because it's a write.
+    """
+    arc = open_archive_cached(archive_path)
+    _run(arc.promote(artifact_id, version, approver, reason))
+    # Invalidate caches that depend on promotion state
+    get_live_champion.clear()
+    get_promotion_history.clear()
+
+
+@st.cache_data(ttl=30)
 def list_round_log(archive_path: str) -> list[dict]:
     """Read the per-round JSONL log if it exists alongside the archive."""
     archive_dir = Path(archive_path).parent
