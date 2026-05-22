@@ -1,0 +1,210 @@
+<mxfile host="app.diagrams.net" agent="claude-code" version="24.7.17">
+  <diagram name="Helix high level" id="helix-high-level">
+    <mxGraphModel dx="1422" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- ============================================ -->
+        <!-- TITLE                                        -->
+        <!-- ============================================ -->
+        <mxCell id="title" value="Helix &#8212; High-Level Architecture" style="text;html=1;align=center;verticalAlign=middle;fontSize=22;fontStyle=1;fontColor=#2D3748;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="1320" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="subtitle" value="The agent loop sits on a frozen model. Improvement runs in two cadences against a stack of artifact layers." style="text;html=1;align=center;verticalAlign=middle;fontSize=13;fontColor=#4A5568;" vertex="1" parent="1">
+          <mxGeometry x="40" y="60" width="1320" height="24" as="geometry" />
+        </mxCell>
+
+        <!-- ============================================ -->
+        <!-- FROZEN MODEL (substrate)                     -->
+        <!-- ============================================ -->
+        <mxCell id="frozen-model" value="Frozen Model&#10;(LLM via LiteLLM &#8212; never updated)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2D3748;strokeColor=#1A202C;fontColor=#FFFFFF;fontSize=14;fontStyle=1;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="80" y="780" width="1240" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- ============================================ -->
+        <!-- ARTIFACT LAYER STACK (left column)           -->
+        <!-- ============================================ -->
+        <mxCell id="layer-stack-title" value="Artifacts the loop can improve" style="text;html=1;align=center;verticalAlign=middle;fontSize=13;fontStyle=1;fontColor=#2D3748;" vertex="1" parent="1">
+          <mxGeometry x="60" y="110" width="280" height="24" as="geometry" />
+        </mxCell>
+
+        <mxCell id="layer-l1" value="L1 &#8212; Prompts, skills, tool descriptions, rubrics" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF5E6;strokeColor=#F2994A;fontColor=#2D3748;fontSize=12;fontStyle=1;align=left;spacingLeft=12;" vertex="1" parent="1">
+          <mxGeometry x="60" y="140" width="280" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="layer-l1-note" value="cheap, reversible &#8212; safe online" style="text;html=1;align=left;verticalAlign=middle;fontSize=10;fontColor=#4A5568;fontStyle=2;spacingLeft=12;" vertex="1" parent="1">
+          <mxGeometry x="60" y="178" width="280" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="layer-l2" value="L2 &#8212; Memory entries (episodic / semantic / procedural)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E6F7EC;strokeColor=#27AE60;fontColor=#2D3748;fontSize=12;fontStyle=1;align=left;spacingLeft=12;" vertex="1" parent="1">
+          <mxGeometry x="60" y="220" width="280" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="layer-l2-note" value="bounded blast radius &#8212; safe online" style="text;html=1;align=left;verticalAlign=middle;fontSize=10;fontColor=#4A5568;fontStyle=2;spacingLeft=12;" vertex="1" parent="1">
+          <mxGeometry x="60" y="258" width="280" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="layer-l3" value="L3 &#8212; Metacognition (planners, monitors)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3EBFC;strokeColor=#9B51E0;fontColor=#2D3748;fontSize=12;fontStyle=1;align=left;spacingLeft=12;" vertex="1" parent="1">
+          <mxGeometry x="60" y="300" width="280" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="layer-l3-note" value="structural &#8212; offline only" style="text;html=1;align=left;verticalAlign=middle;fontSize=10;fontColor=#4A5568;fontStyle=2;spacingLeft=12;" vertex="1" parent="1">
+          <mxGeometry x="60" y="338" width="280" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="layer-l4" value="L4 &#8212; Code &amp; tool implementations" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FDEAEA;strokeColor=#EB5757;fontColor=#2D3748;fontSize=12;fontStyle=1;align=left;spacingLeft=12;" vertex="1" parent="1">
+          <mxGeometry x="60" y="380" width="280" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="layer-l4-note" value="deepest reach &#8212; offline only, gated" style="text;html=1;align=left;verticalAlign=middle;fontSize=10;fontColor=#4A5568;fontStyle=2;spacingLeft=12;" vertex="1" parent="1">
+          <mxGeometry x="60" y="418" width="280" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="layer-l0" value="L0 &#8212; Helix toolkit (the machinery)&#10;measures, searches, versions, promotes, rolls back" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF9DB;strokeColor=#F2C94C;fontColor=#2D3748;fontSize=12;fontStyle=1;align=center;verticalAlign=middle;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="60" y="470" width="280" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="layer-l0-note" value="reused at every layer" style="text;html=1;align=center;verticalAlign=middle;fontSize=10;fontColor=#4A5568;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="60" y="530" width="280" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- ============================================ -->
+        <!-- AGENT LOOP (center)                          -->
+        <!-- ============================================ -->
+        <mxCell id="loop-title" value="The improvement loop" style="text;html=1;align=center;verticalAlign=middle;fontSize=13;fontStyle=1;fontColor=#2D3748;" vertex="1" parent="1">
+          <mxGeometry x="400" y="110" width="500" height="24" as="geometry" />
+        </mxCell>
+
+        <!-- ACT -->
+        <mxCell id="loop-act" value="ACT&#10;&#10;Agent answers&#10;a real task" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FFF5E6;strokeColor=#F2994A;strokeWidth=3;fontColor=#2D3748;fontSize=13;fontStyle=1;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="430" y="160" width="160" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- SIGNAL -->
+        <mxCell id="loop-signal" value="SIGNAL&#10;&#10;Measure the gap&#10;(judge, ground&#8209;truth,&#10;process)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#E6F7EC;strokeColor=#27AE60;strokeWidth=3;fontColor=#2D3748;fontSize=13;fontStyle=1;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="710" y="160" width="160" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- SEARCH -->
+        <mxCell id="loop-search" value="SEARCH&#10;&#10;Propose a&#10;better variant" style="ellipse;whiteSpace=wrap;html=1;fillColor=#F3EBFC;strokeColor=#9B51E0;strokeWidth=3;fontColor=#2D3748;fontSize=13;fontStyle=1;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="710" y="370" width="160" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- APPLY -->
+        <mxCell id="loop-apply" value="APPLY&#10;&#10;Winner becomes&#10;live champion" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FFF9DB;strokeColor=#F2C94C;strokeWidth=3;fontColor=#2D3748;fontSize=13;fontStyle=1;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="430" y="370" width="160" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- Loop arrows: act -> signal -> search -> apply -> act -->
+        <mxCell id="arrow-act-signal" style="endArrow=classic;html=1;rounded=0;strokeColor=#4A5568;strokeWidth=2;" edge="1" parent="1" source="loop-act" target="loop-signal">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow-signal-search" style="endArrow=classic;html=1;rounded=0;strokeColor=#4A5568;strokeWidth=2;" edge="1" parent="1" source="loop-signal" target="loop-search">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow-search-apply" style="endArrow=classic;html=1;rounded=0;strokeColor=#4A5568;strokeWidth=2;" edge="1" parent="1" source="loop-search" target="loop-apply">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow-apply-act" style="endArrow=classic;html=1;rounded=0;strokeColor=#4A5568;strokeWidth=2;" edge="1" parent="1" source="loop-apply" target="loop-act">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Layer stack -> agent connector (artifacts drive the loop) -->
+        <mxCell id="arrow-layers-loop" style="endArrow=classic;html=1;rounded=0;strokeColor=#A0AEC0;strokeWidth=2;dashed=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="layer-l0" target="loop-apply">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="380" y="500" as="sourcePoint" />
+            <mxPoint x="430" y="420" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="arrow-layers-loop-label" value="L0 toolkit runs every step" style="text;html=1;align=center;verticalAlign=middle;fontSize=10;fontColor=#4A5568;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="350" y="450" width="120" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- ============================================ -->
+        <!-- TWO CADENCES (right column)                  -->
+        <!-- ============================================ -->
+        <mxCell id="cadences-title" value="Two cadences of the same loop" style="text;html=1;align=center;verticalAlign=middle;fontSize=13;fontStyle=1;fontColor=#2D3748;" vertex="1" parent="1">
+          <mxGeometry x="960" y="110" width="380" height="24" as="geometry" />
+        </mxCell>
+
+        <!-- OFFLINE box -->
+        <mxCell id="offline-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F0FE;strokeColor=#2F80ED;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="960" y="140" width="380" height="190" as="geometry" />
+        </mxCell>
+        <mxCell id="offline-title" value="🛡  OFFLINE &#8212; deploy-gate cadence" style="text;html=1;align=center;verticalAlign=middle;fontSize=14;fontStyle=1;fontColor=#2F80ED;" vertex="1" parent="1">
+          <mxGeometry x="960" y="150" width="380" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="offline-desc" value="Winners are recorded as candidates.&#10;A human reviewer promotes them&#10;to live via the chat UI or dashboard.&#10;&#10;Touches L1, L2, L3, L4." style="text;html=1;align=center;verticalAlign=middle;fontSize=12;fontColor=#2D3748;" vertex="1" parent="1">
+          <mxGeometry x="975" y="180" width="350" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="offline-gate" value="👤  human review gate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2F80ED;fontColor=#2F80ED;fontSize=11;fontStyle=1;align=center;verticalAlign=middle;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="1075" y="290" width="150" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- ONLINE box -->
+        <mxCell id="online-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FDEAEA;strokeColor=#EB5757;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="960" y="360" width="380" height="190" as="geometry" />
+        </mxCell>
+        <mxCell id="online-title" value="⚡  ONLINE &#8212; auto-apply cadence" style="text;html=1;align=center;verticalAlign=middle;fontSize=14;fontStyle=1;fontColor=#EB5757;" vertex="1" parent="1">
+          <mxGeometry x="960" y="370" width="380" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="online-desc" value="Winners auto-promote on round&#10;completion. The next request the&#10;agent serves uses the new version.&#10;&#10;Restricted to L1 (prompts) and L2&#10;(memory). L3 / L4 raise at construction." style="text;html=1;align=center;verticalAlign=middle;fontSize=12;fontColor=#2D3748;" vertex="1" parent="1">
+          <mxGeometry x="975" y="400" width="350" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="online-gate" value="📡  bus hook auto-promotes" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#EB5757;fontColor=#EB5757;fontSize=11;fontStyle=1;align=center;verticalAlign=middle;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="1075" y="510" width="180" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Search -> Offline arrow -->
+        <mxCell id="arrow-search-offline" style="endArrow=classic;html=1;rounded=0;strokeColor=#2F80ED;strokeWidth=2;exitX=1;exitY=0.25;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="loop-search" target="offline-box">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow-search-offline-label" value="candidate_wins (offline)" style="text;html=1;align=center;verticalAlign=middle;fontSize=10;fontColor=#2F80ED;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="870" y="320" width="140" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- Search -> Online arrow -->
+        <mxCell id="arrow-search-online" style="endArrow=classic;html=1;rounded=0;strokeColor=#EB5757;strokeWidth=2;exitX=1;exitY=0.75;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="loop-search" target="online-box">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow-search-online-label" value="candidate_wins (online)" style="text;html=1;align=center;verticalAlign=middle;fontSize=10;fontColor=#EB5757;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="870" y="465" width="140" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- Both cadences feed Apply -->
+        <mxCell id="arrow-offline-apply" style="endArrow=classic;html=1;rounded=0;strokeColor=#2F80ED;strokeWidth=2;dashed=1;exitX=0;exitY=1;exitDx=0;exitDy=0;entryX=1;entryY=0.25;entryDx=0;entryDy=0;" edge="1" parent="1" source="offline-gate" target="loop-apply">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow-online-apply" style="endArrow=classic;html=1;rounded=0;strokeColor=#EB5757;strokeWidth=2;exitX=0;exitY=0;exitDx=0;exitDy=0;entryX=1;entryY=0.75;entryDx=0;entryDy=0;" edge="1" parent="1" source="online-gate" target="loop-apply">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ============================================ -->
+        <!-- BOTTOM NOTE                                  -->
+        <!-- ============================================ -->
+        <mxCell id="bottom-note" value="The model never changes. Improvement is always around the model: the artifacts the loop versions, swaps, and rolls back." style="text;html=1;align=center;verticalAlign=middle;fontSize=11;fontColor=#4A5568;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="40" y="710" width="1320" height="24" as="geometry" />
+        </mxCell>
+
+        <!-- ============================================ -->
+        <!-- LEGEND                                       -->
+        <!-- ============================================ -->
+        <mxCell id="legend-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F7FAFC;strokeColor=#CBD5E0;" vertex="1" parent="1">
+          <mxGeometry x="60" y="570" width="840" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-title" value="Reading the diagram" style="text;html=1;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;fontColor=#2D3748;spacingLeft=12;" vertex="1" parent="1">
+          <mxGeometry x="60" y="575" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-1" value="●  Each dial of the loop (signal / search / apply) is independent &#8212; you can change one without touching the others." style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontColor=#2D3748;spacingLeft=12;" vertex="1" parent="1">
+          <mxGeometry x="60" y="600" width="820" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-2" value="●  Layers L1 &#8594; L4 grow more powerful and more dangerous. Online cadence touches only L1 and L2; offline can touch any." style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontColor=#2D3748;spacingLeft=12;" vertex="1" parent="1">
+          <mxGeometry x="60" y="622" width="820" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-3" value="●  Offline keeps a human in the loop at the deploy gate. Online keeps the same loop but trades the gate for a bus hook." style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontColor=#2D3748;spacingLeft=12;" vertex="1" parent="1">
+          <mxGeometry x="60" y="644" width="820" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-4" value="●  Both cadences write to the same archive; the difference is whether winning candidates become the live champion automatically." style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontColor=#2D3748;spacingLeft=12;" vertex="1" parent="1">
+          <mxGeometry x="60" y="666" width="820" height="20" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
