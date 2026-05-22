@@ -1,9 +1,11 @@
-"""Chapter 2 demo: improving HelixAgent's system prompt with an Improver.
+"""Chapter 2 demo: improving HelixAgent's system prompt offline with SPO.
 
-The user-facing surface for self-improvement, in one chapter script. The
-orchestration math, per-question judging, aggregation, archive recording,
-and event emission all live in helix.improvement.* — this script is how a
-reader operates that platform.
+The OFFLINE pattern. This script runs SPO against a fixed eval set with
+labeled reference answers, using a pairwise LLM-as-judge as the Signal.
+Candidates are written to the archive with measurements, but the running
+agent does not switch to a new prompt automatically: a human (or the
+dashboard's promote button) decides when to call `archive.promote()`.
+For the auto-promoting online counterpart see `spo_online_loop.py`.
 
 Recipe:
 
@@ -14,8 +16,9 @@ Recipe:
   4. Drive rounds (manually, on an interval, or continuously).
   5. The console renderer prints every step as it happens.
 
-Re-run the script and the next round picks up the current champion from the
-archive. No state to hand around: the Archive is the contract.
+Re-run the script and the next round picks up the highest-scoring
+candidate from the archive as the new reference. No state to hand around:
+the Archive is the contract.
 """
 
 from __future__ import annotations

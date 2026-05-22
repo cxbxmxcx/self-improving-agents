@@ -117,7 +117,8 @@ def main() -> None:
     print(f"Steps: {len(trajectory.steps)}  Outcome: {trajectory.outcome.value}")
     print(f"Artifacts used: {trajectory.artifacts_used}")
     print()
-    print("Tip: run `python chapters/ch02/spo_loop.py` to improve the system prompt.")
+    print("Tip: run `python chapters/ch02/spo_offline_loop.py` to improve the system prompt offline,")
+    print("     or `python chapters/ch02/spo_online_loop.py` for the online auto-promoting variant.")
 
 
 if __name__ == "__main__":
