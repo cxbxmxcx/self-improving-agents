@@ -8,8 +8,11 @@ Search produced each candidate.
 
 Pedagogical point: two Search methods can target the same artifact in parallel
 without coordinating. The Archive is the single source of truth, and
-`archive.best()` returns the overall champion. SPEC section 5: 'A Search
-proposes-and-selects against any artifact kind it is compatible with.'
+`archive.best()` returns the highest-scoring candidate across both Searches.
+That candidate is not yet what the running agent serves; promotion (the
+live champion swap via `archive.promote()`) is a separate step. SPEC
+section 5: 'A Search proposes-and-selects against any artifact kind it is
+compatible with.' DESIGN_NOTES.md section 10.
 
 Re-run the script to drive more alternating rounds.
 """
@@ -27,7 +30,7 @@ if str(REPO_ROOT) not in sys.path:
 from helix.agent import Agent
 from helix.env import load_env
 from helix.eval import FixedEvalSet, load_eval_set
-from helix.improvement import Improver, ImproverPolicy, Schedule
+from helix.improvement import Improver, ImproverMode, ImproverPolicy, Schedule
 from helix.observability import attach_console_renderer
 from helix.search.gepa import GEPA
 from helix.search.spo import SPO
@@ -79,6 +82,7 @@ async def main_async() -> None:
     eval_source = FixedEvalSet(load_eval_set(EVAL_QUESTIONS_PATH))
     policy = ImproverPolicy(
         schedule=Schedule.MANUAL,
+        mode=ImproverMode.OFFLINE,
         questions_per_round=QUESTIONS_PER_ROUND,
         promote_threshold_win_rate=0.5,
     )

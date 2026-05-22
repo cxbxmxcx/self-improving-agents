@@ -67,15 +67,22 @@ One invocation runs one round:
 4. Pairwise judge (with `SwapAndAgree`) compares answers question by question.
 5. Aggregate verdict (mean score + majority vote) is recorded to the archive.
 
-The candidate becomes the new "best" automatically if its mean score is the
-highest in the archive (because `archive.best()` orders by score). Re-run
-`spo_loop.py` to do another round; each round picks up the current champion.
+The candidate becomes the new top-scoring "best candidate" automatically if
+its mean score is the highest in the archive (because `archive.best()` orders
+by score). Note that "best candidate" is not the same as the **live champion**
+the running agent serves: SPO here runs in offline mode, so the candidate
+sits in the archive until a human reviews and promotes it via
+`archive.promote()`. Re-run `spo_loop.py` to do another round; each round
+picks up the current best candidate as the reference. DESIGN_NOTES.md
+section 10.
 
 Per-round summaries are appended to `runs/spo_rounds.jsonl`.
 
-After SPO has run, `python chapters/ch02/helixagent_v1.py` and
+After SPO has run and you have promoted a winning candidate (either through
+the dashboard's "Promote v{N} → live" button or programmatically via
+`archive.promote()`), `python chapters/ch02/helixagent_v1.py` and
 `python chapters/ch02/eval_harness.py` (with v1's factory) automatically use
-the latest-best prompt.
+the live champion prompt. Until then, the agent serves the genesis prompt.
 
 ## Visualize what happened
 
