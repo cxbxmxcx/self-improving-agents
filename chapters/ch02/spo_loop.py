@@ -31,7 +31,7 @@ if str(REPO_ROOT) not in sys.path:
 from helix.agent import Agent
 from helix.env import load_env
 from helix.eval import FixedEvalSet, load_eval_set
-from helix.improvement import Improver, ImproverPolicy, Schedule
+from helix.improvement import Improver, ImproverMode, ImproverPolicy, Schedule
 from helix.observability import attach_console_renderer
 from helix.search.spo import SPO
 from helix.signals.pairwise_judge import PairwiseJudge, SwapAndAgree
@@ -89,8 +89,13 @@ async def main_async() -> None:
         rounds=1,  # SPO propose called once per Improver.trigger_round()
     )
     eval_source = FixedEvalSet(load_eval_set(EVAL_QUESTIONS_PATH))
+    # mode=OFFLINE is the default, made explicit here for teaching: offline
+    # improvers write candidates to the archive but do not change what the
+    # running agent serves. Promotion (live_champion swap) happens separately
+    # via `archive.promote()` once a human reviews the candidate.
     policy = ImproverPolicy(
         schedule=Schedule.MANUAL,
+        mode=ImproverMode.OFFLINE,
         questions_per_round=QUESTIONS_PER_ROUND,
         promote_threshold_win_rate=0.5,
     )

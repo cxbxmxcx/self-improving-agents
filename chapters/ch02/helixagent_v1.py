@@ -2,13 +2,16 @@
 search.
 
 The difference from v0 is one line: `build_system_prompt()` now reads the
-current-best prompt from a persistent SQLite Archive. If the archive is empty
-(first run), v1 falls back to v0's genesis prompt and records it as the seed.
+current live champion prompt from a persistent SQLite Archive. If no version
+has been promoted yet, v1 falls back to v0's genesis prompt and records it as
+the seed.
 
-Subsequent runs read whatever the SPO loop (spo_loop.py) has accepted as the
-new champion. There is no other change to the agent. The improvement is
-delivered by swapping the seed Artifact in the archive, not by changing the
-agent loop or the tool wiring. SPEC section 11.2.
+Subsequent runs read whatever has been promoted as the live champion via
+`archive.promote()`. SPO can produce a higher-scoring candidate every round,
+but the agent does not serve it until promotion happens. There is no other
+change to the agent. The improvement is delivered by promoting a new Artifact
+in the archive, not by changing the agent loop or the tool wiring. SPEC
+section 11.2; DESIGN_NOTES.md section 10.
 """
 
 from __future__ import annotations
@@ -47,20 +50,24 @@ def open_archive(path: Path = ARCHIVE_PATH) -> SQLiteArchive:
 
 
 async def get_or_create_seed(archive: SQLiteArchive) -> Artifact:
-    """Return the current-best prompt artifact.
+    """Return the live champion prompt, or v0's genesis if nothing is promoted.
+
+    The running agent serves the live champion, which changes only when
+    something calls `archive.promote()`. `archive.best()` ranks all
+    candidates by score, but a candidate is not what the agent serves until
+    it is explicitly promoted. Offline improvers can produce a winning
+    candidate that sits unpromoted in the archive; the agent ignores it
+    until a human (or an online auto-promotion hook) promotes it. See
+    DESIGN_NOTES.md section 10.
 
     On first run the archive is empty. We instantiate v0's genesis prompt
     but DO NOT attach a measurement to it: a prompt has no score until a
-    Signal measures it. The first SPO round runs the genesis against its
-    first candidate via the pairwise judge, and records measurements for
-    both. From that point on, archive.best() picks the higher-scoring one.
-
-    Until then, `archive.best()` returns []; callers fall back to this
-    genesis. The fallback path lives entirely here.
+    Signal measures it. Callers fall back to this genesis until the first
+    promotion happens. The fallback path lives entirely here.
     """
-    best = await archive.best(k=1)
-    if best:
-        return best[0].artifact
+    live = await archive.live_champion(PROMPT_ARTIFACT_ID)
+    if live is not None:
+        return live
 
     # Look up an unmeasured genesis if we recorded one previously
     existing = await archive.by_id(PROMPT_ARTIFACT_ID, version=1)
