@@ -239,7 +239,7 @@ class Improver:
         # Store the fallback so future best() calls find it.
         from helix.search.base import Variant
         # We don't record a measurement for the fallback; see SPEC honesty
-        # decision in spo_loop.py history. The first round measures it.
+        # decision in spo_offline_loop.py history. The first round measures it.
         if hasattr(self.archive, "_store_artifact"):
             self.archive._store_artifact(self.seed_fallback)  # type: ignore[attr-defined]
             self.archive._conn.commit()  # type: ignore[attr-defined]

@@ -64,7 +64,7 @@ def _placeholder_screen() -> None:
         **No archive yet?** Run a chapter script first:
 
         ```
-        python chapters/ch02/spo_loop.py
+        python chapters/ch02/spo_offline_loop.py
         ```
 
         ...or, for a richer run with two Search methods:

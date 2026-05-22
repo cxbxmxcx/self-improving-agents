@@ -7,11 +7,21 @@ Files in this chapter:
 - **`helixagent_v1.py`** — same agent, but the system prompt comes from the
   persistent SQLite Archive. On first run the archive is seeded with v0's
   genesis prompt; subsequent runs read whatever SPO has accepted as champion.
-- **`spo_loop.py`** — the improvement driver. One invocation runs one SPO
-  round: reference pass over the 20 eval questions, SPO mutation, candidate
-  pass, pairwise-judge each question with `SwapAndAgree`, aggregate verdicts
-  (mean score for ordering + majority vote for accept/reject), record to
-  archive. Re-run to do more rounds.
+- **`spo_offline_loop.py`** — the **offline** improvement driver. One
+  invocation runs one SPO round: reference pass over the eval questions,
+  SPO mutation, candidate pass, pairwise-judge each question with
+  `SwapAndAgree`, aggregate verdicts (mean score for ordering + majority
+  vote for accept/reject), record to archive. Candidates are not served
+  until a human promotes one via `archive.promote()` (or the dashboard
+  button). Re-run to do more rounds.
+- **`spo_online_loop.py`** — the **online** counterpart. Simulates live
+  traffic by replaying eval questions one at a time, spot-checks responses
+  with `LiveTrajectoryJudge` (an absolute rubric judge — no reference
+  answer required), and triggers SPO when the rolling average drops. If
+  the candidate beats the reference on a small shadow sample, the script
+  publishes `CandidateWins(mode="online", auto_promote=True)` and the
+  default promotion hook calls `archive.promote()` automatically. The
+  next request reads the new live champion.
 - **`eval_questions.json`** — 20 hand-curated questions across 4 difficulty
   bands (factual / disambiguation / multi-hop / trap). Reference answers
   derived from the arXiv corpus. Drives the eval harness and SPO judge.
@@ -53,17 +63,17 @@ At the end the script prints per-band summary statistics.
 No judging happens at v0; the `judgment` field stays null. v1 plugs a pairwise
 judge into `run_eval(judge=...)` to score answers.
 
-## Run v1 (one SPO round)
+## Run v1 offline (one SPO round)
 
 ```
-python chapters/ch02/spo_loop.py
+python chapters/ch02/spo_offline_loop.py
 ```
 
 One invocation runs one round:
 
-1. Reference pass: agent backed by current-best prompt runs all 20 questions.
+1. Reference pass: agent backed by current-best prompt runs all eval questions.
 2. SPO proposes one mutated candidate prompt.
-3. Candidate pass: agent backed by the candidate runs the same 20 questions.
+3. Candidate pass: agent backed by the candidate runs the same questions.
 4. Pairwise judge (with `SwapAndAgree`) compares answers question by question.
 5. Aggregate verdict (mean score + majority vote) is recorded to the archive.
 
@@ -72,8 +82,8 @@ its mean score is the highest in the archive (because `archive.best()` orders
 by score). Note that "best candidate" is not the same as the **live champion**
 the running agent serves: SPO here runs in offline mode, so the candidate
 sits in the archive until a human reviews and promotes it via
-`archive.promote()`. Re-run `spo_loop.py` to do another round; each round
-picks up the current best candidate as the reference. DESIGN_NOTES.md
+`archive.promote()`. Re-run `spo_offline_loop.py` to do another round; each
+round picks up the current best candidate as the reference. DESIGN_NOTES.md
 section 10.
 
 Per-round summaries are appended to `runs/spo_rounds.jsonl`.
@@ -83,6 +93,41 @@ the dashboard's "Promote v{N} → live" button or programmatically via
 `archive.promote()`), `python chapters/ch02/helixagent_v1.py` and
 `python chapters/ch02/eval_harness.py` (with v1's factory) automatically use
 the live champion prompt. Until then, the agent serves the genesis prompt.
+
+## Run v1 online (auto-promoting, no labels)
+
+```
+python chapters/ch02/spo_online_loop.py
+```
+
+The online pattern requires no labeled eval set at runtime. Live traffic is
+simulated by replaying eval questions one at a time. Each response is
+scored 0-1 by `LiveTrajectoryJudge` — an absolute rubric judge that reads
+the question, the agent's tool calls, and the final answer, and rates
+grounding, correctness, abstention, and concision. Spot-checks accumulate
+in a rolling window. When the rolling average drops below the threshold,
+SPO proposes a candidate, the candidate is shadow-evaluated on the next
+few requests, and if it beats the reference, the script fires a
+`CandidateWins` event that the default promotion hook auto-promotes.
+
+The layer rule is enforced structurally: `ImproverPolicy(mode=ONLINE)`
+refuses L3 (planner / monitor) and L4 (code) artifacts at construction.
+Prompts are L1, so this example is safe.
+
+The online example differs from offline along three axes:
+
+| Axis | Offline | Online |
+|------|---------|--------|
+| trigger | manual / scheduled | rolling score drop |
+| signal | pairwise judge over labeled pairs | absolute rubric judge |
+| promotion | human via dashboard | auto via `CandidateWins` hook |
+| safety | any artifact layer | L1/L2 only (enforced) |
+
+Cost shape: every spot-checked request invokes the agent plus the judge,
+plus the SPO proposer when a candidate is triggered, plus the shadow-eval
+runs (one extra agent run per side, per shadow question). Tune
+`SAMPLE_RATE`, `ROLLING_WINDOW`, and `SHADOW_SAMPLE` at the top of the
+script to budget the example.
 
 ## Visualize what happened
 
