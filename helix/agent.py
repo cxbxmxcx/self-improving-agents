@@ -80,6 +80,41 @@ class Agent:
         # the hot path. They consume trajectories via the event bus.
         self.improvers: list = []  # type: list[Improver] but avoid circular import
 
+    def with_artifacts(self, overrides: dict[str, Artifact]) -> "Agent":
+        """Return a new Agent with the given artifacts swapped in. SPEC §15.2.
+
+        The improver uses this to test candidates without the user having to
+        write a factory function. For each artifact id in `overrides`, the
+        matching slot on the agent is replaced; everything else (tools, model,
+        hooks, memory tiers) carries over by reference.
+
+        The single-artifact Ch 2 case swaps `system_prompt`. Future chapters
+        will swap tool descriptions, tool code, memory entries, and guardrails
+        by the same mechanism — the dispatch is by `artifact.kind` plus
+        `artifact.id` matching the agent's current configuration.
+        """
+        new_system_prompt = self.system_prompt
+        for art in overrides.values():
+            # System prompt match: candidate has same id as current prompt.
+            if art.id == self.system_prompt.id:
+                if not isinstance(art.content, str):
+                    raise TypeError("system_prompt artifact must have string content")
+                new_system_prompt = art
+
+        # Future kinds (tool descriptions, tool code, memory entries,
+        # guardrails) wire here as the framework grows. For now Ch 2 only
+        # routes the system prompt.
+        return Agent(
+            system_prompt=new_system_prompt,
+            tools=list(self.tools.values()),
+            model=self.model,
+            max_iterations=self.max_iterations,
+            max_tool_calls=self.max_tool_calls,
+            hooks=self.hooks,
+            bus=self.bus,
+            memory_tiers=dict(self.memory),
+        )
+
     def attach_improver(self, improver) -> None:
         """Register an Improver on this agent.
 

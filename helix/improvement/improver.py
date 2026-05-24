@@ -1,21 +1,25 @@
-"""Improver: the long-running per-artifact improvement loop.
+"""OfflineImprover: the long-running per-artifact improvement loop.
 
-An Improver is a registered, schedulable owner of one artifact's improvement
-plan. It has a Signal, a Search, an Archive, an EvalSource, and a Policy.
-It runs rounds asynchronously per its Schedule.
+An OfflineImprover is a registered, schedulable owner of one artifact's
+improvement plan. It has an Agent (the definition under improvement), a
+Signal, a Search, an Archive, an EvalSource, and a Policy. It runs rounds
+asynchronously per its Schedule. SPEC §15.
 
 Lifecycle:
-    improver = Improver(...)
+    improver = OfflineImprover(agent=agent, ...)
     await improver.start()               # spawns background asyncio.Task
-    # agent serves requests while improver runs rounds in the background
+    # agent definition stays externally owned; improver clones it to test
     status = improver.status             # readable any time
     await improver.trigger_round()       # force a round now (manual or in-between)
     await improver.wait_until_idle()     # block until no in-flight rounds
     await improver.stop()                # graceful shutdown
 
-The Improver does not own the Agent. It owns the target_artifact_id and the
-plan. The Agent reads the current-best from the archive on each request.
-This is what makes the in-process / out-of-process split survivable.
+The improver does not own the Agent. It receives the Agent by reference and
+calls `agent.with_artifacts({target_id: candidate})` to test candidates. The
+Agent's user reads the current-best from the archive on each request. This
+is what makes the in-process / out-of-process split survivable.
+
+For event-driven online improvement, see helix.improvement.online_improver.
 """
 
 from __future__ import annotations
@@ -58,53 +62,45 @@ class ImproverStatus:
     schedule: str
 
 
-class Improver:
-    """A per-artifact background improvement loop.
+class OfflineImprover:
+    """A per-artifact offline improvement loop. SPEC §15.
 
-    Parameters mirror the cleanest constructor surface readers should see in
-    Ch 2: target the artifact, supply the signal/search/archive/eval, set a
-    policy, attach a build-agent-with-prompt callable. The Improver derives
-    its seed artifact from the archive (or accepts an explicit fallback).
+    Constructor surface: the Agent under improvement plus the target artifact,
+    a signal/search/archive/eval, and a policy. The improver clones the agent
+    via `agent.with_artifacts({target_id: candidate})` to test each candidate.
+
+    For event-driven online improvement (no labeled eval set, auto-promote on
+    rolling spot-check), see helix.improvement.online_improver.OnlineImprover.
     """
 
     def __init__(
         self,
         *,
+        agent,                          # Agent: the definition under improvement
         target_artifact_id: str,
         signal: Signal,
         search: Search,
         archive: Archive,
         eval_source: EvalSource,
-        build_agent_with_prompt,   # async (prompt: Artifact) -> Agent
         policy: ImproverPolicy | None = None,
         seed_fallback: Artifact | None = None,
         improver_id: str | None = None,
         bus: EventBus | None = None,
     ) -> None:
+        self.agent = agent
         self.target_artifact_id = target_artifact_id
         self.signal = signal
         self.search = search
         self.archive = archive
         self.eval_source = eval_source
-        self.build_agent_with_prompt = build_agent_with_prompt
         self.policy = policy or ImproverPolicy()
         self.seed_fallback = seed_fallback
         self.improver_id = improver_id or f"imp-{uuid.uuid4().hex[:8]}"
         self.bus = bus or get_bus()
 
-        # Online safety check: refuse to construct if mode=ONLINE and the
-        # target artifact is L3 (metacognition) or L4 (code). Those layers
-        # need a deploy gate; auto-applying changes there is the failure
-        # mode Chapter 1 warns about. DESIGN_NOTES.md section 10.
-        if self.policy.mode == ImproverMode.ONLINE and seed_fallback is not None:
-            layer = seed_fallback.kind.layer
-            if layer >= 3:
-                raise ValueError(
-                    f"Improver {self.improver_id}: cannot run in ONLINE mode "
-                    f"against an L{layer} artifact (kind={seed_fallback.kind.value}). "
-                    f"Online mode is restricted to L1 (prompt) and L2 (memory) "
-                    f"artifacts. Use OFFLINE mode for L3/L4 work."
-                )
+        # OfflineImprover places no layer restrictions on its target; offline
+        # is the safe mode for L3/L4 artifacts because promotion is gated on
+        # human review. OnlineImprover carries the L1/L2-only restriction.
 
         # Wire this Improver into the default promotion handler so the
         # bus-level handler can look up the archive when it fires.
@@ -245,17 +241,18 @@ class Improver:
             self.archive._conn.commit()  # type: ignore[attr-defined]
         return self.seed_fallback
 
-    def _capped_build_agent(self, prompt):
-        """Wrap user's build_agent_with_prompt so each agent inherits the
-        policy's per-question caps (max iterations, max tool calls)."""
-        import inspect
-        sig = inspect.signature(self.build_agent_with_prompt)
-        kwargs: dict = {}
-        if "max_iterations" in sig.parameters:
-            kwargs["max_iterations"] = self.policy.max_iterations_per_question
-        if "max_tool_calls" in sig.parameters:
-            kwargs["max_tool_calls"] = self.policy.max_tool_calls_per_question
-        return self.build_agent_with_prompt(prompt, **kwargs)
+    def _capped_build_agent(self, candidate: Artifact):
+        """Clone the agent with `candidate` swapped in for the target artifact,
+        applying the policy's per-question caps (max iterations, max tool calls).
+
+        SPEC §15.2: the improver tests candidates by calling
+        `agent.with_artifacts({target_id: candidate})`, then trims the clone
+        to the policy's per-question budgets.
+        """
+        clone = self.agent.with_artifacts({self.target_artifact_id: candidate})
+        clone.max_iterations = self.policy.max_iterations_per_question
+        clone.max_tool_calls = self.policy.max_tool_calls_per_question
+        return clone
 
     async def _run_one_round(self) -> RoundResult:
         if self.policy.quiesce_on_empty_eval:
@@ -278,7 +275,7 @@ class Improver:
                 round_index=self._rounds_completed + 1,
                 seed_artifact=seed,
                 agent_factory=lambda: self._capped_build_agent(seed),
-                build_agent_with_prompt=self._capped_build_agent,
+                clone_agent_with_artifact=self._capped_build_agent,
                 search=self.search,
                 signal=self.signal,
                 archive=self.archive,

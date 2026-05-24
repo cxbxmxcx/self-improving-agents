@@ -22,7 +22,13 @@ from helix.signals.reflection import Reflection
 
 class _StubAgent:
     def __init__(self, prompt) -> None:
-        self.prompt = prompt
+        self.system_prompt = prompt
+        self.max_iterations = 10
+        self.max_tool_calls = 20
+
+    def with_artifacts(self, overrides):
+        new_prompt = overrides.get(self.system_prompt.id, self.system_prompt)
+        return _StubAgent(new_prompt)
 
     async def run(self, task: str):
         from helix.trajectory import Outcome, Trajectory
@@ -31,8 +37,8 @@ class _StubAgent:
         return t.final_output, t
 
 
-async def _build_agent(prompt, **kwargs):
-    return _StubAgent(prompt)
+def _make_agent(seed):
+    return _StubAgent(seed)
 
 
 class _StubSignal:
@@ -57,15 +63,16 @@ def _eval_set() -> EvalSet:
 
 
 @pytest.mark.asyncio
-async def test_gepa_requires_agent_factory():
+async def test_gepa_requires_agent():
     with pytest.raises(ValueError):
         GEPA(eval_source=FixedEvalSet(_eval_set()))
 
 
 @pytest.mark.asyncio
 async def test_gepa_requires_eval_source():
+    seed = genesis("prompt.test", ArtifactKind.PROMPT, "seed content")
     with pytest.raises(ValueError):
-        GEPA(agent_factory=_build_agent)
+        GEPA(agent=_make_agent(seed))
 
 
 @pytest.mark.asyncio
@@ -104,7 +111,7 @@ async def test_gepa_yields_a_single_winner_after_internal_evolution():
     gepa = GEPA(
         proposer_model="claude-haiku-4-5",  # unused with patches
         reflector=Reflection(model="claude-haiku-4-5"),  # unused
-        agent_factory=_build_agent,
+        agent=_make_agent(seed),
         eval_source=FixedEvalSet(_eval_set()),
         population_size=3,
         generations=2,
@@ -147,7 +154,7 @@ async def test_gepa_records_all_intermediate_candidates_to_archive():
     gepa = GEPA(
         proposer_model="claude-haiku-4-5",
         reflector=Reflection(model="claude-haiku-4-5"),
-        agent_factory=_build_agent,
+        agent=_make_agent(seed),
         eval_source=FixedEvalSet(_eval_set()),
         population_size=2,
         generations=2,

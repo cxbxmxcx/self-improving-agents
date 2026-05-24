@@ -19,7 +19,7 @@ from helix.agent import Agent
 from helix.archive import SQLiteArchive
 from helix.artifact import Artifact, ArtifactKind, genesis
 from helix.eval import RecentTrajectorySource
-from helix.improvement import Improver, ImproverPolicy, Schedule
+from helix.improvement import OfflineImprover, ImproverPolicy, Schedule
 from helix.memory import EpisodicMemory, ProceduralMemory, SemanticMemory
 from helix.retrieval.index import open_index
 from helix.search.spo import SPO
@@ -234,7 +234,7 @@ def build_improvers(
     agent: Agent,
     *,
     archive_path: str | None = None,
-) -> list[Improver]:
+) -> list[OfflineImprover]:
     """Declared default improvers for this agent.
 
     Returns one Improver targeting the system prompt with the Pattern A
@@ -271,26 +271,21 @@ def build_improvers(
         max_concurrent_questions=2,
     )
 
-    # Agent factory: rebuild the agent fresh with a different system prompt,
-    # but skip memory (the improver's internal eval shouldn't pollute live
-    # memory tiers).
-    async def build_agent_with_prompt(
-        prompt, *, max_iterations: int = 10, max_tool_calls: int = 20
-    ):
-        return build(
-            system_prompt=prompt,
-            max_iterations=max_iterations,
-            max_tool_calls=max_tool_calls,
-            skip_memory=True,
-        )
+    # The improver clones the agent via `agent.with_artifacts({...})` to test
+    # each candidate. We build an agent here without memory tiers so the
+    # improver's internal eval runs don't pollute live memory.
+    improver_agent = build(
+        system_prompt=agent.system_prompt,
+        skip_memory=True,
+    )
 
-    improver = Improver(
+    improver = OfflineImprover(
+        agent=improver_agent,
         target_artifact_id=agent.system_prompt.id,
         signal=signal,
         search=search,
         archive=archive,
         eval_source=eval_source,
-        build_agent_with_prompt=build_agent_with_prompt,
         policy=policy,
         seed_fallback=agent.system_prompt,
         improver_id="helpdesk-prompt-spo",

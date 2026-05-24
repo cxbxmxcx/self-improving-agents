@@ -663,22 +663,24 @@ Section numbers in this spec are stable identifiers, not just ordering: code com
 
 ---
 
-## 15. The Improver
+## 15. The OfflineImprover
 
-An Improver is a long-running, per-artifact optimization loop. It owns one artifact's improvement plan: which Signal measures the gap, which Search proposes variants, which Archive records measurements, which EvalSource supplies questions, and the Policy that governs scheduling, layering, and promotion.
+The framework defines two improver classes: `OfflineImprover` (§15) and `OnlineImprover` (§17). They share no base class. Both target one artifact, both compose Signal + Search + Archive, both publish `CandidateWins` for the promotion handler chain — but their lifecycles are different enough that conflating them would obscure the distinction. The term "improver" is a category noun for both; readers picking a concrete class pick by improvement *mode*, not by configuration of a single class.
 
-The Improver is a primitive because Chapter 2's "the agent serves requests while improvement happens in the background" is only honest if there is a typed object responsible for running the background loop. Without it, every chapter reinvents the orchestration.
+OfflineImprover is a long-running, per-artifact optimization driver. It owns its own loop and tests candidates against a labeled `EvalSource`. The agent it improves does not need to be serving traffic; the agent is a definition the improver clones to test variants.
 
-### 15.1 The Improver protocol
+OfflineImprover is the right shape when: improvement happens against a stable labeled set, when human review gates promotion, when L3/L4 artifacts (planner, monitor, code) need offline-only safety. It is the Ch 2 default.
+
+### 15.1 The OfflineImprover constructor
 
 ```
-class Improver:
+class OfflineImprover:
+    agent: Agent
     target_artifact_id: str
     signal: Signal
     search: Search
     archive: Archive
     eval_source: EvalSource
-    build_agent_with_artifacts: Callable[[dict[str, Artifact]], Awaitable[Agent]]
     policy: ImproverPolicy
 
     async def start(self) -> None: ...
@@ -688,33 +690,36 @@ class Improver:
     def status(self) -> ImproverStatus: ...
 ```
 
-Three support types appear in this protocol and warrant a one-line sketch each; their full definitions live in the reference implementation under `helix/improvement/` and `helix/eval/`:
+`agent` is the Agent definition under improvement (§15.2). `target_artifact_id` names which of the Agent's artifacts the improver mutates. Two support types appear in the constructor; full definitions live in the reference implementation under `helix/improvement/` and `helix/eval/`:
 
-- **`EvalSource`** supplies the questions a round runs against. Two concrete shapes: `FixedEvalSet` wraps a labeled JSON file (offline pattern); `LiveTrafficSource` pulls recent trajectories off the observability bus (online pattern). Both expose `async get_questions(n: int | None) -> list[Question]`.
-- **`RoundResult`** is the structured outcome of one round: candidate version, candidate score, reference score, per-question verdicts, costs, whether promotion occurred, and the underlying GapMeasurements. The dashboard and the on-round-result Search hook both read this.
-- **`ImproverPolicy`** bundles scheduling (§15.5), mode (OFFLINE / ONLINE), per-question caps, per-round budget, and promotion thresholds. The promotion threshold here (`promote_threshold_win_rate`) is distinct from the per-signal trigger threshold of §3.6: the policy threshold gates promotion, the signal threshold gates the `triggered` flag.
+- **`EvalSource`** supplies the questions a round runs against. The offline pattern's canonical implementation is `FixedEvalSet`, wrapping a labeled JSON file. Online improvement uses a different mechanism (§17).
+- **`RoundResult`** is the structured outcome of one round: candidate version, candidate score, reference score, per-question verdicts, costs, whether promotion occurred, and the underlying GapMeasurements.
+- **`ImproverPolicy`** bundles scheduling (§15.5), per-question caps, per-round budget, and promotion thresholds. The promotion threshold here (`promote_threshold_win_rate`) is distinct from the per-signal trigger threshold of §3.6: the policy threshold gates promotion, the signal threshold gates the `triggered` flag. OfflineImprover does not need a mode flag; its class identity makes the mode explicit.
 
-The Improver does not own the Agent. It owns the `target_artifact_id` and the plan. The Agent reads the current live champion from the archive on each request. This is the in-process / out-of-process split that lets the same archive serve a notebook driving rounds and a production agent serving traffic.
+The improver does not own the Agent. The Agent is passed in by reference and stays externally owned; the improver never mutates it. To test a candidate, the improver calls `agent.with_artifacts({target_id: candidate})` (§15.2), which returns a fresh Agent for that round only.
 
-### 15.2 The factory contract
+### 15.2 Agent.with_artifacts
 
-`build_agent_with_artifacts` is the single point of agent composition. It accepts a dict of `(artifact_id → Artifact)` and returns a fully-built Agent. The improver calls it once per round with `{target_artifact_id: candidate}`; the factory resolves any artifact not in the dict by calling `archive.live_champion(artifact_id)`.
+The Agent exposes a clone method that takes a dict of artifact overrides and returns a new Agent with those artifacts swapped in:
 
-This delegates dependency resolution to the factory rather than the improver. Three consequences flow from that:
+```
+class Agent:
+    def with_artifacts(self, overrides: dict[str, Artifact]) -> "Agent": ...
+```
 
-- The improver's signature stays minimal: it does not enumerate other artifacts the agent depends on.
-- The factory is the single source of truth for the agent's composition. Production deployment calls `build_agent_with_artifacts({}, archive=archive)` and gets a fully-resolved agent. The same code path serves training and serving.
-- When a candidate is being measured, every non-target artifact is whatever the archive currently considers live. If another improver promotes mid-round, the next round measures against the new combination.
+This replaces the older "factory function" pattern with a method on Agent itself. The improver calls `agent.with_artifacts({target_artifact_id: candidate})` once per round and runs the cloned agent against the eval set. Three consequences flow from this:
 
-This eventual-consistency property is what makes multi-artifact agents work without a coordination protocol (§16.1).
+- The user writes one Agent definition; the improver introspects everything it needs. No separate factory function.
+- The Agent is the source of truth for its own composition. Production deployment uses the same Agent instance the improver was given.
+- Multi-artifact agents (§16.1) get the same treatment: an improver targeting a tool description passes `{tool_desc_id: candidate}`; the Agent's `with_artifacts` swaps that one artifact and leaves the rest intact.
 
 ### 15.3 Layer-based safety
 
-An Improver constructed with `policy.mode = ONLINE` refuses to target an artifact at layer ≥ 3 (planner, monitor, code). Online improvers auto-promote, and L3/L4 changes need a deploy gate. The constructor raises at construction time, which is the earliest possible failure.
+OfflineImprover accepts any artifact kind, including L3 (planner, monitor) and L4 (code). Offline is the safe mode for those layers because promotion is gated on human review. The class places no layer restrictions on construction; OnlineImprover (§17) is what carries the L1/L2 restriction.
 
 ### 15.4 The round
 
-One round is one `propose → measure → record → (maybe promote)` cycle. The improver calls `search.propose(seed, signal, archive, budget)` to get a candidate, builds the agent via the factory, runs it against the eval source, measures the result with the signal, and records the variant + measurement to the archive. If the policy authorizes auto-promotion and the candidate clears the policy's promotion threshold (`promote_threshold_win_rate`), the round ends with a promotion. Otherwise the candidate sits in the archive until a human promotes it.
+One round is one `propose → measure → record → (maybe promote)` cycle. The improver calls `search.propose(seed, signal, archive, budget)` to get a candidate, clones the agent via `with_artifacts`, runs the clone against the eval source, measures with the signal, and records the variant + measurement to the archive. If the policy authorizes auto-promotion and the candidate clears the policy's promotion threshold (`promote_threshold_win_rate`), the round ends with a promotion. Otherwise the candidate sits in the archive until a human promotes it.
 
 The policy's promotion threshold is distinct from any per-signal trigger threshold (§3.6). The signal threshold decides whether a measurement is *flagged* as significant; the policy threshold decides whether a measurement is *good enough to deploy*. A candidate can trigger its signal (a latency spike, say) without clearing the promotion threshold, or clear the promotion threshold without triggering any signal.
 
@@ -726,7 +731,7 @@ The policy's promotion threshold is distinct from any per-signal trigger thresho
 - `INTERVAL`: rounds fire on a fixed cadence.
 - `CONTINUOUS`: rounds fire back-to-back, bounded only by budget.
 
-The schedule does not affect what a round does; it affects when. This separation keeps the Chapter 2 offline pattern (manual rounds against a labeled eval set) and the Chapter 2 online pattern (continuous rounds against live traffic) running the same round code.
+The schedule does not affect what a round does; it affects when. Scheduling is an OfflineImprover-specific concern because OnlineImprover (§17) has no driver loop; it fires when the agent produces a trajectory.
 
 ---
 
@@ -738,54 +743,60 @@ The schedule does not affect what a round does; it affects when. This separation
 
 Real agents have multiple artifacts under simultaneous improvement: a system prompt at L1, an episodic memory layout at L2, a tool implementation at L4, a tool description back at L1, possibly a guardrail at L4. Each artifact has different mutation economics, different signal stacks, and different layer-based safety constraints.
 
-The framework's answer is **one Improver per artifact, sharing a factory**. There is no coordinator, no joint search, no agent-level regression checker.
+The framework's answer is **one improver per artifact, sharing one Agent definition**. There is no coordinator, no joint search, no agent-level regression checker. Each improver picks the concrete class — `OfflineImprover` (§15) or `OnlineImprover` (§17) — that matches the artifact's improvement mode.
 
 #### 16.1.1 The shape
 
 ```
-factory: build_agent_with_artifacts(artifacts: dict, archive: Archive) -> Agent
-
-improver_prompt = Improver(
-    target_artifact_id="prompt.helix.system",
-    signal=...,
-    search=SPO(...),
-    build_agent_with_artifacts=factory,
-    policy=ImproverPolicy(mode=ImproverMode.OFFLINE),
-    ...
+agent = Agent(
+    system_prompt=load_artifact("prompt.helix.system"),
+    tools=[
+        ToolFromArtifact(
+            code_artifact=load_artifact("code.tool.retrieve"),
+            description_artifact=load_artifact("prompt.tool.retrieve.description"),
+        ),
+    ],
+    memory=EpisodicMemory(artifact=load_artifact("mem.helix.episodic")),
+    model="claude-haiku-4-5",
 )
 
-improver_memory = Improver(
+improver_prompt = OfflineImprover(
+    agent=agent,
+    target_artifact_id="prompt.helix.system",
+    signal=...,
+    search=SPO(agent=agent, ...),
+    archive=archive,
+    eval_source=FixedEvalSet(...),
+    policy=ImproverPolicy(),
+)
+
+improver_memory = OnlineImprover(
+    agent=agent,
     target_artifact_id="mem.helix.episodic",
     signal=...,
     search=MemoryQLearning(...),
-    build_agent_with_artifacts=factory,
-    policy=ImproverPolicy(mode=ImproverMode.ONLINE),
-    ...
+    archive=archive,
+    policy=ImproverPolicy(),
 )
 
-improver_tool_code = Improver(
+improver_tool_code = OfflineImprover(
+    agent=agent,
     target_artifact_id="code.tool.retrieve",
     signal=...,
-    search=CodeEvolution(...),
-    build_agent_with_artifacts=factory,
-    policy=ImproverPolicy(mode=ImproverMode.OFFLINE),
-    ...
-)
-
-await asyncio.gather(
-    improver_prompt.start(),
-    improver_memory.start(),
-    improver_tool_code.start(),
+    search=CodeEvolution(agent=agent, ...),
+    archive=archive,
+    eval_source=FixedEvalSet(...),
+    policy=ImproverPolicy(),
 )
 ```
 
-Three improvers run concurrently. Each picks its own Search (SPO for prompts, MemoryQLearning for memory, CodeEvolution for code) and its own signal stack. Each calls the shared factory with `{its_target: candidate}`; the factory resolves the other two artifacts from `archive.live_champion()`.
+Three improvers, one Agent definition. Each picks its own Search and its own signal stack. Each calls `agent.with_artifacts({its_target: candidate})` to test a candidate; non-target artifacts come from the Agent's current definition (or from `archive.live_champion()` when the Agent reads dynamically).
 
 #### 16.1.2 Why this works
 
-Each improver's signal measures the *whole agent*, not the bare artifact. When the prompt improver tests a candidate prompt, the agent it builds uses the current live memory layout and the current live tool implementation. The score the signal records is the score of *this prompt with those other live artifacts*. That is the score that matters: it is the score the deployed agent would actually achieve.
+Each improver's signal measures the *whole agent*, not the bare artifact. When the prompt improver tests a candidate prompt, the cloned agent uses the current memory layout and the current tool implementation. The score the signal records is the score of *this prompt with those other live artifacts*. That is the score that matters: it is the score the deployed agent would actually achieve.
 
-When another improver promotes between rounds, the next round of any improver picks up the new live champion automatically (via the factory's resolution rule). Combination drift is corrected by the next round, not by a separate guardrail.
+When another improver promotes between rounds, the next round of any improver picks up the new live champion. The Agent reads the live champion on each clone; combination drift is corrected by the next round, not by a separate guardrail.
 
 #### 16.1.3 What this is not
 
@@ -793,7 +804,7 @@ This pattern does not guarantee that the deployed combination of `(best L1) × (
 
 #### 16.1.4 The richer pattern (future extension)
 
-When per-artifact improvement is insufficient, the framework supports a `MultiArtifactImprover` that mutates multiple artifacts per round and measures the bundle as a unit under one composite signal. It is a variant of Improver (§15) that owns multiple Searches, one per artifact under joint improvement, and invokes them together each round. The reference implementation realizes this as a subclass of `Improver` overriding the round loop, but that is one implementation choice; the spec contract is "mutate multiple artifacts per round; measure the bundle." It is mentioned here so the architectural answer to "what about joint optimization?" is on the page; the foundational pattern is one improver per artifact.
+When per-artifact improvement is insufficient, the framework supports a `MultiArtifactImprover` that mutates multiple artifacts per round and measures the bundle as a unit under one composite signal. It owns multiple Searches, one per artifact under joint improvement, and invokes them together each round. The reference implementation realizes this as a peer of OfflineImprover with a different round body; the spec contract is "mutate multiple artifacts per round; measure the bundle." It is mentioned here so the architectural answer to "what about joint optimization?" is on the page; the foundational pattern is one improver per artifact.
 
 #### 16.1.5 The eval-disjointness requirement
 
@@ -863,3 +874,58 @@ class ToolFromArtifact:
 Both refs are recorded in `Trajectory.artifacts_used` on every invocation, so lineage tracks both artifacts independently. This is what enables the dual-improver pattern: the L1 improver for the description (online-eligible, mutated by SPO) and the L4 improver for the implementation (offline-only, mutated by CodeEvolution) operate on the same logical tool without coordinating.
 
 Plain-callable tools remain supported. `ToolFromArtifact` is for the case where the tool itself is under improvement. Chapter 2 and Chapter 3 agents use plain callables; the L4 chapter introduces `ToolFromArtifact` as the bridge.
+
+---
+
+## 17. The OnlineImprover
+
+OnlineImprover is the event-driven peer to OfflineImprover (§15). Where OfflineImprover owns a driver loop and tests candidates against a labeled eval set, OnlineImprover has no driver loop. It subscribes to the agent's `SESSION_END` hook and reacts to each completed trajectory: spot-check the trajectory with its signal, accumulate the score in a rolling window, propose a candidate when the rolling average crosses threshold, shadow-evaluate against the next few real requests, publish `CandidateWins(auto_promote=True)` if the candidate wins.
+
+This is structurally different from offline improvement, and the class shape reflects it. The two improver classes share no base class because they share no lifecycle.
+
+### 17.1 The OnlineImprover constructor
+
+```
+class OnlineImprover:
+    agent: Agent
+    target_artifact_id: str
+    signal: Signal
+    search: Search
+    archive: Archive
+    policy: ImproverPolicy
+
+    async def start(self) -> None: ...   # subscribes to agent.SESSION_END
+    async def stop(self) -> None: ...    # unsubscribes
+    @property
+    def status(self) -> ImproverStatus: ...
+```
+
+No `eval_source`. The agent's live trajectories *are* the source of measurement. No `Schedule`; the cadence is the cadence of user requests.
+
+`agent.attach_improver(online_improver)` is the wiring step that subscribes the improver to the agent's `SESSION_END` hook. Without that attachment the improver has nothing to react to. (OfflineImprover does not require attachment because it builds its own clones to test.)
+
+### 17.2 The lifecycle
+
+Each agent request completes with a trajectory. The OnlineImprover's `SESSION_END` handler:
+
+1. Calls `signal.measure(candidate=current_live_champion, trajectory=trajectory)`. This is the spot-check.
+2. Appends the score to a rolling window of length `policy.rolling_window`.
+3. If the rolling average drops below `policy.rolling_threshold` and the window is full, schedules a candidate proposal in the background.
+4. The candidate proposal runs `search.propose(...)` to get one candidate, then shadow-evaluates the candidate against the next `policy.shadow_sample` real requests by running both reference and candidate on each (the candidate's run does not affect what the user sees; it is logged only).
+5. If the candidate beats the reference on the shadow sample by `policy.promote_threshold_win_rate`, the improver publishes `CandidateWins(mode="online", auto_promote=True)`. The default promotion handler chain (§10 in DESIGN_NOTES) writes `archive.promote()`. The next agent request reads the new live champion.
+
+The agent is never blocked by the improver. Spot-check and propose work happen in the background; the user's response goes out as soon as the agent's `SESSION_END` fires.
+
+### 17.3 Layer-based safety
+
+OnlineImprover's constructor refuses to target an artifact at layer ≥ 3 (planner, monitor, code). Online auto-promotes; L3/L4 changes need a deploy gate. The constructor raises at construction time, the earliest possible failure. This is what makes the safety rule structural rather than advisory.
+
+### 17.4 Cost shape
+
+OnlineImprover spends LLM tokens on three things:
+
+- Every spot-check is one signal call (typically one LLM judge call per request).
+- Every proposed candidate is one `search.propose` call (one proposer LLM call).
+- Every shadow-evaluated request runs the agent twice (reference + candidate) for the duration of the shadow sample.
+
+Reasonable production knobs to tune: `policy.sample_rate` to spot-check a fraction of traffic rather than every request; `policy.rolling_window` and `policy.rolling_threshold` to make the trigger less or more sensitive; `policy.shadow_sample` to control how confidently the improver promotes.

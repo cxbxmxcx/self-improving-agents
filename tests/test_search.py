@@ -44,13 +44,18 @@ def test_spo_has_correct_kind():
 
 
 def test_gepa_has_correct_kind():
-    # GEPA now requires agent_factory and eval_source for internal population
-    # evaluation (Option Y from design discussion).
+    # GEPA requires agent and eval_source for internal population
+    # evaluation (SPEC §15.2 — agent.with_artifacts replaces factory).
     from helix.eval.dataset import EvalQuestion, EvalSet
     from helix.eval.source import FixedEvalSet
+
+    class _DummyAgent:
+        def with_artifacts(self, overrides):
+            return self
+
     es = FixedEvalSet(EvalSet(questions=[EvalQuestion(id="X", band=1, question="x", reference_answer="x")]))
     g = GEPA(
-        agent_factory=lambda prompt: None,
+        agent=_DummyAgent(),
         eval_source=es,
     )
     assert g.kind == SearchKind.GENETIC_PARETO
