@@ -29,6 +29,7 @@ class SignalKind(str, Enum):
     PROCESS_REWARD_MODEL = "process_reward_model"
     REFLECTION = "reflection"
     FORMAL_PROOF = "formal_proof"
+    METRIC = "metric"
     COMPOSITE = "composite"
 
 
@@ -53,6 +54,121 @@ class Cost:
             dollars=self.dollars + other.dollars,
             wall_clock_sec=self.wall_clock_sec + other.wall_clock_sec,
         )
+
+
+# ---------------------------------------------------------------------------
+# SignalThreshold: normalize unbounded observations into [0,1] and fire a
+# triggered flag when the gap crosses threshold. SPEC §3.6.
+# ---------------------------------------------------------------------------
+
+from collections.abc import Callable as _Callable  # noqa: E402
+from typing import Literal as _Literal  # noqa: E402
+
+
+@dataclass
+class SignalThreshold:
+    """Embedded by signals that observe an unbounded quantity (tokens, latency,
+    error rate) so the resulting score is in [0,1] and composes with judge
+    signals in a CompositeSignal.
+
+    - `baseline` is the expected value. A float fixes it; a zero-arg callable
+      resolves it at measure time (e.g. rolling p50 of recent trajectories).
+      None means no baseline; normalize() falls back to identity-bounded.
+    - `threshold` is the magnitude of |raw - baseline| that fires `triggered`.
+      None means the signal never triggers.
+    - `direction` is "minimize" (lower raw is better; latency, tokens) or
+      "maximize" (higher raw is better; judge scores, hit rates).
+    - `normalizer` picks the squashing function: `minmax` against a configured
+      range, `zscore` against baseline plus scale, `ratio` (raw / baseline),
+      `identity` (clip raw into [0,1] as-is).
+    """
+
+    baseline: float | _Callable[[], float] | None = None
+    threshold: float | None = None
+    direction: _Literal["minimize", "maximize"] = "minimize"
+    normalizer: _Literal["minmax", "zscore", "ratio", "identity"] = "ratio"
+    # minmax bounds
+    min_value: float | None = None
+    max_value: float | None = None
+    # zscore scale (one standard deviation)
+    scale: float | None = None
+
+    def resolve_baseline(self) -> float | None:
+        b = self.baseline
+        if callable(b):
+            return float(b())
+        if b is None:
+            return None
+        return float(b)
+
+    def normalize(self, raw: float) -> float:
+        """Map raw → [0,1] under `direction` and `normalizer`. Higher score is
+        always better. Out-of-range values clip; NaN-like inputs return 0.5.
+
+        Anchor: when raw == baseline, score is 0.5. Direction shapes the ramp.
+        """
+        try:
+            r = float(raw)
+        except (TypeError, ValueError):
+            return 0.5
+
+        if self.normalizer == "minmax":
+            lo = self.min_value if self.min_value is not None else r
+            hi = self.max_value if self.max_value is not None else r
+            if hi <= lo:
+                v = 0.5
+            else:
+                v = (r - lo) / (hi - lo)
+            # Flip for minimize: low raw = high score
+            if self.direction == "minimize":
+                v = 1.0 - v
+        elif self.normalizer == "zscore":
+            b = self.resolve_baseline()
+            s = self.scale if (self.scale is not None and self.scale > 0) else 1.0
+            if b is None:
+                v = 0.5
+            else:
+                # Map z = (r - b) / s into [0,1] via clipped linear sigmoid
+                z = (r - b) / s
+                v = 0.5 + 0.5 * max(-1.0, min(1.0, z / 3.0))
+            if self.direction == "minimize":
+                v = 1.0 - v
+        elif self.normalizer == "ratio":
+            b = self.resolve_baseline()
+            if b is None or b == 0:
+                v = 0.5
+            else:
+                # Anchor: raw == baseline → 0.5. For minimize, low raw is good,
+                # so use baseline/raw to invert. For maximize, raw/baseline.
+                if self.direction == "minimize":
+                    if r == 0:
+                        v = 1.0  # zero cost is perfect under minimize
+                    else:
+                        v = (b / r) / 2.0  # raw=baseline → 0.5; raw<baseline → >0.5
+                else:
+                    v = (r / b) / 2.0  # raw=baseline → 0.5; raw>baseline → >0.5
+        else:  # identity
+            v = r
+            if self.direction == "minimize":
+                v = 1.0 - v
+
+        return max(0.0, min(1.0, v))
+
+    def is_triggered(self, raw: float) -> bool:
+        """True when |raw - baseline| crosses threshold (in the unfavorable
+        direction). With no baseline or no threshold, returns False."""
+        if self.threshold is None:
+            return False
+        b = self.resolve_baseline()
+        if b is None:
+            return False
+        try:
+            r = float(raw)
+        except (TypeError, ValueError):
+            return False
+        if self.direction == "minimize":
+            return (r - b) > self.threshold
+        return (b - r) > self.threshold
 
 
 @dataclass
