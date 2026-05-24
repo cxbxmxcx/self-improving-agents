@@ -23,7 +23,7 @@ from helix.agent import Agent
 from helix.artifact import Artifact, ArtifactKind, genesis
 from helix.env import load_env
 from helix.retrieval.index import open_index
-from helix.tools import Tool, tool
+from helix.tools import TextDescriptionTool, Tool, tool
 from helix.trajectory import Trajectory
 
 load_env()
@@ -31,6 +31,15 @@ load_env()
 
 CORPUS_PATH = REPO_ROOT / "data" / "helix_corpus.lance"
 DEFAULT_MODEL = "claude-haiku-4-5"
+
+# The retrieve tool's LLM-facing description, as a string. Ch 2 bakes this
+# into the @tool decorator; Ch 3 promotes it to a TOOL_DESCRIPTION artifact
+# so a search method can improve it. SPEC §16.2.2.
+RETRIEVE_DESCRIPTION_ID = "tool_description.helixagent.retrieve"
+RETRIEVE_DESCRIPTION_V0 = (
+    "Search the document corpus for passages relevant to a query. Returns the "
+    "top matching passages with their source filename and page."
+)
 
 SYSTEM_PROMPT_V0 = """You are HelixAgent, a research assistant.
 
@@ -41,15 +50,20 @@ contain the answer, say so directly rather than guessing.
 """
 
 
-def build_retrieve_tool(corpus_path: Path = CORPUS_PATH) -> Tool:
+def _retrieve_index(corpus_path: Path = CORPUS_PATH):
     if not corpus_path.exists():
         raise FileNotFoundError(
             f"No corpus found at {corpus_path}. "
             "Run `python ingestion/download_corpus.py` then `python ingestion/build_index.py`."
         )
-    index = open_index(corpus_path)
+    return open_index(corpus_path)
 
-    @tool(description="Search the document corpus for passages relevant to a query. Returns the top matching passages with their source filename and page.")
+
+def build_retrieve_tool(corpus_path: Path = CORPUS_PATH) -> Tool:
+    """The Ch 2 retrieve tool: description baked into the @tool decorator."""
+    index = _retrieve_index(corpus_path)
+
+    @tool(description=RETRIEVE_DESCRIPTION_V0)
     async def retrieve(query: str, k: int = 5) -> list[dict]:
         hits = index.search(query, k=k, mode="hybrid")
         return [
@@ -58,6 +72,44 @@ def build_retrieve_tool(corpus_path: Path = CORPUS_PATH) -> Tool:
         ]
 
     return retrieve
+
+
+def build_retrieve_description_artifact() -> Artifact:
+    """The genesis TOOL_DESCRIPTION artifact for the retrieve tool. Ch 3
+    aims search methods at this artifact to improve how the LLM understands
+    when and how to call the tool."""
+    return genesis(
+        id=RETRIEVE_DESCRIPTION_ID,
+        kind=ArtifactKind.TOOL_DESCRIPTION,
+        content=RETRIEVE_DESCRIPTION_V0,
+        created_by="human",
+    )
+
+
+def build_retrieve_tool_with_artifact_description(
+    description_artifact: Artifact | None = None,
+    corpus_path: Path = CORPUS_PATH,
+) -> TextDescriptionTool:
+    """The Ch 3 retrieve tool: same Python implementation, but the LLM-facing
+    description is a TOOL_DESCRIPTION artifact a search method can improve.
+
+    Pass a specific description artifact (e.g. a candidate under test) or
+    omit it to use the genesis description.
+    """
+    index = _retrieve_index(corpus_path)
+
+    async def retrieve(query: str, k: int = 5) -> list[dict]:
+        hits = index.search(query, k=k, mode="hybrid")
+        return [
+            {"source": h.source, "page": h.page, "text": h.text, "score": h.score}
+            for h in hits
+        ]
+
+    return TextDescriptionTool(
+        name="retrieve",
+        fn=retrieve,
+        description_artifact=description_artifact or build_retrieve_description_artifact(),
+    )
 
 
 def build_system_prompt() -> Artifact:
