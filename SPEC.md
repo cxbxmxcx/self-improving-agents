@@ -233,7 +233,7 @@ Signals with no meaningful threshold (pairwise judges, reflection) omit the data
 
 ## 4. The Search
 
-A Search proposes variants of an artifact and selects among them, guided by a signal. The Search protocol absorbs hill-climbing, pairwise mutation (SPO), genetic-Pareto (GEPA), Bayesian (MIPROv2), MCTS (AFlow), archive evolution (DGM, AlphaEvolve, ShinkaEvolve), and Q-learning over memory (MemRL).
+A Search proposes variants of an artifact and selects among them, guided by a signal. The Search protocol absorbs hill-climbing, pairwise mutation (SPO), genetic-Pareto (GEPA), Bayesian (MIPROv2), MCTS (AFlow), archive evolution (DGM, AlphaEvolve, ShinkaEvolve), Q-learning over memory (MemRL), and group-relative selection (GRPO-style). All are instances of propose-measure-select; Section 4.2.1 explains why the evolutionary / reinforcement-learning distinction dissolves at this level.
 
 ### 4.1 The Search protocol
 
@@ -279,7 +279,19 @@ class Search:
 
 **Memory-grounded Q-learning (MemRL).** A search whose artifact is a memory entry and whose signal is utility. The rare layer-bound search method; the archive is the agent's episodic memory itself.
 
+**Group-relative selection (GRPO-style).** Sample a group of N candidate trajectories, score each, compute each candidate's advantage relative to the group mean, and select the above-average candidates. This is the selection mechanic of Group Relative Policy Optimization (the DeepSeek-R1 method), applied external to the model: the "policy update" is artifact promotion, not a weight update. The framework reuses GRPO's group-relative advantage as a Search, not as a fine-tuning step, which keeps it inside the strict-external-to-the-model thesis (Section 12). Uses an absolute signal scored per candidate in the group.
+
 **Editable meta-procedure (HyperAgents).** The search method itself is an artifact under search. The framework supports this as a degenerate case where the proposing entity is also a Search artifact, with appropriate guards.
+
+### 4.2.1 Evolutionary search and RL-style search are one pattern
+
+The search families above are conventionally split into camps: evolutionary methods (GEPA, DGM, AlphaEvolve) on one side, reinforcement-learning methods (MemRL, GRPO) on the other. The framework rejects that split. Every method here is the same three-step shape: propose variants, measure them with a Signal, select the winners. What varies is two knobs.
+
+The first knob is **how many candidates per round**. Hill-climbing and SPO propose one. GEPA proposes a population. GRPO proposes a group. DGM proposes one per round but samples its seed from an unbounded archive. The framework expresses this difference as the *round shape*: pairwise rounds (one reference, one candidate, a pairwise judge), group rounds (N candidates, an absolute signal, group-relative advantage), and archive-evolutionary rounds (sample-from-history, mutate, record). All three are variations of propose-measure-select, not different primitives.
+
+The second knob is **the selection rule**. SPO accepts on pairwise win. GEPA keeps the Pareto front. GRPO keeps the above-group-mean candidates. DGM keeps everything and re-samples by quality-diversity. These are selection policies over the same measured candidates, not different algorithms in different paradigms.
+
+This is why the book teaches RL-style methods and evolutionary methods in the same chapters with the same primitives. The distinction the literature draws between "evolution" and "reinforcement" is, at the level of this framework, a difference of selection rule and candidate count. The weight-update step that usually accompanies RL is the one thing the framework does not adopt: GRPO's group-relative advantage is a selection signal over artifacts, and the reinforcement it drives is promotion of a better artifact, not a gradient step on model weights.
 
 ### 4.3 Searches do not know about layers
 
