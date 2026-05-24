@@ -364,9 +364,9 @@ async def run_improvement_round(
     *,
     round_index: int,
     seed_artifact: Artifact,
-    agent_factory,            # async () -> Agent, given a system_prompt artifact
-    build_agent_with_prompt,  # async (prompt: Artifact) -> Agent
-    search,                   # Search instance
+    agent_factory,                # async () -> Agent (closed over seed_artifact)
+    clone_agent_with_artifact,    # (candidate: Artifact) -> Agent — usually agent.with_artifacts(...)
+    search,                       # Search instance
     signal: Signal,           # pairwise Signal (typically SwapAndAgree wrapped)
     archive: Archive,
     eval_source: EvalSource,
@@ -442,7 +442,7 @@ async def run_improvement_round(
     #    cached trajectories from prior rounds. First round caches; later
     #    rounds use the cache, skipping all reference LLM calls.
     reference_runs = await _run_against_questions(
-        agent_factory=lambda: build_agent_with_prompt(current_best),
+        agent_factory=lambda: clone_agent_with_artifact(current_best),
         questions=questions,
         bus=bus,
         improver_id=improver_id,
@@ -471,7 +471,7 @@ async def run_improvement_round(
     #    candidate becomes a future champion, its reference pass next round
     #    is free.
     candidate_runs = await _run_against_questions(
-        agent_factory=lambda: build_agent_with_prompt(candidate_prompt),
+        agent_factory=lambda: clone_agent_with_artifact(candidate_prompt),
         questions=questions,
         bus=bus,
         improver_id=improver_id,

@@ -77,3 +77,16 @@ class ImproverPolicy:
     # against runaway costs from a single question.
     max_iterations_per_question: int = 10
     max_tool_calls_per_question: int = 20
+
+    # ---- OnlineImprover-specific knobs (SPEC §17) ----
+    # Fraction of completed trajectories that get spot-checked. 1.0 means score
+    # every response; 0.05 means roughly one in twenty. Real deployments set
+    # this low to keep judge cost bounded.
+    sample_rate: float = 1.0
+    # Rolling window for the gap signal. Drop below rolling_threshold over the
+    # last rolling_window spot-checks triggers a candidate proposal.
+    rolling_window: int = 4
+    rolling_threshold: float = 0.70
+    # When a candidate is proposed, how many subsequent requests it sees as a
+    # shadow evaluation before the OnlineImprover compares it to the reference.
+    shadow_sample: int = 3

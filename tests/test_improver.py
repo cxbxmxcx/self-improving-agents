@@ -16,7 +16,8 @@ from helix.archive import SQLiteArchive
 from helix.artifact import Artifact, ArtifactKind, genesis
 from helix.eval.dataset import EvalQuestion, EvalSet
 from helix.eval.source import FixedEvalSet
-from helix.improvement import Improver, ImproverPolicy, Schedule
+from helix.hooks import HookRegistry
+from helix.improvement import OfflineImprover, ImproverPolicy, Schedule
 from helix.observability.bus import EventBus
 from helix.search.base import (
     Search,
@@ -73,10 +74,18 @@ class _StubSearch:
 
 
 class _StubAgent:
-    """Has a .run() that produces a trivial trajectory."""
+    """Has a .run() that produces a trivial trajectory, and a .with_artifacts
+    clone method so OfflineImprover can test candidate prompts."""
 
     def __init__(self, prompt: Artifact) -> None:
-        self.prompt = prompt
+        self.system_prompt = prompt
+        self.hooks = HookRegistry()
+        self.max_iterations = 10
+        self.max_tool_calls = 20
+
+    def with_artifacts(self, overrides: dict[str, Artifact]) -> "_StubAgent":
+        new_prompt = overrides.get(self.system_prompt.id, self.system_prompt)
+        return _StubAgent(new_prompt)
 
     async def run(self, task: str):
         from helix.trajectory import Outcome, StepKind, Trajectory
@@ -86,12 +95,6 @@ class _StubAgent:
         return t.final_output, t
 
 
-def _stub_build_agent_with_prompt(prompt: Artifact):
-    async def go():
-        return _StubAgent(prompt)
-    return go()
-
-
 def _eval_set() -> EvalSet:
     return EvalSet(questions=[
         EvalQuestion(id="Q1", band=1, question="What is X?", reference_answer="X is a thing."),
@@ -99,17 +102,18 @@ def _eval_set() -> EvalSet:
     ])
 
 
-def _make_improver(*, schedule: Schedule = Schedule.MANUAL) -> tuple[Improver, SQLiteArchive, Artifact, EventBus]:
+def _make_improver(*, schedule: Schedule = Schedule.MANUAL) -> tuple[OfflineImprover, SQLiteArchive, Artifact, EventBus]:
     bus = EventBus()
     archive = SQLiteArchive(":memory:")
     seed = genesis("prompt.test", ArtifactKind.PROMPT, "seed content")
-    improver = Improver(
+    agent = _StubAgent(seed)
+    improver = OfflineImprover(
+        agent=agent,
         target_artifact_id="prompt.test",
         signal=_StubSignal(),
         search=_StubSearch(),
         archive=archive,
         eval_source=FixedEvalSet(_eval_set()),
-        build_agent_with_prompt=_stub_build_agent_with_prompt,
         policy=ImproverPolicy(schedule=schedule),
         seed_fallback=seed,
         bus=bus,

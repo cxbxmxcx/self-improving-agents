@@ -10,7 +10,8 @@ from helix.archive import SQLiteArchive
 from helix.artifact import Artifact, ArtifactKind, genesis
 from helix.eval.dataset import EvalQuestion, EvalSet
 from helix.eval.source import FixedEvalSet
-from helix.improvement import Improver, ImproverPolicy, Schedule
+from helix.hooks import HookRegistry
+from helix.improvement import OfflineImprover, ImproverPolicy, Schedule
 from helix.observability.bus import EventBus
 from helix.search.base import SearchCostModel, SearchKind, Variant
 from helix.signal import Cost, GapMeasurement, Preference, SignalKind
@@ -54,7 +55,14 @@ class _StubSearch:
 
 class _StubAgent:
     def __init__(self, prompt: Artifact) -> None:
-        self.prompt = prompt
+        self.system_prompt = prompt
+        self.hooks = HookRegistry()
+        self.max_iterations = 10
+        self.max_tool_calls = 20
+
+    def with_artifacts(self, overrides):
+        new_prompt = overrides.get(self.system_prompt.id, self.system_prompt)
+        return _StubAgent(new_prompt)
 
     async def run(self, task: str):
         from helix.trajectory import Outcome, Trajectory
@@ -63,28 +71,22 @@ class _StubAgent:
         return t.final_output, t
 
 
-def _build_agent(prompt: Artifact):
-    async def go():
-        return _StubAgent(prompt)
-    return go()
-
-
 def _eval_set() -> EvalSet:
     return EvalSet(questions=[
         EvalQuestion(id="Q1", band=1, question="X?", reference_answer="X."),
     ])
 
 
-def _make_improver(*, search_kind: SearchKind, label: str) -> Improver:
+def _make_improver(*, search_kind: SearchKind, label: str) -> OfflineImprover:
     archive = SQLiteArchive(":memory:")
     seed = genesis("prompt.shared", ArtifactKind.PROMPT, "seed")
-    return Improver(
+    return OfflineImprover(
+        agent=_StubAgent(seed),
         target_artifact_id="prompt.shared",
         signal=_StubSignal(),
         search=_StubSearch(search_kind, label),
         archive=archive,
         eval_source=FixedEvalSet(_eval_set()),
-        build_agent_with_prompt=_build_agent,
         policy=ImproverPolicy(schedule=Schedule.MANUAL),
         seed_fallback=seed,
         improver_id=f"imp-{label}",
@@ -163,14 +165,14 @@ async def test_two_improvers_can_share_an_archive():
                 score=1.0, preference=Preference.LEFT, confidence=1.0, cost=Cost()
             )
 
-    def make(label: str, kind: SearchKind) -> Improver:
-        return Improver(
+    def make(label: str, kind: SearchKind) -> OfflineImprover:
+        return OfflineImprover(
+            agent=_StubAgent(seed),
             target_artifact_id="prompt.shared",
             signal=_WinningSignal(),
             search=_StubSearch(kind, label),
             archive=archive,
             eval_source=FixedEvalSet(_eval_set()),
-            build_agent_with_prompt=_build_agent,
             policy=ImproverPolicy(schedule=Schedule.MANUAL),
             seed_fallback=seed,
             improver_id=f"imp-{label}",

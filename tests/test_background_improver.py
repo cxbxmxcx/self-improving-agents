@@ -15,7 +15,8 @@ from helix.archive import SQLiteArchive
 from helix.artifact import ArtifactKind, genesis
 from helix.eval.dataset import EvalQuestion, EvalSet
 from helix.eval.source import FixedEvalSet
-from helix.improvement import Improver, ImproverPolicy, Schedule
+from helix.hooks import HookRegistry
+from helix.improvement import OfflineImprover, ImproverPolicy, Schedule
 from helix.improvement.background import (
     BackgroundImproverRunner,
     attach_runner,
@@ -51,27 +52,31 @@ class _StubSearch:
 
 
 class _StubAgent:
-    def __init__(self, prompt): self.prompt = prompt
+    def __init__(self, prompt):
+        self.system_prompt = prompt
+        self.hooks = HookRegistry()
+        self.max_iterations = 10
+        self.max_tool_calls = 20
+
+    def with_artifacts(self, overrides):
+        new_prompt = overrides.get(self.system_prompt.id, self.system_prompt)
+        return _StubAgent(new_prompt)
+
     async def run(self, task, context=None):
         from helix.trajectory import Outcome, Trajectory
         t = Trajectory(task=task); t.complete("ok", Outcome.COMPLETED); return "ok", t
 
 
-def _build(prompt):
-    async def go(): return _StubAgent(prompt)
-    return go()
-
-
-def _make_improver(improver_id: str, schedule: Schedule = Schedule.MANUAL) -> Improver:
+def _make_improver(improver_id: str, schedule: Schedule = Schedule.MANUAL) -> OfflineImprover:
     seed = genesis("p", ArtifactKind.PROMPT, "seed")
     es = EvalSet(questions=[EvalQuestion(id="Q1", band=1, question="?", reference_answer="x")])
-    return Improver(
+    return OfflineImprover(
+        agent=_StubAgent(seed),
         target_artifact_id="p",
         signal=_StubSignal(),
         search=_StubSearch(),
         archive=SQLiteArchive(":memory:", check_same_thread=False),
         eval_source=FixedEvalSet(es),
-        build_agent_with_prompt=_build,
         policy=ImproverPolicy(schedule=schedule),
         seed_fallback=seed,
         improver_id=improver_id,

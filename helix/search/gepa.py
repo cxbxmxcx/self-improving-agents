@@ -18,8 +18,8 @@ candidate is the result of a full evolutionary run.
 Constructor requires:
   - proposer_model: the LLM doing reflective mutation and crossover
   - reflector: a Reflection Signal that critiques trajectories
-  - agent_factory: builds an Agent given a prompt artifact (so GEPA can run
-                   its candidates against the eval set)
+  - agent: the Agent definition under improvement; GEPA clones it via
+           `agent.with_artifacts({target_id: candidate})` for each candidate
   - eval_source: where GEPA gets its questions from
 
 GEPA's signal (the pairwise judge) and archive arrive via propose().
@@ -86,8 +86,9 @@ class GEPA:
     Parameters:
       proposer_model: LLM that produces mutations / crossovers
       reflector: Reflection Signal used to critique trajectories
-      agent_factory: async (prompt) -> Agent — used to build agents for
-                     each candidate's eval pass
+      agent: the Agent definition under improvement. GEPA calls
+             `agent.with_artifacts({target_id: candidate})` to clone for
+             each candidate's eval pass. SPEC §15.2.
       eval_source: EvalSource — supplies the questions GEPA scores against
       population_size: candidates per generation (default 4)
       generations: number of generations to run (default 2)
@@ -101,7 +102,7 @@ class GEPA:
         self,
         proposer_model: str = "claude-sonnet-4-6",
         reflector: Reflection | None = None,
-        agent_factory=None,
+        agent=None,
         eval_source: EvalSource | None = None,
         population_size: int = 4,
         generations: int = 2,
@@ -112,13 +113,13 @@ class GEPA:
         max_concurrent_questions: int = 2,
         bus: EventBus | None = None,
     ) -> None:
-        if agent_factory is None:
-            raise ValueError("GEPA requires an agent_factory to build agents per candidate")
+        if agent is None:
+            raise ValueError("GEPA requires an agent to clone for each candidate via agent.with_artifacts(...)")
         if eval_source is None:
             raise ValueError("GEPA requires an eval_source to know which questions to score against")
         self.proposer_model = proposer_model
         self.reflector = reflector or Reflection(model=proposer_model)
-        self.agent_factory = agent_factory
+        self.agent = agent
         self.eval_source = eval_source
         self.population_size = population_size
         self.generations = generations
@@ -443,7 +444,7 @@ Produce a single offspring combining A's strengths and B's strengths."""
                         band=q.band,
                     )
                 )
-                agent = await _maybe_await(self.agent_factory(prompt))
+                agent = self.agent.with_artifacts({prompt.id: prompt})
                 t0 = time.perf_counter()
                 try:
                     answer, trajectory = await agent.run(q.question)

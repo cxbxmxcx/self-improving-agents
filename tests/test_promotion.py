@@ -18,7 +18,8 @@ import pytest
 
 from helix.archive import SQLiteArchive, PromotionRecord
 from helix.artifact import ArtifactKind, genesis
-from helix.improvement import Improver, ImproverMode, ImproverPolicy
+from helix.hooks import HookRegistry
+from helix.improvement import OfflineImprover, OnlineImprover, ImproverMode, ImproverPolicy
 from helix.improvement.promotion import (
     default_promotion_handler,
     ensure_default_handler_registered,
@@ -63,8 +64,18 @@ class _Stub:
     """Stand-in for Signal / Search / EvalSource in safety-check tests."""
 
 
-async def _build_agent(*_args, **_kwargs):
-    return None
+class _StubAgent:
+    """Minimal Agent stand-in: has system_prompt, hooks, and with_artifacts."""
+
+    def __init__(self, prompt) -> None:
+        self.system_prompt = prompt
+        self.hooks = HookRegistry()
+        self.max_iterations = 10
+        self.max_tool_calls = 20
+
+    def with_artifacts(self, overrides):
+        new_prompt = overrides.get(self.system_prompt.id, self.system_prompt)
+        return _StubAgent(new_prompt)
 
 
 # ---------------------------------------------------------------------------
@@ -273,51 +284,53 @@ async def test_auto_promote_records_improver_id_as_approver():
 
 def test_online_improver_refuses_l3_artifact():
     arc = SQLiteArchive(":memory:")
+    agent = _StubAgent(_genesis_l3())
     with pytest.raises(ValueError, match="L3"):
-        Improver(
+        OnlineImprover(
+            agent=agent,
             target_artifact_id="plan.l3",
             signal=_Stub(), search=_Stub(), archive=arc,
-            eval_source=_Stub(), build_agent_with_prompt=_build_agent,
-            policy=ImproverPolicy(mode=ImproverMode.ONLINE),
-            seed_fallback=_genesis_l3(),
+            policy=ImproverPolicy(),
         )
 
 
 def test_online_improver_refuses_l4_artifact():
     arc = SQLiteArchive(":memory:")
+    agent = _StubAgent(_genesis_l4())
     with pytest.raises(ValueError, match="L4"):
-        Improver(
+        OnlineImprover(
+            agent=agent,
             target_artifact_id="code.l4",
             signal=_Stub(), search=_Stub(), archive=arc,
-            eval_source=_Stub(), build_agent_with_prompt=_build_agent,
-            policy=ImproverPolicy(mode=ImproverMode.ONLINE),
-            seed_fallback=_genesis_l4(),
+            policy=ImproverPolicy(),
         )
 
 
 def test_online_improver_allows_l1_artifact():
     arc = SQLiteArchive(":memory:")
-    imp = Improver(
+    agent = _StubAgent(_genesis_l1())
+    imp = OnlineImprover(
+        agent=agent,
         target_artifact_id="p.l1",
         signal=_Stub(), search=_Stub(), archive=arc,
-        eval_source=_Stub(), build_agent_with_prompt=_build_agent,
-        policy=ImproverPolicy(mode=ImproverMode.ONLINE),
-        seed_fallback=_genesis_l1(),
+        policy=ImproverPolicy(),
     )
-    assert imp.policy.mode == ImproverMode.ONLINE
+    assert imp.target_artifact_id == "p.l1"
 
 
 def test_offline_improver_allows_l4_artifact():
-    """Offline mode imposes no layer restriction — the deploy gate handles it."""
+    """Offline class imposes no layer restriction — the deploy gate handles it."""
     arc = SQLiteArchive(":memory:")
-    imp = Improver(
+    agent = _StubAgent(_genesis_l4())
+    imp = OfflineImprover(
+        agent=agent,
         target_artifact_id="code.l4",
         signal=_Stub(), search=_Stub(), archive=arc,
-        eval_source=_Stub(), build_agent_with_prompt=_build_agent,
-        policy=ImproverPolicy(mode=ImproverMode.OFFLINE),
+        eval_source=_Stub(),
+        policy=ImproverPolicy(),
         seed_fallback=_genesis_l4(),
     )
-    assert imp.policy.mode == ImproverMode.OFFLINE
+    assert imp.target_artifact_id == "code.l4"
 
 
 def test_default_policy_is_offline_with_auto_promote_true():

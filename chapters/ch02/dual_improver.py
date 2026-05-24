@@ -30,7 +30,7 @@ if str(REPO_ROOT) not in sys.path:
 from helix.agent import Agent
 from helix.env import load_env
 from helix.eval import FixedEvalSet, load_eval_set
-from helix.improvement import Improver, ImproverMode, ImproverPolicy, Schedule
+from helix.improvement import OfflineImprover, ImproverPolicy, Schedule
 from helix.observability import attach_console_renderer
 from helix.search.gepa import GEPA
 from helix.search.spo import SPO
@@ -62,32 +62,30 @@ GEPA_GENERATIONS = 2
 EVAL_QUESTIONS_PATH = Path(__file__).parent / "eval_questions_v2.json"
 
 
-async def build_agent_with_prompt(prompt, *, max_iterations: int = 10, max_tool_calls: int = 20) -> Agent:
-    return Agent(
-        system_prompt=prompt,
-        tools=[build_retrieve_tool()],
-        model=AGENT_MODEL,
-        max_iterations=max_iterations,
-        max_tool_calls=max_tool_calls,
-    )
-
-
 async def main_async() -> None:
     attach_console_renderer(verbose=True)
 
     archive = open_archive()
     seed = await get_or_create_seed(archive)
 
+    # Define the Agent once. Both improvers clone it via `agent.with_artifacts`
+    # to test their candidates. SPEC §15.2.
+    agent = Agent(
+        system_prompt=seed,
+        tools=[build_retrieve_tool()],
+        model=AGENT_MODEL,
+    )
+
     judge = SwapAndAgree(PairwiseJudge(model=JUDGE_MODEL))
     eval_source = FixedEvalSet(load_eval_set(EVAL_QUESTIONS_PATH))
     policy = ImproverPolicy(
         schedule=Schedule.MANUAL,
-        mode=ImproverMode.OFFLINE,
         questions_per_round=QUESTIONS_PER_ROUND,
         promote_threshold_win_rate=0.5,
     )
 
-    spo_improver = Improver(
+    spo_improver = OfflineImprover(
+        agent=agent,
         target_artifact_id=PROMPT_ARTIFACT_ID,
         signal=judge,
         search=SPO(
@@ -97,32 +95,30 @@ async def main_async() -> None:
         ),
         archive=archive,
         eval_source=eval_source,
-        build_agent_with_prompt=build_agent_with_prompt,
         policy=policy,
         seed_fallback=seed,
         improver_id="imp-spo",
     )
 
-    gepa_improver = Improver(
+    gepa_improver = OfflineImprover(
+        agent=agent,
         target_artifact_id=PROMPT_ARTIFACT_ID,
         signal=judge,
         search=GEPA(
             proposer_model=PROPOSER_MODEL,
             reflector=Reflection(model=PROPOSER_MODEL),
-            agent_factory=build_agent_with_prompt,
+            agent=agent,
             eval_source=eval_source,
             population_size=GEPA_POPULATION,
             generations=GEPA_GENERATIONS,
         ),
         archive=archive,
         eval_source=eval_source,
-        build_agent_with_prompt=build_agent_with_prompt,
         policy=policy,
         seed_fallback=seed,
         improver_id="imp-gepa",
     )
 
-    agent = await build_agent_with_prompt(seed)
     agent.attach_improver(spo_improver)
     agent.attach_improver(gepa_improver)
     print(f"\nAttached {len(agent.improvers)} improvers to agent (SPO + GEPA)")
