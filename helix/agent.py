@@ -138,17 +138,18 @@ class Agent:
 
         Dispatch by artifact:
           - `system_prompt`: swapped when an override's id matches.
+          - tool descriptions: a TextDescriptionTool whose description artifact
+            id matches an override gets a fresh description (Ch 3). Plain Tools
+            and ToolFromArtifact instances carry over unchanged.
           - `guardrails`: each guardrail whose artifact id matches an override
             is rebuilt with the new artifact. Other guardrails carry over.
-          - tools and tool descriptions: future chapters will route via
-            ToolFromArtifact (§16.2.2). For now plain Tool instances carry
-            over unchanged.
 
         The clone gets a fresh HookRegistry. Hooks registered on the original
         do not carry over (each Agent owns its own hook state). Guardrails are
         re-registered on the clone via the normal __init__ path.
         """
         from helix.guardrails import Guardrail  # local import: avoid circular
+        from helix.tools import TextDescriptionTool
 
         new_system_prompt = self.system_prompt
         for art in overrides.values():
@@ -156,6 +157,26 @@ class Agent:
                 if not isinstance(art.content, str):
                     raise TypeError("system_prompt artifact must have string content")
                 new_system_prompt = art
+
+        # Rebuild tools: a TextDescriptionTool whose description artifact id
+        # appears in overrides gets a fresh copy with the candidate
+        # description. Other tools (plain Tool, ToolFromArtifact) carry over
+        # by reference.
+        new_tools: list = []
+        for t in self.tools.values():
+            desc_art = getattr(t, "description_artifact", None)
+            if (
+                isinstance(t, TextDescriptionTool)
+                and desc_art is not None
+                and desc_art.id in overrides
+            ):
+                new_tools.append(TextDescriptionTool(
+                    name=t.name,
+                    fn=t.fn,
+                    description_artifact=overrides[desc_art.id],
+                ))
+            else:
+                new_tools.append(t)
 
         # Rebuild guardrails: any whose artifact id appears in overrides gets
         # a new Guardrail (same phase, same fail_open) backed by the candidate
@@ -173,7 +194,7 @@ class Agent:
 
         return Agent(
             system_prompt=new_system_prompt,
-            tools=list(self.tools.values()),
+            tools=new_tools,
             model=self.model,
             max_iterations=self.max_iterations,
             max_tool_calls=self.max_tool_calls,
