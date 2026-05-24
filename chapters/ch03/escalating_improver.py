@@ -1,17 +1,25 @@
-"""Single Improver with a StrategyChain that escalates from SPO to GEPA.
+"""Chapter 3 §3.4 — escalating strategy chain: SPO -> GEPA -> DGM.
 
-Demonstrates the platform's StrategyChain Search: an ordered list of Search
-methods with a failure budget per method. Cheap methods (SPO) try first;
-expensive methods (GEPA) escalate only when the cheap methods stop producing
-wins. Promotion resets the active strategy's failure count; failures past
-the budget rotate to the next strategy.
+Demonstrates the StrategyChain Search: an ordered list of Search methods
+with a failure budget per method. Cheap methods (SPO) try first; expensive
+methods escalate only when the cheaper ones stop producing wins. Promotion
+resets the active strategy's failure count; failures past the budget rotate
+to the next strategy.
 
-Pedagogical point: this is the cost-aware version of multi-method search.
-The user sets the ordering and budget; the framework arbitrates. Compare
-with dual_improver.py, which runs all methods always.
+The escalation order is a cost ladder:
+  - SPO: one mutation per round, cheapest.
+  - GEPA: population evolution, ~Nx the candidates per round.
+  - DGM: archive-evolutionary, samples from full history.
+
+The artifact under improvement is the retrieve tool's description (the same
+target as dual_improver.py). Compare the two scripts: dual_improver runs all
+three methods every round in round-robin; this one runs ONE method until it
+plateaus, then escalates.
 
 Re-run the script to drive more rounds against whatever strategy is
 currently active in the chain.
+
+Cost: ~$1 with the default knobs.
 """
 
 from __future__ import annotations
@@ -25,52 +33,81 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from helix.agent import Agent
+from helix.archive import SQLiteArchive
+from helix.artifact import Artifact, ArtifactKind, genesis
 from helix.env import load_env
 from helix.eval import FixedEvalSet, load_eval_set
 from helix.improvement import OfflineImprover, ImproverPolicy, Schedule
 from helix.observability import attach_console_renderer
 from helix.search import StrategyChain
+from helix.search.dgm import BlindLLMMutator, DGMSearch
 from helix.search.gepa import GEPA
 from helix.search.spo import SPO
 from helix.signals.pairwise_judge import PairwiseJudge, SwapAndAgree
 from helix.signals.reflection import Reflection
 
-from chapters.ch02.helixagent_v1 import (
-    ARCHIVE_PATH,
-    PROMPT_ARTIFACT_ID,
-    get_or_create_seed,
-    open_archive,
+from chapter_appendices.getting_started.helixagent_v0 import (
+    DEFAULT_MODEL,
+    RETRIEVE_DESCRIPTION_ID,
+    SYSTEM_PROMPT_V0,
+    build_retrieve_description_artifact,
+    build_retrieve_tool_with_artifact_description,
 )
-from chapter_appendices.getting_started.helixagent_v0 import build_retrieve_tool
 
 load_env()
 
 # Configuration -----------------------------------------------------------
-AGENT_MODEL = "claude-haiku-4-5"
+AGENT_MODEL = DEFAULT_MODEL
 PROPOSER_MODEL = "claude-sonnet-4-6"
 JUDGE_MODEL = "claude-sonnet-4-6"
 QUESTIONS_PER_ROUND: int | None = None
 ROUNDS_TO_DRIVE = 5
-MAX_FAILURES_PER_STRATEGY = 2  # rotate after 2 consecutive failures (gives each method room to recover)
+MAX_FAILURES_PER_STRATEGY = 2  # rotate after 2 consecutive failures
 
-# GEPA configuration: population=4, generations=2 (8 candidates per GEPA round).
 GEPA_POPULATION = 4
 GEPA_GENERATIONS = 2
 
+ARCHIVE_PATH = Path(__file__).parent / "runs" / "ch03_archive.sqlite"
 EVAL_QUESTIONS_PATH = Path(__file__).parent / "eval_questions_v2.json"
+PROMPT_ARTIFACT_ID = "prompt.helixagent.system"
+
+
+def open_archive(path: Path = ARCHIVE_PATH) -> SQLiteArchive:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    return SQLiteArchive(path)
+
+
+async def get_or_create_description(archive: SQLiteArchive) -> Artifact:
+    live = await archive.live_champion(RETRIEVE_DESCRIPTION_ID)
+    if live is not None:
+        return live
+    existing = await archive.by_id(RETRIEVE_DESCRIPTION_ID, version=1)
+    if existing is not None:
+        return existing.artifact
+    seed = build_retrieve_description_artifact()
+    archive._store_artifact(seed)  # type: ignore[attr-defined]
+    archive._conn.commit()  # type: ignore[attr-defined]
+    return seed
+
+
+def _system_prompt_artifact() -> Artifact:
+    return genesis(
+        id=PROMPT_ARTIFACT_ID,
+        kind=ArtifactKind.PROMPT,
+        content=SYSTEM_PROMPT_V0,
+        created_by="human",
+    )
 
 
 async def main_async() -> None:
     attach_console_renderer(verbose=True)
 
     archive = open_archive()
-    seed = await get_or_create_seed(archive)
+    description = await get_or_create_description(archive)
 
-    # Define the Agent once. The OfflineImprover clones it via
-    # `agent.with_artifacts({PROMPT_ARTIFACT_ID: candidate})` per round.
     agent = Agent(
-        system_prompt=seed,
-        tools=[build_retrieve_tool()],
+        system_prompt=_system_prompt_artifact(),
+        tools=[build_retrieve_tool_with_artifact_description(description)],
         model=AGENT_MODEL,
     )
 
@@ -82,8 +119,9 @@ async def main_async() -> None:
         promote_threshold_win_rate=0.5,
     )
 
-    # The StrategyChain: SPO first (cheap), GEPA second (expensive). One
-    # failure per strategy is the budget; rotate to the next on overflow.
+    # The cost ladder: SPO (cheapest) -> GEPA -> DGM (most thorough). Each
+    # method gets MAX_FAILURES_PER_STRATEGY consecutive failures before the
+    # chain rotates to the next.
     chain = StrategyChain(
         strategies=[
             SPO(
@@ -99,19 +137,23 @@ async def main_async() -> None:
                 population_size=GEPA_POPULATION,
                 generations=GEPA_GENERATIONS,
             ),
+            DGMSearch(
+                mutator=BlindLLMMutator(model=PROPOSER_MODEL),
+                rounds=1,
+            ),
         ],
         max_failures_per_strategy=MAX_FAILURES_PER_STRATEGY,
     )
 
     improver = OfflineImprover(
         agent=agent,
-        target_artifact_id=PROMPT_ARTIFACT_ID,
+        target_artifact_id=RETRIEVE_DESCRIPTION_ID,
         signal=judge,
         search=chain,
         archive=archive,
         eval_source=eval_source,
         policy=policy,
-        seed_fallback=seed,
+        seed_fallback=description,
         improver_id="imp-chain",
     )
 
