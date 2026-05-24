@@ -195,7 +195,7 @@ def summarize(jsonl_path: Path) -> None:
 
 def main() -> None:
     """Run the v0 baseline against all 20 eval questions, no judge."""
-    from chapters.ch02.helixagent_v0 import build_agent
+    from chapter_appendices.getting_started.helixagent_v0 import build_agent
 
     asyncio.run(
         run_eval(

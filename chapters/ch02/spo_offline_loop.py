@@ -1,11 +1,11 @@
-"""Chapter 2 demo: improving HelixAgent's system prompt offline with SPO.
+"""Chapter 2 §2.4 — the offline improvement loop end to end.
 
-The OFFLINE pattern. This script runs SPO against a fixed eval set with
-labeled reference answers, using a pairwise LLM-as-judge as the Signal.
-Candidates are written to the archive with measurements, but the running
-agent does not switch to a new prompt automatically: a human (or the
-dashboard's promote button) decides when to call `archive.promote()`.
-For the auto-promoting online counterpart see `spo_online_loop.py`.
+This script runs SPO against a fixed eval set with labeled reference
+answers, using a pairwise LLM-as-judge as the Signal. Candidates are
+written to the archive with measurements, but the running agent does
+not switch to a new prompt automatically: a human (or the dashboard's
+promote button) decides when to call `archive.promote()`. Auto-promotion
+is a Ch 8 topic, paired with HITL and live feedback.
 
 Recipe:
 
@@ -45,7 +45,7 @@ from chapters.ch02.helixagent_v1 import (
     get_or_create_seed,
     open_archive,
 )
-from chapters.ch02.helixagent_v0 import build_retrieve_tool
+from chapter_appendices.getting_started.helixagent_v0 import build_retrieve_tool
 
 load_env()
 
