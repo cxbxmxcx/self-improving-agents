@@ -33,7 +33,9 @@ from helix.improvement.background import (
 
 if TYPE_CHECKING:
     from helix.agent import Agent
-    from helix.improvement.improver import Improver
+    from helix.improvement.improver import OfflineImprover
+    from helix.improvement.online_improver import OnlineImprover
+    ImproverLike = OfflineImprover | OnlineImprover
 
 
 def render_improver_panel(agent: "Agent", agent_name: str) -> None:
@@ -104,9 +106,9 @@ def render_improver_panel(agent: "Agent", agent_name: str) -> None:
 # Card per attached improver
 # ---------------------------------------------------------------------------
 
-def _render_improver_card(agent: "Agent", improver: "Improver", *, in_spec: bool) -> None:
+def _render_improver_card(agent: "Agent", improver: "ImproverLike", *, in_spec: bool) -> None:
     """One stacked card per attached improver."""
-    from helix.improvement.policy import ImproverMode
+    from helix.improvement.online_improver import OnlineImprover
 
     runner = get_runner(improver.improver_id)
     status = runner.status() if runner else None
@@ -120,8 +122,10 @@ def _render_improver_card(agent: "Agent", improver: "Improver", *, in_spec: bool
     else:
         badge = "🔴 Stopped"
 
-    # Mode badge: shield for offline (deploy gate), bolt for online (auto-apply).
-    is_online = improver.policy.mode == ImproverMode.ONLINE
+    # Mode by class identity, per SPEC §15 (OfflineImprover) and §17
+    # (OnlineImprover). Shield for offline (deploy gate), bolt for online
+    # (auto-apply).
+    is_online = isinstance(improver, OnlineImprover)
     mode_badge = "⚡ online" if is_online else "🛡 offline"
 
     # All attached improvers should come from spec now; tag remains for
@@ -135,10 +139,12 @@ def _render_improver_card(agent: "Agent", improver: "Improver", *, in_spec: bool
             unsafe_allow_html=True,
         )
 
+        eval_line = ""
+        if hasattr(improver, "eval_source"):
+            eval_line = f"\n\neval: `{describe_eval_source(improver.eval_source)}`"
         st.caption(
             f"signal: `{describe_signal(improver.signal)}`\n\n"
-            f"search: `{describe_search(improver.search)}`\n\n"
-            f"eval: `{describe_eval_source(improver.eval_source)}`"
+            f"search: `{describe_search(improver.search)}`{eval_line}"
         )
 
         if status is not None:
@@ -164,8 +170,9 @@ def _render_improver_card(agent: "Agent", improver: "Improver", *, in_spec: bool
             st.code(describe_signal(improver.signal), language="text")
             st.markdown("**Search:**")
             st.code(describe_search(improver.search), language="text")
-            st.markdown("**Eval source:**")
-            st.code(describe_eval_source(improver.eval_source), language="text")
+            if hasattr(improver, "eval_source"):
+                st.markdown("**Eval source:**")
+                st.code(describe_eval_source(improver.eval_source), language="text")
             st.markdown("**Archive:**")
             st.code(describe_archive(improver.archive), language="text")
             st.markdown("**Policy:**")
@@ -216,7 +223,7 @@ def _render_improver_card(agent: "Agent", improver: "Improver", *, in_spec: bool
 # Offline promote gate: one button per pending winning candidate
 # ---------------------------------------------------------------------------
 
-def _render_offline_promote_gate(improver: "Improver", status) -> None:
+def _render_offline_promote_gate(improver: "ImproverLike", status) -> None:
     """If an offline improver has a winning candidate that's not live, show
     a single 'Promote v{N} → live' button.
 
@@ -265,7 +272,7 @@ def _render_offline_promote_gate(improver: "Improver", status) -> None:
         st.rerun()
 
 
-def _promote_candidate(improver: "Improver", version: int, score_text: str) -> None:
+def _promote_candidate(improver: "ImproverLike", version: int, score_text: str) -> None:
     """Call archive.promote with the current user as approver."""
     import asyncio
 
@@ -293,7 +300,7 @@ def _promote_candidate(improver: "Improver", version: int, score_text: str) -> N
 # Preview of an unattached spec improver
 # ---------------------------------------------------------------------------
 
-def _render_spec_preview(improver: "Improver") -> None:
+def _render_spec_preview(improver: "ImproverLike") -> None:
     """Compact preview of an improver that's declared by the spec but not attached."""
     with st.sidebar.container():
         st.markdown(
@@ -301,10 +308,12 @@ def _render_spec_preview(improver: "Improver") -> None:
             f"<span style='font-size:0.85em;'>target: `{improver.target_artifact_id}`</span>",
             unsafe_allow_html=True,
         )
+        eval_line = ""
+        if hasattr(improver, "eval_source"):
+            eval_line = f"\n\neval: `{describe_eval_source(improver.eval_source)}`"
         st.caption(
             f"signal: `{describe_signal(improver.signal)}`\n\n"
-            f"search: `{describe_search(improver.search)}`\n\n"
-            f"eval: `{describe_eval_source(improver.eval_source)}`"
+            f"search: `{describe_search(improver.search)}`{eval_line}"
         )
         st.markdown("---")
 

@@ -286,7 +286,7 @@ class OfflineImprover:
                 questions_per_round=self.policy.questions_per_round,
                 max_concurrent_questions=self.policy.max_concurrent_questions,
                 bus=self.bus,
-                mode=self.policy.mode.value,
+                mode="offline",  # OfflineImprover is offline by class identity
                 auto_promote=self.policy.auto_promote,
             )
             self._rounds_completed += 1
