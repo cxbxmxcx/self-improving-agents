@@ -1,9 +1,15 @@
-"""Chapter 2 demo: online prompt improvement with auto-promote.
+"""Pending Ch 8 demo: online prompt improvement with auto-promote.
 
-The ONLINE counterpart to `spo_offline_loop.py`. Where offline runs SPO
-against a labeled eval set and waits for a human to promote the winner,
-this script wires an `OnlineImprover` to the agent and simulates live
-traffic by replaying eval questions one at a time. The improver:
+This script demonstrates the OnlineImprover pattern and is held here
+until Chapter 8 (HITL + live feedback) is drafted, where the auto-
+promotion semantics pair naturally with the chapter's HITL gates and
+implicit-feedback signals. Ch 2 (the foundational improvement chapter)
+covers the offline pattern only.
+
+Where offline runs SPO against a labeled eval set and waits for a
+human to promote the winner, this script wires an `OnlineImprover` to
+the agent and simulates live traffic by replaying eval questions one
+at a time. The improver:
 
   - Subscribes to the agent's SESSION_END hook.
   - Spot-checks each completed trajectory with `LiveTrajectoryJudge`
@@ -59,7 +65,7 @@ from chapters.ch02.helixagent_v1 import (
     get_or_create_seed,
     open_archive,
 )
-from chapters.ch02.helixagent_v0 import build_retrieve_tool
+from chapter_appendices.getting_started.helixagent_v0 import build_retrieve_tool
 
 load_env()
 

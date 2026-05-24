@@ -32,7 +32,7 @@ from helix.search.base import Variant
 from helix.signal import GapMeasurement
 from helix.trajectory import Trajectory
 
-from chapters.ch02.helixagent_v0 import (
+from chapter_appendices.getting_started.helixagent_v0 import (
     SYSTEM_PROMPT_V0,
     DEFAULT_MODEL,
     build_retrieve_tool,
@@ -117,8 +117,8 @@ def main() -> None:
     print(f"Steps: {len(trajectory.steps)}  Outcome: {trajectory.outcome.value}")
     print(f"Artifacts used: {trajectory.artifacts_used}")
     print()
-    print("Tip: run `python chapters/ch02/spo_offline_loop.py` to improve the system prompt offline,")
-    print("     or `python chapters/ch02/spo_online_loop.py` for the online auto-promoting variant.")
+    print("Tip: run `python chapters/ch02/spo_offline_loop.py` to improve the system prompt offline.")
+    print("     Ch 3 adds evolutionary search; Ch 8 covers online auto-promotion.")
 
 
 if __name__ == "__main__":

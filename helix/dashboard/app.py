@@ -67,10 +67,10 @@ def _placeholder_screen() -> None:
         python chapters/ch02/spo_offline_loop.py
         ```
 
-        ...or, for a richer run with two Search methods:
+        ...or, for a richer Ch 3 run with two Search methods:
 
         ```
-        python chapters/ch02/escalating_improver.py
+        python chapters/ch03/escalating_improver.py
         ```
         """
     )

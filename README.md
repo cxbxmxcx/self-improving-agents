@@ -56,15 +56,18 @@ into your local Hugging Face cache. Subsequent runs are offline.
 The result is a LanceDB index at `data/helix_corpus.lance/`. Chapter scripts
 read from there.
 
-## Run HelixAgent v0
+## Run the baseline agent
 
 ```
-python chapters/ch02/helixagent_v0.py
-python chapters/ch02/helixagent_v0.py --question "What is GEPA?"
+python chapter_appendices/getting_started/helixagent_v0.py
+python chapter_appendices/getting_started/helixagent_v0.py --question "What is GEPA?"
 ```
 
-See [`chapters/ch02/README.md`](chapters/ch02/README.md) for what v0 is and
-what v1 adds.
+The baseline agent (RAG + ReAct, fixed system prompt, no improvement) lives
+in [`chapter_appendices/getting_started/`](chapter_appendices/getting_started/)
+as a refresher for readers who want to see the pre-improvement agent. Chapter 2
+starts from "you have an agent and you want it to get better"; see
+[`chapters/ch02/README.md`](chapters/ch02/README.md).
 
 ## Run the tests
 

@@ -41,7 +41,7 @@ from chapters.ch02.helixagent_v1 import (
     get_or_create_seed,
     open_archive,
 )
-from chapters.ch02.helixagent_v0 import build_retrieve_tool
+from chapter_appendices.getting_started.helixagent_v0 import build_retrieve_tool
 
 load_env()
 
