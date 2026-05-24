@@ -394,10 +394,18 @@ class Agent:
                             except Exception as exc:  # surface to the model, don't crash
                                 result = {"error": str(exc)}
 
-                    trajectory.append(
+                    tool_call_step = trajectory.append(
                         StepKind.TOOL_CALL,
                         {"name": tc.function.name, "arguments": args},
                     )
+                    # Record artifact lineage for artifact-backed tools
+                    # (TextDescriptionTool, ToolFromArtifact). Plain Tools have
+                    # no artifact_refs and contribute nothing here.
+                    tool_obj = self.tools.get(tc.function.name)
+                    refs = getattr(tool_obj, "artifact_refs", None)
+                    if callable(refs):
+                        for ref in refs():
+                            trajectory.record_artifact(tool_call_step.index, ref)
                     trajectory.append(StepKind.TOOL_RESULT, {"result": result})
                     memory.append(
                         {
