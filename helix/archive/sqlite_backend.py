@@ -66,9 +66,14 @@ CREATE TABLE IF NOT EXISTS measurements (
     cost_wall_sec REAL NOT NULL DEFAULT 0,
     measurement_metadata TEXT NOT NULL,
     recorded_at TEXT NOT NULL,
+    signal_id TEXT,
+    signal_version INTEGER,
+    raw_value REAL,
+    triggered INTEGER NOT NULL DEFAULT 0,
     FOREIGN KEY (artifact_id, version) REFERENCES artifacts(artifact_id, version)
 );
 CREATE INDEX IF NOT EXISTS idx_meas_artifact ON measurements(artifact_id, version);
+CREATE INDEX IF NOT EXISTS idx_meas_signal ON measurements(signal_id, signal_version);
 
 CREATE TABLE IF NOT EXISTS variants (
     artifact_id TEXT NOT NULL,
@@ -121,8 +126,33 @@ class SQLiteArchive:
         self._conn = sqlite3.connect(self.path, check_same_thread=check_same_thread)
         self._conn.row_factory = sqlite3.Row
         self._conn.executescript(_SCHEMA)
+        self._migrate_measurements_signal_columns()
         self._conn.commit()
         self._bus = bus or get_bus()
+
+    def _migrate_measurements_signal_columns(self) -> None:
+        """Idempotent migration: add signal_id, signal_version, raw_value,
+        triggered to measurements if an older archive predates them. SPEC §5.2.1."""
+        existing = {
+            row["name"]
+            for row in self._conn.execute("PRAGMA table_info(measurements)").fetchall()
+        }
+        to_add: list[tuple[str, str]] = []
+        if "signal_id" not in existing:
+            to_add.append(("signal_id", "TEXT"))
+        if "signal_version" not in existing:
+            to_add.append(("signal_version", "INTEGER"))
+        if "raw_value" not in existing:
+            to_add.append(("raw_value", "REAL"))
+        if "triggered" not in existing:
+            to_add.append(("triggered", "INTEGER NOT NULL DEFAULT 0"))
+        for col, decl in to_add:
+            self._conn.execute(f"ALTER TABLE measurements ADD COLUMN {col} {decl}")
+        if to_add:
+            # Index may not exist on old schemas; create if missing.
+            self._conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_meas_signal ON measurements(signal_id, signal_version)"
+            )
 
     # ---------------- internals ----------------
 
@@ -202,6 +232,14 @@ class SQLiteArchive:
             feedback=row["feedback"],
             confidence=float(row["confidence"]),
             rubric_id=rubric_id,
+            signal_id=self._row_get(row, "signal_id"),
+            signal_version=(
+                int(row["signal_version"]) if self._row_get(row, "signal_version") is not None else None
+            ),
+            triggered=bool(self._row_get(row, "triggered") or 0),
+            raw_value=(
+                float(row["raw_value"]) if self._row_get(row, "raw_value") is not None else None
+            ),
             cost=Cost(
                 tokens=int(row["cost_tokens"]),
                 dollars=float(row["cost_dollars"]),
@@ -209,6 +247,16 @@ class SQLiteArchive:
             ),
             metadata=json.loads(row["measurement_metadata"]),
         )
+
+    @staticmethod
+    def _row_get(row: sqlite3.Row, key: str) -> Any:
+        """Safe sqlite3.Row access: returns None if the column doesn't exist
+        (older archive files that haven't yet been migrated by us, e.g. via a
+        read-only handle)."""
+        try:
+            return row[key]
+        except (IndexError, KeyError):
+            return None
 
     # ---------------- protocol methods ----------------
 
@@ -224,8 +272,9 @@ class SQLiteArchive:
             INSERT INTO measurements
             (artifact_id, version, score, preference, feedback, confidence,
              rubric_id, rubric_version, cost_tokens, cost_dollars, cost_wall_sec,
-             measurement_metadata, recorded_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             measurement_metadata, recorded_at,
+             signal_id, signal_version, raw_value, triggered)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 variant.artifact.id,
@@ -241,6 +290,10 @@ class SQLiteArchive:
                 measurement.cost.wall_clock_sec,
                 json.dumps(measurement.metadata),
                 datetime.now(timezone.utc).isoformat(),
+                measurement.signal_id,
+                measurement.signal_version,
+                measurement.raw_value,
+                1 if measurement.triggered else 0,
             ),
         )
         self._conn.execute(
@@ -285,15 +338,27 @@ class SQLiteArchive:
             )
         )
 
-    async def best(self, k: int = 1, by: str = "score") -> list[Variant]:
+    async def best(
+        self,
+        k: int = 1,
+        by: str = "score",
+        signal_id: str | None = None,
+    ) -> list[Variant]:
         """Return the top-k variants by latest measurement score.
 
         Ties are broken by latest measurement timestamp (newer wins).
+        When `signal_id` is given, only measurements taken under that signal
+        configuration are considered. SPEC §5.2.1.
         """
         if by != "score":
             raise NotImplementedError(f"Sorting by '{by}' not yet supported")
+        # Filter the inner aggregation by signal_id when provided. The
+        # GROUP BY still collapses by (artifact_id, version) so each variant
+        # contributes its latest matching measurement.
+        signal_filter = "WHERE signal_id = ?" if signal_id is not None else ""
+        params: tuple[Any, ...] = ((signal_id,) if signal_id is not None else ()) + (k,)
         rows = self._conn.execute(
-            """
+            f"""
             SELECT a.*, m.score AS latest_score, m.preference AS latest_pref,
                    v.search_method, v.variant_metadata
             FROM artifacts a
@@ -301,6 +366,7 @@ class SQLiteArchive:
                 SELECT artifact_id, version, score, preference,
                        MAX(rowid) AS latest_row
                 FROM measurements
+                {signal_filter}
                 GROUP BY artifact_id, version
             ) m ON a.artifact_id = m.artifact_id AND a.version = m.version
             LEFT JOIN variants v ON a.artifact_id = v.artifact_id AND a.version = v.version
@@ -308,10 +374,51 @@ class SQLiteArchive:
             ORDER BY m.score DESC, m.latest_row DESC
             LIMIT ?
             """,
-            (k,),
+            params,
         ).fetchall()
 
         return [self._row_to_variant(row) for row in rows]
+
+    async def measurements_for_signal(
+        self,
+        signal_id: str,
+        signal_version: int | None = None,
+    ) -> list[tuple[Variant, GapMeasurement]]:
+        """All (variant, measurement) pairs taken under the given signal.
+
+        Used by tooling that needs to recompare candidates under a specific
+        signal configuration (calibration drift, "rescore under signal X"
+        views, re-measurement passes). SPEC §5.2.1.
+        """
+        if signal_version is None:
+            where = "WHERE m.signal_id = ?"
+            params: tuple[Any, ...] = (signal_id,)
+        else:
+            where = "WHERE m.signal_id = ? AND m.signal_version = ?"
+            params = (signal_id, signal_version)
+        rows = self._conn.execute(
+            f"""
+            SELECT a.*, v.search_method, v.variant_metadata,
+                   m.rowid AS m_rowid
+            FROM measurements m
+            INNER JOIN artifacts a
+                ON a.artifact_id = m.artifact_id AND a.version = m.version
+            LEFT JOIN variants v
+                ON v.artifact_id = m.artifact_id AND v.version = m.version
+            {where}
+            ORDER BY m.rowid ASC
+            """,
+            params,
+        ).fetchall()
+        results: list[tuple[Variant, GapMeasurement]] = []
+        for row in rows:
+            variant = self._row_to_variant(row)
+            measurement = self._latest_measurement(
+                variant.artifact.id, variant.artifact.version
+            )
+            if measurement is not None:
+                results.append((variant, measurement))
+        return results
 
     def _row_to_variant(self, row: sqlite3.Row) -> Variant:
         art = self._row_to_artifact(row)

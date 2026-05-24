@@ -62,7 +62,18 @@ class Archive(Protocol):
 
     async def record(self, variant: Variant, measurement: GapMeasurement) -> None: ...
 
-    async def best(self, k: int = 1, by: str = "score") -> list[Variant]: ...
+    async def best(
+        self,
+        k: int = 1,
+        by: str = "score",
+        signal_id: str | None = None,
+    ) -> list[Variant]: ...
+
+    async def measurements_for_signal(
+        self,
+        signal_id: str,
+        signal_version: int | None = None,
+    ) -> list[tuple[Variant, GapMeasurement]]: ...
 
     async def pareto_front(self, objectives: list[str]) -> list[Variant]: ...
 

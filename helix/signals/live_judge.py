@@ -38,6 +38,7 @@ from helix.signal import (
     GapMeasurement,
     Preference,
     SignalKind,
+    derive_signal_id,
 )
 from helix.trajectory import StepKind, Trajectory
 
@@ -99,10 +100,12 @@ class LiveTrajectoryJudge:
         model: str = "claude-sonnet-4-6",
         rubric: str = DEFAULT_LIVE_RUBRIC,
         rubric_id: tuple[str, int] | None = None,
+        version: int = 1,
     ) -> None:
         self.model = model
         self.rubric = rubric
         self._rubric_id = rubric_id
+        self._version = version
 
     @property
     def kind(self) -> SignalKind:
@@ -112,6 +115,17 @@ class LiveTrajectoryJudge:
     def cost_estimate(self) -> Cost:
         # Rubric + question + trajectory excerpt: ~2-3k tokens typical.
         return Cost(tokens=2500, dollars=0.012, wall_clock_sec=3.0)
+
+    @property
+    def signal_id(self) -> str:
+        return derive_signal_id(
+            "LiveTrajectoryJudge",
+            {"model": self.model, "rubric": self.rubric, "rubric_id": self._rubric_id},
+        )
+
+    @property
+    def signal_version(self) -> int:
+        return self._version
 
     async def measure(
         self,
@@ -167,6 +181,8 @@ Rate this response per the rubric. Reply as JSON."""
             feedback=feedback,
             confidence=verdict.confidence,
             rubric_id=self._rubric_id,
+            signal_id=self.signal_id,
+            signal_version=self.signal_version,
             cost=cost,
             metadata={
                 "judge_kind": "live_trajectory",

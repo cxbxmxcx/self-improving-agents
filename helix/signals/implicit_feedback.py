@@ -33,6 +33,7 @@ from helix.signal import (
     GapMeasurement,
     Preference,
     SignalKind,
+    derive_signal_id,
 )
 from helix.trajectory import Trajectory
 
@@ -73,12 +74,14 @@ class ImplicitFeedbackSignal:
         store: FeedbackStore | None = None,
         kind_weights: dict[str, float] | None = None,
         min_records_for_confidence: int = 3,
+        version: int = 1,
     ) -> None:
         self.store = store or get_feedback_store()
         self.kind_weights = kind_weights or dict(DEFAULT_KIND_WEIGHTS)
         # Below this count, confidence is scaled down linearly so a single
         # thumbs-up doesn't get treated as a strong signal.
         self.min_records_for_confidence = min_records_for_confidence
+        self._version = version
 
     @property
     def kind(self) -> SignalKind:
@@ -90,6 +93,20 @@ class ImplicitFeedbackSignal:
     def cost_estimate(self) -> Cost:
         # Pure SQL read; negligible cost.
         return Cost(tokens=0, dollars=0.0, wall_clock_sec=0.05)
+
+    @property
+    def signal_id(self) -> str:
+        return derive_signal_id(
+            "ImplicitFeedbackSignal",
+            {
+                "kind_weights": self.kind_weights,
+                "min_records_for_confidence": self.min_records_for_confidence,
+            },
+        )
+
+    @property
+    def signal_version(self) -> int:
+        return self._version
 
     async def measure(
         self,
@@ -137,6 +154,8 @@ class ImplicitFeedbackSignal:
             preference=Preference.NONE,
             feedback=feedback_str,
             confidence=confidence,
+            signal_id=self.signal_id,
+            signal_version=self.signal_version,
             cost=self.cost_estimate,
             metadata={
                 "signal_kind": "implicit_feedback",
