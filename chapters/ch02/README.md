@@ -110,9 +110,9 @@ SPO proposes a candidate, the candidate is shadow-evaluated on the next
 few requests, and if it beats the reference, the script fires a
 `CandidateWins` event that the default promotion hook auto-promotes.
 
-The layer rule is enforced structurally: `ImproverPolicy(mode=ONLINE)`
-refuses L3 (planner / monitor) and L4 (code) artifacts at construction.
-Prompts are L1, so this example is safe.
+The layer rule is enforced structurally: `OnlineImprover(...)` refuses L3
+(planner / monitor) and L4 (code) artifacts at construction. Prompts are
+L1, so this example is safe.
 
 The online example differs from offline along three axes:
 
