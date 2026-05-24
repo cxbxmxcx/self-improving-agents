@@ -25,7 +25,7 @@ from typing import Any
 from helix._caching import cacheable_system_message
 from helix.llm_call import acompletion as helix_acompletion
 from helix.artifact import Artifact
-from helix.hooks import HookPoint, HookRegistry
+from helix.hooks import HookPoint, HookRegistry, Refusal
 from helix.memory.base import (
     MemoryContext,
     MemoryEntry,
@@ -52,6 +52,46 @@ _EPISODIC_K = 3
 _SEMANTIC_K = 6
 
 
+def _first_refusal(hook_results: list[Any]) -> Refusal | None:
+    """Return the first Refusal in a list of hook results, or None.
+
+    Used by the agent loop at PRE_MODEL and PRE_OUTPUT to short-circuit on
+    guardrail refusals. SPEC §6.2.
+    """
+    for r in hook_results:
+        if isinstance(r, Refusal):
+            return r
+    return None
+
+
+def _first_output_patch(hook_results: list[Any]) -> Any:
+    """Return the first ('patched', OutputGuardrailPayload) entry's payload, or None."""
+    for r in hook_results:
+        if isinstance(r, tuple) and len(r) == 2 and r[0] == "patched":
+            return r[1]
+    return None
+
+
+def _apply_input_patch(memory, hook_results: list[Any]) -> None:
+    """If a PRE_MODEL hook returned ('patched', InputGuardrailPayload), rewrite
+    the user message in working memory with the patched question. SPEC §6.2.
+    """
+    for r in hook_results:
+        if isinstance(r, tuple) and len(r) == 2 and r[0] == "patched":
+            patched = r[1]
+            new_question = getattr(patched, "question", None)
+            if new_question is None:
+                continue
+            msgs = memory._messages if hasattr(memory, "_messages") else None
+            if msgs is None:
+                return
+            for i in range(len(msgs) - 1, -1, -1):
+                if msgs[i].get("role") == "user":
+                    msgs[i] = {**msgs[i], "content": new_question}
+                    return
+            return
+
+
 class Agent:
     def __init__(
         self,
@@ -63,6 +103,7 @@ class Agent:
         hooks: HookRegistry | None = None,
         bus: EventBus | None = None,
         memory_tiers: dict[str, MemoryTier] | None = None,
+        guardrails: list | None = None,  # list[Guardrail], avoid circular import
     ) -> None:
         if not isinstance(system_prompt.content, str):
             raise TypeError("system_prompt artifact must have string content")
@@ -79,6 +120,12 @@ class Agent:
         # Improvers registered on this agent. They are not invoked inline by
         # the hot path. They consume trajectories via the event bus.
         self.improvers: list = []  # type: list[Improver] but avoid circular import
+        # Guardrails (SPEC §16.2.1). Each wraps a CODE artifact and registers
+        # itself as a PRE_MODEL or PRE_OUTPUT hook at construction. The list
+        # is kept around so Agent.with_artifacts can carry it into a clone.
+        self.guardrails: list = list(guardrails or [])
+        for g in self.guardrails:
+            self.hooks.register(g.hook_point, g.make_hook_handler())
 
     def with_artifacts(self, overrides: dict[str, Artifact]) -> "Agent":
         """Return a new Agent with the given artifacts swapped in. SPEC §15.2.
@@ -86,33 +133,54 @@ class Agent:
         The improver uses this to test candidates without the user having to
         write a factory function. For each artifact id in `overrides`, the
         matching slot on the agent is replaced; everything else (tools, model,
-        hooks, memory tiers) carries over by reference.
+        memory tiers, guardrails) carries over either by reference or as a
+        rebound clone.
 
-        The single-artifact Ch 2 case swaps `system_prompt`. Future chapters
-        will swap tool descriptions, tool code, memory entries, and guardrails
-        by the same mechanism — the dispatch is by `artifact.kind` plus
-        `artifact.id` matching the agent's current configuration.
+        Dispatch by artifact:
+          - `system_prompt`: swapped when an override's id matches.
+          - `guardrails`: each guardrail whose artifact id matches an override
+            is rebuilt with the new artifact. Other guardrails carry over.
+          - tools and tool descriptions: future chapters will route via
+            ToolFromArtifact (§16.2.2). For now plain Tool instances carry
+            over unchanged.
+
+        The clone gets a fresh HookRegistry. Hooks registered on the original
+        do not carry over (each Agent owns its own hook state). Guardrails are
+        re-registered on the clone via the normal __init__ path.
         """
+        from helix.guardrails import Guardrail  # local import: avoid circular
+
         new_system_prompt = self.system_prompt
         for art in overrides.values():
-            # System prompt match: candidate has same id as current prompt.
             if art.id == self.system_prompt.id:
                 if not isinstance(art.content, str):
                     raise TypeError("system_prompt artifact must have string content")
                 new_system_prompt = art
 
-        # Future kinds (tool descriptions, tool code, memory entries,
-        # guardrails) wire here as the framework grows. For now Ch 2 only
-        # routes the system prompt.
+        # Rebuild guardrails: any whose artifact id appears in overrides gets
+        # a new Guardrail (same phase, same fail_open) backed by the candidate
+        # artifact. Others carry over with the same artifact.
+        new_guardrails: list[Guardrail] = []
+        for g in self.guardrails:
+            if g.artifact.id in overrides:
+                new_guardrails.append(Guardrail(
+                    artifact=overrides[g.artifact.id],
+                    phase=g.phase,
+                    fail_open=g.fail_open,
+                ))
+            else:
+                new_guardrails.append(g)
+
         return Agent(
             system_prompt=new_system_prompt,
             tools=list(self.tools.values()),
             model=self.model,
             max_iterations=self.max_iterations,
             max_tool_calls=self.max_tool_calls,
-            hooks=self.hooks,
+            hooks=None,  # fresh HookRegistry; guardrails re-register in __init__
             bus=self.bus,
             memory_tiers=dict(self.memory),
+            guardrails=new_guardrails,
         )
 
     def attach_improver(self, improver) -> None:
@@ -196,11 +264,37 @@ class Agent:
 
         async with span("agent.run", task=task, model=self.model):
             for iteration in range(self.max_iterations):
-                await self.hooks.fire(
+                pre_model_results = await self.hooks.fire(
                     HookPoint.PRE_MODEL,
                     messages=memory.messages(),
                     trajectory=trajectory,
                 )
+                # SPEC §6.2: a PRE_MODEL hook may return a Refusal to terminate
+                # the run, or ("patched", payload) to swap in a rewritten
+                # input. Guardrails (§16.2.1) are the canonical producer of
+                # both. The agent loop inspects results in registration order;
+                # the first short-circuit wins.
+                refusal = _first_refusal(pre_model_results)
+                if refusal is not None:
+                    refusal_msg = f"[refused] {refusal.reason}"
+                    trajectory.metadata["refusal"] = {
+                        "reason": refusal.reason,
+                        "source": refusal.source,
+                        "phase": "pre_model",
+                    }
+                    trajectory.complete(refusal_msg, Outcome.COMPLETED)
+                    await self.hooks.fire(HookPoint.SESSION_END, trajectory=trajectory)
+                    await self.bus.publish(
+                        TrajectoryCompleted(
+                            trajectory_id=trajectory.id,
+                            task=task[:200],
+                            outcome=trajectory.outcome.value,
+                            num_steps=len(trajectory.steps),
+                            final_output=refusal_msg[:500],
+                        )
+                    )
+                    return refusal_msg, trajectory
+                _apply_input_patch(memory, pre_model_results)
 
                 response = await helix_acompletion(
                     model=self.model,
@@ -227,9 +321,24 @@ class Agent:
 
                 if not msg.tool_calls:
                     output = msg.content or ""
-                    await self.hooks.fire(
+                    pre_output_results = await self.hooks.fire(
                         HookPoint.PRE_OUTPUT, response=output, trajectory=trajectory
                     )
+                    # SPEC §6.2: a PRE_OUTPUT hook may return a Refusal to
+                    # terminate the run with a refusal message in place of the
+                    # output, or ("patched", payload) to rewrite the answer.
+                    refusal = _first_refusal(pre_output_results)
+                    if refusal is not None:
+                        output = f"[refused] {refusal.reason}"
+                        trajectory.metadata["refusal"] = {
+                            "reason": refusal.reason,
+                            "source": refusal.source,
+                            "phase": "pre_output",
+                        }
+                    else:
+                        patched = _first_output_patch(pre_output_results)
+                        if patched is not None:
+                            output = patched.answer
                     trajectory.complete(output, Outcome.COMPLETED)
                     await self.hooks.fire(HookPoint.SESSION_END, trajectory=trajectory)
                     await self._write_to_episodic(task, output, trajectory, context)
