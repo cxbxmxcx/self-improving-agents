@@ -1,33 +1,30 @@
-# Chapter 2: Prompts that improve themselves
+# Chapter 2: Getting started improving agents
 
-Files in this chapter:
+This chapter teaches the smallest end-to-end self-improvement loop: one
+prompt artifact, one LLM-as-judge, one search method, one improver. By
+the end, the reader can mutate a system prompt offline, score the
+mutations against an eval set, and promote a winning version into
+production.
 
-- **`helixagent_v0.py`** — the baseline: RAG agent with a fixed system prompt,
-  one retrieval tool, working memory only. No improvement loop.
-- **`helixagent_v1.py`** — same agent, but the system prompt comes from the
-  persistent SQLite Archive. On first run the archive is seeded with v0's
-  genesis prompt; subsequent runs read whatever SPO has accepted as champion.
-- **`spo_offline_loop.py`** — the **offline** improvement driver. One
-  invocation runs one SPO round: reference pass over the eval questions,
-  SPO mutation, candidate pass, pairwise-judge each question with
-  `SwapAndAgree`, aggregate verdicts (mean score for ordering + majority
-  vote for accept/reject), record to archive. Candidates are not served
-  until a human promotes one via `archive.promote()` (or the dashboard
-  button). Re-run to do more rounds.
-- **`spo_online_loop.py`** — the **online** counterpart. Simulates live
-  traffic by replaying eval questions one at a time, spot-checks responses
-  with `LiveTrajectoryJudge` (an absolute rubric judge — no reference
-  answer required), and triggers SPO when the rolling average drops. If
-  the candidate beats the reference on a small shadow sample, the script
-  publishes `CandidateWins(mode="online", auto_promote=True)` and the
-  default promotion hook calls `archive.promote()` automatically. The
-  next request reads the new live champion.
-- **`eval_questions.json`** — 20 hand-curated questions across 4 difficulty
-  bands (factual / disambiguation / multi-hop / trap). Reference answers
-  derived from the arXiv corpus. Drives the eval harness and SPO judge.
-- **`eval_harness.py`** — runs an agent against the eval set; writes one JSONL
-  record per question to `runs/<label>_<timestamp>.jsonl`. Optional `judge`
-  callback scores each record (used by v1 / SPO).
+Four sections, four runnable scripts:
+
+| § | Concept | Script |
+|---|---------|--------|
+| 2.1 | The artifact under improvement | `helixagent_v1.py` |
+| 2.2 | Measuring with an LLM-as-judge | `minimal_judge.py` |
+| 2.3 | Searching with SPO | `minimal_spo.py` |
+| 2.4 | The offline improvement loop | `spo_offline_loop.py` |
+
+The chapter assumes the reader has built an agent before. The pre-MEAP
+baseline agent (one-shot RAG agent with a fixed prompt) lives in
+`chapter_appendices/getting_started/` for readers who want a refresher;
+this chapter starts from "you have an agent and you want it to get
+better."
+
+Online improvement (auto-promotion, no labeled eval set, rolling
+spot-checks) is a Ch 8 topic — it composes with HITL and feedback in a
+way that needs both foundations. Evolutionary search (GEPA, multi-search
+strategy chains, tool-description improvement) is Ch 3.
 
 ## Prerequisites
 
@@ -35,149 +32,170 @@ Files in this chapter:
    ```
    python ingestion/build_index.py
    ```
-2. Set an LLM provider key. LiteLLM picks up the env var for whichever model
-   you choose (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, etc.).
+2. Set an LLM provider key. LiteLLM picks up the env var for whichever
+   model you choose (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, etc.).
 
-## Run v0
+---
 
+## §2.1 The artifact under improvement
+
+The thing being improved is a single object: the agent's system prompt,
+treated as an `Artifact`. Three properties matter:
+
+- **Identity.** The prompt has a stable id (`prompt.helixagent.system`)
+  and a version (`1`, `2`, ...). Mutations produce new versions; old
+  versions stay readable.
+- **Lineage.** Every version after the first carries a parent pointer.
+  The archive can reconstruct the full mutation history.
+- **The agent reads at request time.** The prompt is not hardcoded in
+  the agent's source. The agent reads the live champion from the archive
+  on every request.
+
+Run:
 ```
-python chapters/ch02/helixagent_v0.py
+python chapters/ch02/helixagent_v1.py
 ```
 
-Edit the `question` variable in `main()` to experiment with a different
-prompt. The agent and tools are exposed as `build_agent()` and `ask_one()` so
-you can also import them from a REPL or a notebook.
+On first run the archive is seeded with the genesis prompt. The agent
+serves whatever the archive currently identifies as the live champion.
+Until §2.4 produces a winning candidate and you promote it, that's still
+the genesis prompt.
 
-## Run the eval harness
+The archive is a SQLite file at `chapters/ch02/runs/helix_archive.sqlite`.
+Open it in any sqlite browser to see the `artifacts`, `measurements`, and
+`promotions` tables. There's no magic.
 
+---
+
+## §2.2 Measuring with an LLM-as-judge
+
+Before improving, measure. An LLM-as-judge takes (question, candidate
+answer A, candidate answer B, reference) and returns LEFT/RIGHT/TIE plus
+a feedback string. This section builds one from scratch.
+
+Run:
 ```
-python chapters/ch02/eval_harness.py
+python chapters/ch02/minimal_judge.py
 ```
 
-Runs HelixAgent v0 against all 20 questions in `eval_questions.json` and
-writes one JSONL line per question to `runs/v0_<timestamp>.jsonl`. Each line
-holds the question, the reference answer, the agent's answer, the full
-trajectory, and basic metrics (latency, tool-call count, model-call count).
-At the end the script prints per-band summary statistics.
+The script:
 
-No judging happens at v0; the `judgment` field stays null. v1 plugs a pairwise
-judge into `run_eval(judge=...)` to score answers.
+1. Defines a 30-line pairwise judge with one LiteLLM call. The judge's
+   system prompt holds the rubric; the user prompt holds the question
+   and the two answers.
+2. Demonstrates **position bias**: scores the same answer pair twice
+   with positions swapped, often getting two different verdicts.
+3. Implements **swap-and-agree**: run the judge twice with positions
+   swapped, require both runs to agree, default to TIE on disagreement.
+   ~15 more lines.
 
-## Run v1 offline (one SPO round)
+By the end of this section the reader has hand-written exactly what the
+framework's `SwapAndAgree(PairwiseJudge(...))` is. The framework version
+adds prompt caching, structured Pydantic output, and observability
+events; the *algorithm* is what the reader just wrote.
 
+---
+
+## §2.3 Searching with SPO
+
+Now the reader has an artifact and a way to compare two versions of it.
+SPO produces the second version.
+
+Run:
+```
+python chapters/ch02/minimal_spo.py
+```
+
+The script:
+
+1. Defines a **mutation** as one LLM call: "rewrite this prompt to do X
+   better, here's what the judge said about the last version." ~15 lines.
+2. Defines the **SPO loop**: mutate → run candidate on a few eval
+   questions → judge candidate vs reference → accept if win, reject if
+   loss. Three rounds, accept-on-win hill climbing. ~50 more lines.
+3. Prints the per-round verdict so the reader sees three rounds of
+   "candidate won" or "candidate lost" with the judge's feedback driving
+   the next mutation.
+
+That's SPO. The framework's `helix.search.spo.SPO` is the same algorithm
+with caching, budget enforcement, parent pointers, and observability
+spans. The reader has internalized the algorithm before seeing the
+abstraction.
+
+---
+
+## §2.4 The offline improvement loop
+
+Now the framework version, end-to-end. `OfflineImprover` (SPEC §15) ties
+Signal + Search + Archive + EvalSource together.
+
+Run:
 ```
 python chapters/ch02/spo_offline_loop.py
 ```
 
-One invocation runs one round:
+One invocation drives three rounds:
 
-1. Reference pass: agent backed by current-best prompt runs all eval questions.
+1. Reference pass: agent backed by the current live champion runs all
+   eval questions.
 2. SPO proposes one mutated candidate prompt.
 3. Candidate pass: agent backed by the candidate runs the same questions.
-4. Pairwise judge (with `SwapAndAgree`) compares answers question by question.
-5. Aggregate verdict (mean score + majority vote) is recorded to the archive.
+4. `SwapAndAgree(PairwiseJudge)` compares answers question by question.
+5. Aggregate verdict (mean score + majority vote) is recorded to the
+   archive.
 
-The candidate becomes the new top-scoring "best candidate" automatically if
-its mean score is the highest in the archive (because `archive.best()` orders
-by score). Note that "best candidate" is not the same as the **live champion**
-the running agent serves: SPO here runs in offline mode, so the candidate
-sits in the archive until a human reviews and promotes it via
-`archive.promote()`. Re-run `spo_offline_loop.py` to do another round; each
-round picks up the current best candidate as the reference. DESIGN_NOTES.md
-section 10.
+After three rounds, the archive contains three candidates with
+measurements. **None of them are live.** The agent (run
+`helixagent_v1.py` again) still serves the genesis prompt. This is the
+**deploy gate**: offline improvement records candidates; promotion to
+live is a separate, deliberate act.
 
-Per-round summaries are appended to `runs/spo_rounds.jsonl`.
+Two things in the archive distinguish *best candidate* from *live
+champion*:
 
-After SPO has run and you have promoted a winning candidate (either through
-the dashboard's "Promote v{N} → live" button or programmatically via
-`archive.promote()`), `python chapters/ch02/helixagent_v1.py` and
-`python chapters/ch02/eval_harness.py` (with v1's factory) automatically use
-the live champion prompt. Until then, the agent serves the genesis prompt.
+- `archive.best()` returns the highest-scoring measured candidate.
+- `archive.live_champion()` returns whatever was most recently promoted
+  via `archive.promote()`. On first run, no promotion has happened, so
+  this falls back to the genesis prompt.
 
-## Run v1 online (auto-promoting, no labels)
-
-```
-python chapters/ch02/spo_online_loop.py
-```
-
-The online pattern requires no labeled eval set at runtime. Live traffic is
-simulated by replaying eval questions one at a time. Each response is
-scored 0-1 by `LiveTrajectoryJudge` — an absolute rubric judge that reads
-the question, the agent's tool calls, and the final answer, and rates
-grounding, correctness, abstention, and concision. Spot-checks accumulate
-in a rolling window. When the rolling average drops below the threshold,
-SPO proposes a candidate, the candidate is shadow-evaluated on the next
-few requests, and if it beats the reference, the script fires a
-`CandidateWins` event that the default promotion hook auto-promotes.
-
-The layer rule is enforced structurally: `OnlineImprover(...)` refuses L3
-(planner / monitor) and L4 (code) artifacts at construction. Prompts are
-L1, so this example is safe.
-
-The online example differs from offline along three axes:
-
-| Axis | Offline | Online |
-|------|---------|--------|
-| trigger | manual / scheduled | rolling score drop |
-| signal | pairwise judge over labeled pairs | absolute rubric judge |
-| promotion | human via dashboard | auto via `CandidateWins` hook |
-| safety | any artifact layer | L1/L2 only (enforced) |
-
-Cost shape: every spot-checked request invokes the agent plus the judge,
-plus the SPO proposer when a candidate is triggered, plus the shadow-eval
-runs (one extra agent run per side, per shadow question). Tune
-`SAMPLE_RATE`, `ROLLING_WINDOW`, and `SHADOW_SAMPLE` at the top of the
-script to budget the example.
-
-## Visualize what happened
-
-After any improvement run, launch the platform dashboard:
+Visualize what happened:
 
 ```
 streamlit run helix/dashboard/app.py
 ```
 
-It reads from `chapters/ch02/runs/helix_archive.sqlite` by default. Pages
-walk you through the run: the current champion, the artifact lineage tree
-(colored by Search method), side-by-side prompt diffs, per-question judge
-verdicts, trajectory replays with cross-prompt comparison, and a round-by-
-round score timeline.
+The dashboard shows v1 as live, v2/v3/v4 as scored candidates, and a
+"Promote v{N} → live" button on the best candidate. Click it (or call
+`archive.promote()` from a notebook) and the next `helixagent_v1.py` run
+serves the new version. That's the full self-improvement cycle.
 
-The dashboard is platform-level (lives in `helix/dashboard/`), so the same
-tool works for any chapter's runs.
+---
 
 ## Cost expectations per SPO round
 
-Rough order of magnitude on gpt-4o-mini + gpt-4o:
+Rough order of magnitude on Haiku + Sonnet:
 
-- Reference pass: 20 agent runs × ~5 model calls + tool calls each — ~$0.10
+- Reference pass: 20 agent runs × ~5 model calls each — ~$0.10
 - Candidate pass: same shape — ~$0.10
-- Pairwise judge with `SwapAndAgree`: 20 × 2 judge calls on gpt-4o — ~$0.30
-- SPO proposer call: 1 × gpt-4o — ~$0.01
+- Pairwise judge with `SwapAndAgree`: 20 × 2 judge calls on Sonnet — ~$0.30
+- SPO proposer call: 1 × Sonnet — ~$0.01
 
-Total per round: roughly **$0.50**. Three rounds: ~$1.50. Use a smaller judge
-or skip `SwapAndAgree` for faster, cheaper iterations during development.
+Total per round: roughly **$0.50**. Three rounds: ~$1.50. Use Haiku for
+the judge or skip `SwapAndAgree` for cheaper iterations during
+development.
 
-## What v0 is, in spec terms
+---
 
-Composition (Spec §11.1):
-- One **Artifact** (the system prompt, kind=prompt).
-- One **Tool** (`retrieve`, calling LanceDB hybrid search).
-- **Working memory** only; no episodic, semantic, or procedural memory.
-- The fixed **Agent loop** (Spec §6.1) with hook points wired but empty.
-- A **Trajectory** is recorded on every run.
+## What's deferred
 
-What is deliberately missing:
-- No Signal, no Search, no Archive. Those arrive in v1.
-- No episodic memory write-back. That's Ch 3.
-- No reflection. That's Ch 5.
+- **Evolutionary search.** GEPA, multi-search strategy chains, tool
+  description improvement. Chapter 3.
+- **Memory tiers.** Episodic / semantic / procedural memory; agents that
+  learn from past trajectories. Chapter 4.
+- **Online improvement.** Auto-promotion, rolling spot-checks, no
+  labeled eval set. Chapter 8 (pairs with HITL and live feedback).
+- **Code-level artifacts.** Tool implementations, guardrails. Chapters
+  11/12.
 
-## What v1 adds (preview)
-
-- The system prompt becomes the seed Artifact of an SPO search.
-- A pairwise LLM-as-Judge plays the role of Signal.
-- An Archive (SQLite-backed) records each variant with its measurement.
-- The next agent run reads the current best variant from the archive instead
-  of the hand-authored genesis prompt.
-
-This is the entire self-improvement loop at minimal complexity.
+The single-improver, single-artifact, offline, human-gated pattern in
+this chapter is the foundation everything else builds on.
