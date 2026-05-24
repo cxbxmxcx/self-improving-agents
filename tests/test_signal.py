@@ -49,10 +49,20 @@ class _FakeAbsoluteSignal:
     def cost_estimate(self) -> Cost:
         return Cost(tokens=100)
 
+    @property
+    def signal_id(self) -> str:
+        return f"FakeAbsoluteSignal:{self._score}"
+
+    @property
+    def signal_version(self) -> int:
+        return 1
+
     async def measure(self, candidate, trajectory=None, reference=None, ground_truth=None):
         return GapMeasurement(
             score=self._score,
             confidence=self._confidence,
+            signal_id=self.signal_id,
+            signal_version=self.signal_version,
             cost=Cost(tokens=100),
         )
 
@@ -70,12 +80,22 @@ class _FakePairwiseSignal:
     def cost_estimate(self) -> Cost:
         return Cost(tokens=100)
 
+    @property
+    def signal_id(self) -> str:
+        return f"FakePairwiseSignal:{self._pref.value}"
+
+    @property
+    def signal_version(self) -> int:
+        return 1
+
     async def measure(self, candidate, trajectory=None, reference=None, ground_truth=None):
         score = 1.0 if self._pref == Preference.LEFT else (0.0 if self._pref == Preference.RIGHT else 0.5)
         return GapMeasurement(
             score=score,
             preference=self._pref,
             confidence=self._confidence,
+            signal_id=self.signal_id,
+            signal_version=self.signal_version,
             cost=Cost(tokens=100),
         )
 

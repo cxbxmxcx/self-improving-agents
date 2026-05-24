@@ -32,6 +32,7 @@ from helix.signal import (
     Preference,
     Signal,
     SignalKind,
+    derive_signal_id,
 )
 from helix.trajectory import Trajectory
 
@@ -97,11 +98,13 @@ class PairwiseJudge:
         rubric: str = DEFAULT_RUBRIC,
         rubric_id: tuple[str, int] | None = None,
         extract_answer: AnswerExtractor = _default_extract_answer,
+        version: int = 1,
     ) -> None:
         self.model = model
         self.rubric = rubric
         self._rubric_id = rubric_id
         self.extract_answer = extract_answer
+        self._version = version
 
     @property
     def kind(self) -> SignalKind:
@@ -111,6 +114,17 @@ class PairwiseJudge:
     def cost_estimate(self) -> Cost:
         # Rough estimate: one model call, ~1k tokens.
         return Cost(tokens=1000, dollars=0.005, wall_clock_sec=3.0)
+
+    @property
+    def signal_id(self) -> str:
+        return derive_signal_id(
+            "PairwiseJudge",
+            {"model": self.model, "rubric": self.rubric, "rubric_id": self._rubric_id},
+        )
+
+    @property
+    def signal_version(self) -> int:
+        return self._version
 
     async def measure(
         self,
@@ -147,6 +161,8 @@ class PairwiseJudge:
             feedback=verdict.feedback,
             confidence=verdict.confidence,
             rubric_id=self._rubric_id,
+            signal_id=self.signal_id,
+            signal_version=self.signal_version,
             cost=cost,
             metadata={
                 "judge_model": self.model,
@@ -252,6 +268,17 @@ class SwapAndAgree:
             wall_clock_sec=inner_cost.wall_clock_sec * 2,
         )
 
+    @property
+    def signal_id(self) -> str:
+        return derive_signal_id(
+            "SwapAndAgree",
+            {"inner": getattr(self.inner, "signal_id", type(self.inner).__name__)},
+        )
+
+    @property
+    def signal_version(self) -> int:
+        return getattr(self.inner, "signal_version", 1)
+
     async def measure(
         self,
         candidate: Artifact,
@@ -291,6 +318,8 @@ class SwapAndAgree:
             feedback=(forward.feedback or "") + "\n---\n" + (reverse.feedback or ""),
             confidence=confidence,
             rubric_id=forward.rubric_id,
+            signal_id=self.signal_id,
+            signal_version=self.signal_version,
             cost=forward.cost + reverse.cost,
             metadata={
                 "forward": forward.to_dict(),

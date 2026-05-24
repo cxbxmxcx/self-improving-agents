@@ -122,10 +122,17 @@ GapMeasurement:
     feedback: textual critique, optional, used by reflective search methods
     confidence: float in [0, 1], the signal's self-reported confidence
     rubric_id: (id, version) of the rubric that produced this, if applicable
+    signal_id: stable identifier for the signal configuration that produced this
+    signal_version: integer version bumped when the signal's semantics change
+    triggered: bool, True when the signal's threshold test fired
+    raw_value: float or None, the un-normalized observed value (tokens, latency, etc.)
+    cost: Cost spent producing this measurement
     metadata: signal-specific extra fields (PRM step scores, judge raw response, etc.)
 ```
 
-The GapMeasurement is deliberately a union shape rather than a polymorphic hierarchy. Different signal families fill different fields. A pairwise signal fills `preference` and may fill `feedback`. An absolute signal fills `score`. A PRM fills `score` and a per-step array in `metadata`. ContrastiveJudge fills `feedback` with differential critique. This keeps the consumption side (search methods) uniform.
+The GapMeasurement is deliberately a union shape rather than a polymorphic hierarchy. Different signal families fill different fields. A pairwise signal fills `preference` and may fill `feedback`. An absolute signal fills `score`. A PRM fills `score` and a per-step array in `metadata`. ContrastiveJudge fills `feedback` with differential critique. A metric signal fills `raw_value` with the observation and `score` with its normalized form. This keeps the consumption side (search methods) uniform.
+
+`signal_id` and `signal_version` are populated by the signal on return; the archive persists them so prior measurements remain attributable. `triggered` is True when the signal's own gap-vs-threshold test fired (§3.6); search methods and improvers can read it independent of the score. `raw_value` carries the pre-normalization observation so dashboards can render both the observed quantity and its normalized form.
 
 ### 3.2 The Signal protocol
 
@@ -144,7 +151,17 @@ class Signal:
 
     @property
     def cost_estimate(self) -> Cost: ...
+
+    @property
+    def signal_id(self) -> str: ...
+
+    @property
+    def signal_version(self) -> int: ...
 ```
+
+`signal_id` is a stable identifier for this signal's *configuration*. Two signals of the same kind with different weights, different child sets, or different threshold settings have different ids. Reference implementations derive their id from class name plus a content hash of key config; composite signals derive theirs from a hash of `(kind, weights, child_ids)`.
+
+`signal_version` is bumped by the implementer when the signal's measurement semantics change (rubric edit, weight retune, threshold change). Measurements in the archive remain comparable within the same `(signal_id, signal_version)` pair.
 
 The protocol accepts a candidate artifact and three optional pieces of context. Different signal kinds use different subsets:
 
@@ -158,7 +175,7 @@ The protocol accepts a candidate artifact and three optional pieces of context. 
 
 ### 3.3 The signal families
 
-The book teaches six families. Each family is an implementation of the Signal protocol and they are interchangeable from the search method's perspective.
+The book teaches seven families. Each family is an implementation of the Signal protocol and they are interchangeable from the search method's perspective.
 
 **Ground-truth.** A labeled answer key, a code execution outcome, a tool grounding check, a web evidence verification. Precise when available, rare or sparse otherwise. Fills `score`.
 
@@ -174,6 +191,8 @@ The book teaches six families. Each family is an implementation of the Signal pr
 
 **Formal proof (Schmidhuber limit case).** A theorem prover verifies a property. Fills `score` as 1.0 or 0.0. Treated in the book as a frontier signal that bounds the family from above.
 
+**Metric.** A deterministic observation over a Trajectory: total tokens, wall-clock latency, tool-call count, model-call count. Fills `raw_value` with the observation and `score` with its normalized form (§3.6). Combined with a `SignalThreshold` to express "tokens above baseline by more than X" as a triggered measurement. Composes naturally with judge signals in a CompositeSignal so a candidate can be measured for quality and cost simultaneously.
+
 ### 3.4 The verifiability ceiling
 
 Every signal has a verifiability ceiling. Ground-truth and formal proof have the highest ceilings on the tasks where they apply. LLM judges have lower, drift-prone ceilings. Reflection has the lowest. The framework does not pick for you; it makes the choice explicit by requiring each Signal to declare its `kind`, which the eval subsystem uses to compose signal stacks (cheap judges as a pre-filter, expensive ground truth on the suspect cases).
@@ -181,6 +200,34 @@ Every signal has a verifiability ceiling. Ground-truth and formal proof have the
 ### 3.5 Signals compose
 
 A `CompositeSignal` combines multiple signals into a single GapMeasurement via a configurable aggregator (mean, weighted mean, conservative-min, judge-of-judges). This is what makes Chapter 8's multi-judge ensembles and Chapter 9's confidence routing implementable without changing search methods.
+
+Child signals must return scores already normalized to `[0, 1]`. The composite's aggregation operates on normalized scores; mixing a raw-token-count signal with a raw judge score without normalization would let one signal dominate the other by raw magnitude. The `SignalThreshold` mechanism in §3.6 provides the normalization step that signals with non-`[0, 1]` natural ranges (metric signals especially) use to satisfy this contract.
+
+The composite aggregates `triggered` flags independently of scores. The rule depends on the aggregator: `conservative_min` triggers if *any* child triggered; weighted aggregators trigger if a weighted majority triggered. The composite's `metadata["component_triggers"]` carries the per-child trigger list so a downstream consumer can see which child fired even when the aggregate did not. This is what lets a multi-objective improver react to "latency triggered even though overall score is fine" without reading the underlying components by hand.
+
+A CompositeSignal's own `signal_id` (§3.2) derives from a hash of `(kind, weights, child_ids)`, so two composites with the same children in the same weighting share an id, and two composites with different weights or different children are distinct signals with distinct ids — and their measurements remain separately attributable in the archive (§5.2.1).
+
+### 3.6 Thresholds and normalization
+
+Signals that observe an unbounded quantity (token count, latency, error rate) need a normalization step before they can compose with `[0, 1]` judge signals. The framework provides a small dataclass that signals embed when appropriate:
+
+```
+@dataclass
+class SignalThreshold:
+    baseline: float | Callable[[], float] | None
+    threshold: float | None
+    direction: Literal["minimize", "maximize"]
+    normalizer: Literal["minmax", "zscore", "ratio", "identity"]
+
+    def normalize(self, raw: float) -> float        # raw → [0, 1] under direction
+    def is_triggered(self, raw: float) -> bool      # |raw - baseline| crosses threshold
+```
+
+`baseline` is a fixed number or a callable resolved at measure time (a rolling p50 of recent trajectories, for example). `threshold` is the magnitude of gap that fires `triggered = True`. `direction` flips the normalization sign: latency above baseline is bad (lower normalized score), judge score above baseline is good (higher normalized score). `normalizer` picks the squashing function.
+
+The threshold lives on the signal, not the improver. This is what makes the `triggered` flag portable across improvers, dashboards, and hook handlers: any consumer of a GapMeasurement can read `triggered` without needing to know which improver produced it.
+
+Signals with no meaningful threshold (pairwise judges, reflection) omit the dataclass entirely. `triggered` defaults to False.
 
 ---
 
@@ -259,13 +306,31 @@ Hill-climbing barely uses an archive (single best). Pairwise methods use it as r
 ```
 class Archive:
     async def record(self, variant: Variant, measurement: GapMeasurement) -> None: ...
-    async def best(self, k: int = 1, by: str = "score") -> list[Variant]: ...
+    async def best(self, k: int = 1, by: str = "score", signal_id: str | None = None) -> list[Variant]: ...
     async def pareto_front(self, objectives: list[str]) -> list[Variant]: ...
     async def sample(self, strategy: SamplingStrategy) -> Variant: ...
     async def lineage(self, artifact: Artifact) -> list[Artifact]: ...
     async def descendants(self, artifact: Artifact) -> list[Artifact]: ...
     async def diversity_metrics(self) -> DiversityMetrics: ...
+    async def measurements_for_signal(
+        self, signal_id: str, signal_version: int | None = None
+    ) -> list[tuple[Variant, GapMeasurement]]: ...
 ```
+
+The `record` method persists `signal_id`, `signal_version`, `raw_value`, and `triggered` from the GapMeasurement onto the measurement row. The schema's measurement table carries these as nullable columns so existing archives migrate forward without rewrites. New writes populate them; old rows remain valid with nulls.
+
+`best` accepts an optional `signal_id` filter so callers can ask "best under signal X" rather than "best across all measurements." The live champion (§5.5) remains signal-agnostic: it is about which version is deployed, not which signal scored it.
+
+`measurements_for_signal` is the read path for tooling that needs to recompare candidates under a specific signal configuration: the dashboard's "rescore under signal X" view, the eval subsystem's calibration-drift trend, and any future re-measurement pass that runs when a new signal is added.
+
+### 5.2.1 Signal attribution
+
+A measurement without `signal_id` is a measurement whose origin is forgotten. Two consequences follow:
+
+- When the user introduces a new Signal, prior measurements remain in the archive but are not directly comparable to new measurements taken under the new signal. The framework does not auto-rescore; it provides the read path (`measurements_for_signal`) so the user's tooling can decide what to do.
+- Two CompositeSignal instances with different weights are *different signals* with different ids. Measurements taken under each remain attributable.
+
+The archive persists `(signal_id, signal_version)` on every row so this attribution is permanent.
 
 ### 5.3 Quality-diversity selection
 
@@ -274,6 +339,31 @@ Archives support quality-diversity sampling: pick a variant that is good *and* d
 ### 5.4 Archives are persistent
 
 An archive survives process restarts. The reference implementation backs onto SQLite for local development and Postgres for production. This matches Chapter 11's drift-detection and rollout discussion, which assumes archives carry history across deployments.
+
+### 5.5 The live champion
+
+Improvement produces many measured candidates; deployment picks one. The archive records this pick explicitly as a promotion:
+
+```
+class Archive:
+    async def promote(
+        self,
+        artifact_id: str,
+        version: int,
+        approver: str,
+        reason: str,
+    ) -> PromotionRecord: ...
+
+    async def live_champion(self, artifact_id: str) -> Artifact | None: ...
+
+    async def promotion_history(self, artifact_id: str) -> list[PromotionRecord]: ...
+```
+
+`live_champion` returns the currently-live version of an artifact id. This is what the running agent reads on each request, and what `build_agent_with_artifacts` (§15.2) resolves missing artifacts against. A promotion is an immutable row in the archive's promotion log; rollbacks appear as ordinary promotions of an earlier version.
+
+`approver` is either a user id (for human gates) or `improver:<id>` when an online improver auto-promotes. The audit trail makes the "who deployed this" question always answerable.
+
+The live champion is distinct from `best()`: `best` orders by score under a signal, `live_champion` reflects an explicit deployment decision. Offline improvers write candidates to the archive but do not promote; promotion happens when a human (or, in online mode, the auto-promotion handler) calls `archive.promote()`. This separation is what makes the offline / online split (§15) coherent.
 
 ---
 
@@ -314,19 +404,21 @@ agent.run(task):
 
 ### 6.2 The hook points
 
-The framework defines a fixed set of hook points. Hooks are registered against a point and fire in registration order. Hooks can read trajectory, mutate messages (only at PRE_MODEL), short-circuit (cancel a tool call at PRE_TOOL), or emit side effects (logging, eval, drift detection).
+The framework defines a fixed set of hook points. Hooks are registered against a point and fire in registration order. Hooks can read trajectory, mutate messages (only at PRE_MODEL), short-circuit (refuse at PRE_MODEL or PRE_OUTPUT, cancel a tool call at PRE_TOOL), mutate the request or response payload (at PRE_MODEL or PRE_OUTPUT), or emit side effects (logging, eval, drift detection).
 
 | Hook point | Fires | Mutation rights |
 | --- | --- | --- |
 | SESSION_START | Once at run start | None |
-| PRE_MODEL | Before each model call | May edit messages |
+| PRE_MODEL | Before each model call | May edit messages; may refuse with a Refusal verdict; may patch the request payload |
 | POST_MODEL | After each model call | None |
 | PRE_TOOL | Before each tool call | May cancel |
 | POST_TOOL | After each tool call | None |
 | END_OF_TURN | After tool results return to model | None |
-| PRE_OUTPUT | Before final output returns | May edit output |
+| PRE_OUTPUT | Before final output returns | May edit output; may refuse with a Refusal verdict; may patch the response payload |
 | SESSION_END | Once at run end | None |
 | POST_ARTIFACT_MUTATION | When the archive records a variant | None |
+
+A refusal at PRE_MODEL or PRE_OUTPUT terminates the run immediately with a Refusal result that names the hook (or, for typed wrappers, the artifact id of the guardrail that refused) and a reason string. The framework does not loop back, retry, or rewrite. Refusal is a hard stop. This is what makes the typed Guardrail wrapper (§16.2.1) structurally safe: a misbehaving guardrail cannot be silently bypassed.
 
 ### 6.3 What hooks become
 
@@ -501,7 +593,7 @@ An Agent is composed of: a system prompt (Artifact kind=prompt), zero or more to
 
 ### 11.2 The improving agent (Chapter 2, HelixAgent v1)
 
-The minimal agent plus a Signal (LLM-as-Judge pairwise) and a Search (SPO) aimed at the system prompt artifact. The search produces variants, the signal measures them, the archive records them, and the next run reads the best variant from the archive. This is the entire self-improvement loop at minimal complexity.
+The minimal agent plus an Improver (§15) wrapping a Signal (LLM-as-Judge pairwise) and a Search (SPO) aimed at the system prompt artifact. The search produces variants, the signal measures them, the archive records them, and the next run reads the live champion from the archive. In offline mode (the Ch 2 default), a human promotes a candidate to live champion via `archive.promote()`; in online mode, the auto-promotion hook does it. This is the entire self-improvement loop at minimal complexity.
 
 ### 11.3 The memory-enabled agent (Chapter 3, HelixAgent v2)
 
@@ -517,7 +609,7 @@ Adds the Planner/Monitor/Reflector/TSM scaffold as three coordinated hooks plus 
 
 ### 11.6 The self-modifying-skills agent (Chapter 6, HelixAgent v5)
 
-Aims existing searches at skill artifacts and tool_description artifacts. Adds the HITL approval gate as a PRE_OUTPUT hook on the archive's record path: any skill or tool_description mutation surfaces a Proposal before commit. Behavior diffs in the proposal are computed by replaying recent trajectories against the candidate skill.
+Aims existing searches at skill artifacts and tool_description artifacts. A tool under improvement at this layer has only its description mutated; the implementation is still a plain Python callable. When the implementation also comes under improvement (Ch 11/12), the tool becomes a `ToolFromArtifact` (§16.2.2) backed by a CODE artifact for the implementation and a TOOL_DESCRIPTION artifact for the description, each with its own improver. Adds the HITL approval gate as a PRE_OUTPUT hook on the archive's record path: any skill or tool_description mutation surfaces a Proposal before commit. Behavior diffs in the proposal are computed by replaying recent trajectories against the candidate skill.
 
 ### 11.7 The frontier survey (Chapter 7, HelixAgent thought experiment)
 
@@ -549,9 +641,9 @@ Items where the spec is provisional and the manuscript decision is pending.
 
 **Trajectory storage cost.** Trajectories are large. Long-running deployments accumulate trajectories faster than archives. The spec assumes a TTL plus sampling policy for trajectory persistence, but the policy details depend on Chapter 8's continuous-eval sampling strategy, which is still in design.
 
-**Multi-agent composition shape.** Section 11.8 treats sub-agents as tools. Chapter 10's Anthropic-versus-Cognition rubric may demand a richer composition primitive (orchestrator-worker as a distinct shape, group-chat as another). Open until Chapter 10 is drafted.
+**Multi-agent composition shape.** Section 11.8 treats sub-agents as tools, and §16.1 covers the multi-artifact pattern for a single agent. Chapter 10 still needs to validate whether sub-agents-as-tools handles orchestrator-worker and group-chat patterns cleanly, or whether a richer composition primitive is needed. Provisionally settled by §16.1 + sub-agents-as-tools; open pending Chapter 10 drafting.
 
-**The artifact kind for planner/monitor scaffolds.** Currently two kinds (`planner`, `monitor`). It may be cleaner to unify under a single `scaffold` kind with a sub-type. Decision deferred to Chapter 5 drafting.
+**Planner as artifact kind.** Earlier drafts treated `planner` (and `monitor`) as their own artifact kinds. Author decision in design discussion: planners are prompts, not a distinct kind — a planner is a prompt whose role is decomposition, and the framework does not need a kind enum to recognize that. The two kinds remain in §1.2 for backward compatibility with existing archives, but new agents should use `PROMPT` for planner-shaped artifacts. Metacognition is treated as a composition (multiple agents and memories) rather than a primitive kind.
 
 **Code as an artifact kind.** Section 1.2 lists `code` as a recognized kind. The spec does not specify the execution sandbox or the diff representation for code artifacts. These are Chapter 7 frontier territory and deliberately under-specified.
 
@@ -566,3 +658,208 @@ Items where the spec is provisional and the manuscript decision is pending.
 This spec is versioned. The current version is 0.1. Breaking changes between book chapters are not allowed: any chapter that builds on a primitive defined here can assume the protocol shape is stable. Additive changes (new artifact kinds, new signal families, new hook points) are permitted between chapters.
 
 The companion repository tracks the spec version. The repo's README declares which spec version it implements. Readers reading the book and running the repo should be able to align by version number.
+
+Section numbers in this spec are stable identifiers, not just ordering: code comments and chapter scripts reference them by number. Sections added after the initial draft are appended with new numbers (§15, §16, ...) rather than inserted between existing sections, so previously-correct references stay correct.
+
+---
+
+## 15. The Improver
+
+An Improver is a long-running, per-artifact optimization loop. It owns one artifact's improvement plan: which Signal measures the gap, which Search proposes variants, which Archive records measurements, which EvalSource supplies questions, and the Policy that governs scheduling, layering, and promotion.
+
+The Improver is a primitive because Chapter 2's "the agent serves requests while improvement happens in the background" is only honest if there is a typed object responsible for running the background loop. Without it, every chapter reinvents the orchestration.
+
+### 15.1 The Improver protocol
+
+```
+class Improver:
+    target_artifact_id: str
+    signal: Signal
+    search: Search
+    archive: Archive
+    eval_source: EvalSource
+    build_agent_with_artifacts: Callable[[dict[str, Artifact]], Awaitable[Agent]]
+    policy: ImproverPolicy
+
+    async def start(self) -> None: ...
+    async def stop(self) -> None: ...
+    async def trigger_round(self) -> RoundResult: ...
+    @property
+    def status(self) -> ImproverStatus: ...
+```
+
+Three support types appear in this protocol and warrant a one-line sketch each; their full definitions live in the reference implementation under `helix/improvement/` and `helix/eval/`:
+
+- **`EvalSource`** supplies the questions a round runs against. Two concrete shapes: `FixedEvalSet` wraps a labeled JSON file (offline pattern); `LiveTrafficSource` pulls recent trajectories off the observability bus (online pattern). Both expose `async get_questions(n: int | None) -> list[Question]`.
+- **`RoundResult`** is the structured outcome of one round: candidate version, candidate score, reference score, per-question verdicts, costs, whether promotion occurred, and the underlying GapMeasurements. The dashboard and the on-round-result Search hook both read this.
+- **`ImproverPolicy`** bundles scheduling (§15.5), mode (OFFLINE / ONLINE), per-question caps, per-round budget, and promotion thresholds. The promotion threshold here (`promote_threshold_win_rate`) is distinct from the per-signal trigger threshold of §3.6: the policy threshold gates promotion, the signal threshold gates the `triggered` flag.
+
+The Improver does not own the Agent. It owns the `target_artifact_id` and the plan. The Agent reads the current live champion from the archive on each request. This is the in-process / out-of-process split that lets the same archive serve a notebook driving rounds and a production agent serving traffic.
+
+### 15.2 The factory contract
+
+`build_agent_with_artifacts` is the single point of agent composition. It accepts a dict of `(artifact_id → Artifact)` and returns a fully-built Agent. The improver calls it once per round with `{target_artifact_id: candidate}`; the factory resolves any artifact not in the dict by calling `archive.live_champion(artifact_id)`.
+
+This delegates dependency resolution to the factory rather than the improver. Three consequences flow from that:
+
+- The improver's signature stays minimal: it does not enumerate other artifacts the agent depends on.
+- The factory is the single source of truth for the agent's composition. Production deployment calls `build_agent_with_artifacts({}, archive=archive)` and gets a fully-resolved agent. The same code path serves training and serving.
+- When a candidate is being measured, every non-target artifact is whatever the archive currently considers live. If another improver promotes mid-round, the next round measures against the new combination.
+
+This eventual-consistency property is what makes multi-artifact agents work without a coordination protocol (§16.1).
+
+### 15.3 Layer-based safety
+
+An Improver constructed with `policy.mode = ONLINE` refuses to target an artifact at layer ≥ 3 (planner, monitor, code). Online improvers auto-promote, and L3/L4 changes need a deploy gate. The constructor raises at construction time, which is the earliest possible failure.
+
+### 15.4 The round
+
+One round is one `propose → measure → record → (maybe promote)` cycle. The improver calls `search.propose(seed, signal, archive, budget)` to get a candidate, builds the agent via the factory, runs it against the eval source, measures the result with the signal, and records the variant + measurement to the archive. If the policy authorizes auto-promotion and the candidate clears the policy's promotion threshold (`promote_threshold_win_rate`), the round ends with a promotion. Otherwise the candidate sits in the archive until a human promotes it.
+
+The policy's promotion threshold is distinct from any per-signal trigger threshold (§3.6). The signal threshold decides whether a measurement is *flagged* as significant; the policy threshold decides whether a measurement is *good enough to deploy*. A candidate can trigger its signal (a latency spike, say) without clearing the promotion threshold, or clear the promotion threshold without triggering any signal.
+
+### 15.5 Scheduling
+
+`ImproverPolicy.schedule` selects when rounds fire:
+
+- `MANUAL`: rounds fire only when `trigger_round()` is called.
+- `INTERVAL`: rounds fire on a fixed cadence.
+- `CONTINUOUS`: rounds fire back-to-back, bounded only by budget.
+
+The schedule does not affect what a round does; it affects when. This separation keeps the Chapter 2 offline pattern (manual rounds against a labeled eval set) and the Chapter 2 online pattern (continuous rounds against live traffic) running the same round code.
+
+---
+
+## 16. Composition Patterns
+
+§11 Composition shows how the primitives compose into the chapter agents. This section documents two patterns that compose primitives in ways the chapters reference but that do not introduce new primitives: multi-artifact agents (§16.1) and agent-side artifact wrappers (§16.2).
+
+### 16.1 Multi-artifact agents
+
+Real agents have multiple artifacts under simultaneous improvement: a system prompt at L1, an episodic memory layout at L2, a tool implementation at L4, a tool description back at L1, possibly a guardrail at L4. Each artifact has different mutation economics, different signal stacks, and different layer-based safety constraints.
+
+The framework's answer is **one Improver per artifact, sharing a factory**. There is no coordinator, no joint search, no agent-level regression checker.
+
+#### 16.1.1 The shape
+
+```
+factory: build_agent_with_artifacts(artifacts: dict, archive: Archive) -> Agent
+
+improver_prompt = Improver(
+    target_artifact_id="prompt.helix.system",
+    signal=...,
+    search=SPO(...),
+    build_agent_with_artifacts=factory,
+    policy=ImproverPolicy(mode=ImproverMode.OFFLINE),
+    ...
+)
+
+improver_memory = Improver(
+    target_artifact_id="mem.helix.episodic",
+    signal=...,
+    search=MemoryQLearning(...),
+    build_agent_with_artifacts=factory,
+    policy=ImproverPolicy(mode=ImproverMode.ONLINE),
+    ...
+)
+
+improver_tool_code = Improver(
+    target_artifact_id="code.tool.retrieve",
+    signal=...,
+    search=CodeEvolution(...),
+    build_agent_with_artifacts=factory,
+    policy=ImproverPolicy(mode=ImproverMode.OFFLINE),
+    ...
+)
+
+await asyncio.gather(
+    improver_prompt.start(),
+    improver_memory.start(),
+    improver_tool_code.start(),
+)
+```
+
+Three improvers run concurrently. Each picks its own Search (SPO for prompts, MemoryQLearning for memory, CodeEvolution for code) and its own signal stack. Each calls the shared factory with `{its_target: candidate}`; the factory resolves the other two artifacts from `archive.live_champion()`.
+
+#### 16.1.2 Why this works
+
+Each improver's signal measures the *whole agent*, not the bare artifact. When the prompt improver tests a candidate prompt, the agent it builds uses the current live memory layout and the current live tool implementation. The score the signal records is the score of *this prompt with those other live artifacts*. That is the score that matters: it is the score the deployed agent would actually achieve.
+
+When another improver promotes between rounds, the next round of any improver picks up the new live champion automatically (via the factory's resolution rule). Combination drift is corrected by the next round, not by a separate guardrail.
+
+#### 16.1.3 What this is not
+
+This pattern does not guarantee that the deployed combination of `(best L1) × (best L2) × (best L4)` was ever evaluated as a unit at the moment of deployment. It only guarantees that each artifact's most recent measurement was taken against the then-current live combination. For most agents this is sufficient because artifact effects are weakly coupled in practice. For agents where artifacts interact strongly (a prompt that depends on the exact wording of a tool description, for example), a richer pattern is needed.
+
+#### 16.1.4 The richer pattern (future extension)
+
+When per-artifact improvement is insufficient, the framework supports a `MultiArtifactImprover` that mutates multiple artifacts per round and measures the bundle as a unit under one composite signal. It is a variant of Improver (§15) that owns multiple Searches, one per artifact under joint improvement, and invokes them together each round. The reference implementation realizes this as a subclass of `Improver` overriding the round loop, but that is one implementation choice; the spec contract is "mutate multiple artifacts per round; measure the bundle." It is mentioned here so the architectural answer to "what about joint optimization?" is on the page; the foundational pattern is one improver per artifact.
+
+#### 16.1.5 The eval-disjointness requirement
+
+Each per-artifact improver should use an eval source that is at least partially disjoint from the others. If two improvers share the same eval set, each will optimize toward the set in isolation and the joint optimum will be a saddle. The framework does not enforce disjointness; the chapter examples document the requirement and the dashboard surfaces overlap warnings.
+
+### 16.2 Agent-side artifact wrappers
+
+Most artifacts feed into an agent as configuration. Two artifact kinds — guardrails (CODE at L4) and tools (CODE at L4 paired with TOOL_DESCRIPTION at L1) — bolt onto the agent's lifecycle in structured ways. The framework provides two convenience wrappers that turn artifacts into typed agent inputs: `Guardrail` and `ToolFromArtifact`. Neither is a new primitive; both are agent-side adapters.
+
+#### 16.2.1 Guardrail
+
+A Guardrail wraps a CODE artifact whose content is a Python source string exposing one async function. The framework defines exactly two payload contracts and one verdict contract. All three are Pydantic v2 models, consistent with the base stack:
+
+```
+class InputGuardrailPayload(BaseModel):
+    question: str
+    context: dict[str, Any]
+
+class OutputGuardrailPayload(BaseModel):
+    answer: str
+    sources: list[dict[str, Any]]
+    trajectory_metadata: dict[str, Any]
+
+class GuardrailVerdict(BaseModel):
+    allow: bool
+    reason: str
+    patched_payload: InputGuardrailPayload | OutputGuardrailPayload | None = None
+```
+
+The artifact's code must expose:
+
+```
+async def check(payload: InputGuardrailPayload | OutputGuardrailPayload) -> GuardrailVerdict
+```
+
+The `Guardrail` wrapper class binds the artifact to a lifecycle phase:
+
+```
+@dataclass
+class Guardrail:
+    artifact: Artifact
+    phase: Literal["input", "output"]
+    fail_open: bool = False
+```
+
+At Agent construction the wrapper compiles the artifact's code, validates the function signature against the contract, and registers itself as a hook: `PRE_MODEL` for input phase, `PRE_OUTPUT` for output phase.
+
+**Refusal is the default and only short-circuit behavior.** When a guardrail returns `verdict.allow = False`, the agent's run terminates immediately with a Refusal result that names the guardrail artifact and the verdict reason. The framework does not loop back, ask the agent to retry, or rewrite the output. Critic-style "try again with feedback" patterns are agent-level compositions (an answer agent + a critic agent, both with their own improvers); they belong to the multi-agent chapter, not the guardrail wrapper.
+
+If `patched_payload` is non-None, the framework uses the patched payload for the rest of the turn. This supports input scrubbing (a PII guardrail that allows the request but with sensitive content masked) and output redaction (an output guardrail that allows the response but with citations sanitized).
+
+If the compiled code raises an exception, behavior depends on `fail_open`: `True` allows the request, `False` raises a `GuardrailFailure`. The default is `False` because a crashed guardrail is the failure mode guardrails exist to prevent.
+
+The guardrail's artifact ref is recorded in `Trajectory.artifacts_used` at the step the hook fires, so lineage tracks every guardrail consultation.
+
+#### 16.2.2 ToolFromArtifact
+
+A tool sourced from artifacts is two artifacts: a CODE artifact for the implementation and a TOOL_DESCRIPTION artifact for the LLM-facing description. The wrapper compiles the code at construction and presents the Tool protocol to the agent:
+
+```
+@dataclass
+class ToolFromArtifact:
+    code_artifact: Artifact          # ArtifactKind.CODE (L4)
+    description_artifact: Artifact   # ArtifactKind.TOOL_DESCRIPTION (L1)
+```
+
+Both refs are recorded in `Trajectory.artifacts_used` on every invocation, so lineage tracks both artifacts independently. This is what enables the dual-improver pattern: the L1 improver for the description (online-eligible, mutated by SPO) and the L4 improver for the implementation (offline-only, mutated by CodeEvolution) operate on the same logical tool without coordinating.
+
+Plain-callable tools remain supported. `ToolFromArtifact` is for the case where the tool itself is under improvement. Chapter 2 and Chapter 3 agents use plain callables; the L4 chapter introduces `ToolFromArtifact` as the bridge.

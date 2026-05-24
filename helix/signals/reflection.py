@@ -26,6 +26,7 @@ from helix.signal import (
     GapMeasurement,
     Preference,
     SignalKind,
+    derive_signal_id,
 )
 from helix.trajectory import Trajectory
 
@@ -59,9 +60,11 @@ class Reflection:
         self,
         model: str = "gpt-4o",
         prompt: str = DEFAULT_REFLECTION_PROMPT,
+        version: int = 1,
     ) -> None:
         self.model = model
         self.prompt = prompt
+        self._version = version
 
     @property
     def kind(self) -> SignalKind:
@@ -70,6 +73,17 @@ class Reflection:
     @property
     def cost_estimate(self) -> Cost:
         return Cost(tokens=1500, dollars=0.008, wall_clock_sec=4.0)
+
+    @property
+    def signal_id(self) -> str:
+        return derive_signal_id(
+            "Reflection",
+            {"model": self.model, "prompt": self.prompt},
+        )
+
+    @property
+    def signal_version(self) -> int:
+        return self._version
 
     async def measure(
         self,
@@ -128,6 +142,8 @@ the candidate prompt? Reply as JSON with two fields:
             preference=Preference.NONE,
             feedback=out.feedback,
             confidence=out.confidence,
+            signal_id=self.signal_id,
+            signal_version=self.signal_version,
             cost=cost,
             metadata={"reflector_model": self.model},
         )

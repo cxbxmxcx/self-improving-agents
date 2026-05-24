@@ -33,6 +33,7 @@ from helix.signal import (
     Preference,
     Signal,
     SignalKind,
+    derive_signal_id,
 )
 from helix.trajectory import Trajectory
 
@@ -104,6 +105,7 @@ class GoldenSetCalibrator:
         score_fn: ScoreFn | None = None,
         cache_ttl_sec: float = 3600.0,
         max_questions: int = 20,
+        version: int = 1,
     ) -> None:
         if len(golden_set) == 0:
             raise ValueError("GoldenSetCalibrator requires a non-empty golden_set")
@@ -113,10 +115,28 @@ class GoldenSetCalibrator:
         self.cache_ttl_sec = cache_ttl_sec
         self.max_questions = max_questions
         self._cache: dict[tuple[str, int], _CacheEntry] = {}
+        self._version = version
 
     @property
     def kind(self) -> SignalKind:
         return SignalKind.GROUND_TRUTH
+
+    @property
+    def signal_id(self) -> str:
+        # Hash the golden set's question ids so two calibrators using different
+        # sets get different ids.
+        try:
+            q_ids = [q.id for q in self.golden_set.questions]
+        except Exception:
+            q_ids = []
+        return derive_signal_id(
+            "GoldenSetCalibrator",
+            {"max_questions": self.max_questions, "q_ids": q_ids},
+        )
+
+    @property
+    def signal_version(self) -> int:
+        return self._version
 
     @property
     def cost_estimate(self) -> Cost:
@@ -148,6 +168,8 @@ class GoldenSetCalibrator:
                     f"golden-set: {cached.n_correct}/{cached.n_questions} correct (cached)"
                 ),
                 confidence=1.0,
+                signal_id=self.signal_id,
+                signal_version=self.signal_version,
                 cost=Cost(),  # cached = no fresh cost
                 metadata={
                     "signal_kind": "golden_set",
@@ -215,6 +237,8 @@ class GoldenSetCalibrator:
                 f"golden-set: {n_correct}/{len(questions)} correct on the calibration set"
             ),
             confidence=1.0,
+            signal_id=self.signal_id,
+            signal_version=self.signal_version,
             cost=cost,
             metadata={
                 "signal_kind": "golden_set",
