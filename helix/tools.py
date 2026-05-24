@@ -243,3 +243,97 @@ class ToolFromArtifact:
         """The (id, version) tuples for both backing artifacts. Used by the
         agent to record lineage in Trajectory.artifacts_used on each call."""
         return [self.code_artifact.ref, self.description_artifact.ref]
+
+
+# ---------------------------------------------------------------------------
+# TextDescriptionTool: plain Python implementation, artifact-backed description.
+# SPEC §16.2.2 (the description-only path). Chapter 3.
+# ---------------------------------------------------------------------------
+
+
+class TextDescriptionTool:
+    """A Tool whose implementation is a plain Python callable but whose
+    LLM-facing description is a TOOL_DESCRIPTION artifact under improvement.
+
+    This is the Ch 3 shape: the *description* (what the LLM reads to decide
+    whether and how to call the tool) is the artifact a search method
+    mutates. The implementation stays a normal Python function — code is not
+    under search until Ch 11/12, where the full ToolFromArtifact path takes
+    over.
+
+    Construction:
+        retrieve = TextDescriptionTool(
+            name="retrieve",
+            fn=async_retrieve_callable,        # plain Python, same as Tool.fn
+            description_artifact=desc_artifact, # ArtifactKind.TOOL_DESCRIPTION
+        )
+
+    The args model derives from `fn`'s type hints (same as the `tool`
+    decorator). `swap_description(new_artifact)` rebinds the description
+    without rebuilding the tool, which is what the agent does when it picks
+    up a newly promoted description from the archive.
+    """
+
+    def __init__(
+        self,
+        name: str,
+        fn: Callable[..., Any],
+        description_artifact: Artifact,
+    ) -> None:
+        if description_artifact.kind != ArtifactKind.TOOL_DESCRIPTION:
+            raise ValueError(
+                f"TextDescriptionTool: description artifact must be "
+                f"ArtifactKind.TOOL_DESCRIPTION, got {description_artifact.kind}"
+            )
+        if not isinstance(description_artifact.content, str):
+            raise ValueError(
+                f"TextDescriptionTool: description artifact content must be a "
+                f"string, got {type(description_artifact.content).__name__}"
+            )
+        self.name = name
+        self.description_artifact = description_artifact
+        self.args_model = _args_model_from_fn(fn, f"{name}_Args")
+
+        if not asyncio.iscoroutinefunction(fn):
+            async def _async_wrapper(**kwargs: Any) -> Any:
+                return fn(**kwargs)
+            self.fn: Callable[..., Awaitable[Any]] = _async_wrapper
+        else:
+            self.fn = fn
+
+    @property
+    def description(self) -> str:
+        """The LLM-facing description, read live from the current artifact."""
+        return self.description_artifact.content  # type: ignore[return-value]
+
+    def swap_description(self, new_artifact: Artifact) -> None:
+        """Rebind the description to a new artifact version. The implementation
+        and args model are unchanged. The agent calls this when a newly
+        promoted description becomes the live champion."""
+        if new_artifact.kind != ArtifactKind.TOOL_DESCRIPTION:
+            raise ValueError(
+                f"swap_description: artifact must be ArtifactKind.TOOL_DESCRIPTION, "
+                f"got {new_artifact.kind}"
+            )
+        if not isinstance(new_artifact.content, str):
+            raise ValueError("swap_description: artifact content must be a string")
+        self.description_artifact = new_artifact
+
+    def to_openai_schema(self) -> dict[str, Any]:
+        return {
+            "type": "function",
+            "function": {
+                "name": self.name,
+                "description": self.description,
+                "parameters": self.args_model.model_json_schema(),
+            },
+        }
+
+    async def call(self, **kwargs: Any) -> Any:
+        validated = self.args_model(**kwargs)
+        return await self.fn(**validated.model_dump())
+
+    def artifact_refs(self) -> list[tuple[str, int]]:
+        """The (id, version) tuple for the description artifact. Used by the
+        agent to record lineage in Trajectory.artifacts_used on each call."""
+        return [self.description_artifact.ref]
