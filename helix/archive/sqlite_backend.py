@@ -22,7 +22,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from helix.artifact import Artifact, ArtifactKind
+from helix.artifact import Artifact, ArtifactKind, migrate_kind
 from helix.archive.archive import DiversityMetrics, PromotionRecord, SamplingStrategy
 from helix.observability.bus import EventBus, get_bus
 from helix.observability.events import ArtifactCreated, ArtifactMeasured, Promoted
@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS artifacts (
     artifact_id TEXT NOT NULL,
     version INTEGER NOT NULL,
     kind TEXT NOT NULL,
+    subtype TEXT,
     content TEXT NOT NULL,
     content_is_json INTEGER NOT NULL,
     parent_id TEXT,
@@ -127,8 +128,21 @@ class SQLiteArchive:
         self._conn.row_factory = sqlite3.Row
         self._conn.executescript(_SCHEMA)
         self._migrate_measurements_signal_columns()
+        self._migrate_artifacts_subtype_column()
         self._conn.commit()
         self._bus = bus or get_bus()
+
+    def _migrate_artifacts_subtype_column(self) -> None:
+        """Idempotent migration: add the subtype column if an older archive
+        predates the v0.2 kind/subtype split. Old rows keep their retired kind
+        string (e.g. "prompt") and a NULL subtype; migrate_kind maps them on
+        read. SPEC §1.2, §14."""
+        existing = {
+            row["name"]
+            for row in self._conn.execute("PRAGMA table_info(artifacts)").fetchall()
+        }
+        if "subtype" not in existing:
+            self._conn.execute("ALTER TABLE artifacts ADD COLUMN subtype TEXT")
 
     def _migrate_measurements_signal_columns(self) -> None:
         """Idempotent migration: add signal_id, signal_version, raw_value,
@@ -166,11 +180,14 @@ class SQLiteArchive:
         parent_id = None
         if row["parent_id"] is not None:
             parent_id = (row["parent_id"], int(row["parent_version"]))
+        raw_subtype = row["subtype"] if "subtype" in row.keys() else None
+        kind, subtype = migrate_kind(row["kind"], raw_subtype)
         return Artifact(
             id=row["artifact_id"],
             version=int(row["version"]),
-            kind=ArtifactKind(row["kind"]),
+            kind=kind,
             content=content,
+            subtype=subtype,
             parent_id=parent_id,
             created_by=row["created_by"],
             created_at=datetime.fromisoformat(row["created_at"]),
@@ -191,14 +208,15 @@ class SQLiteArchive:
         self._conn.execute(
             """
             INSERT INTO artifacts
-            (artifact_id, version, kind, content, content_is_json, parent_id, parent_version,
+            (artifact_id, version, kind, subtype, content, content_is_json, parent_id, parent_version,
              created_by, created_at, content_hash, artifact_metadata)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 art.id,
                 art.version,
                 art.kind.value,
+                art.subtype.value if art.subtype else None,
                 content_str,
                 is_json,
                 parent_id,

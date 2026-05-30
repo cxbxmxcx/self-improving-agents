@@ -17,7 +17,7 @@ import pytest
 
 from helix._caching import cacheable_system_message, is_anthropic_model
 from helix.archive import SQLiteArchive
-from helix.artifact import ArtifactKind, genesis
+from helix.artifact import ArtifactKind, genesis, Subtype
 from helix.retrieval.chunker import Chunk
 from helix.search.base import SearchBudget
 from helix.signal import Cost
@@ -31,7 +31,7 @@ from helix.trajectory import Outcome, StepKind, Trajectory
 @pytest.mark.asyncio
 async def test_trajectory_cache_round_trip():
     arc = SQLiteArchive(":memory:")
-    art = genesis("prompt.test", ArtifactKind.PROMPT, "seed")
+    art = genesis("prompt.test", Subtype.PROMPT, "seed")
     traj = Trajectory(task="hello")
     traj.append(StepKind.MODEL_CALL, {"response": {"content": "answer"}})
     traj.complete("answer", Outcome.COMPLETED)
@@ -49,7 +49,7 @@ async def test_trajectory_cache_round_trip():
 @pytest.mark.asyncio
 async def test_trajectory_cache_miss_returns_none():
     arc = SQLiteArchive(":memory:")
-    art = genesis("prompt.test", ArtifactKind.PROMPT, "seed")
+    art = genesis("prompt.test", Subtype.PROMPT, "seed")
     cached = await arc.get_trajectory(art, "Q1")
     assert cached is None
 
@@ -57,7 +57,7 @@ async def test_trajectory_cache_miss_returns_none():
 @pytest.mark.asyncio
 async def test_trajectory_cache_keyed_per_question():
     arc = SQLiteArchive(":memory:")
-    art = genesis("prompt.test", ArtifactKind.PROMPT, "seed")
+    art = genesis("prompt.test", Subtype.PROMPT, "seed")
     t1 = Trajectory(task="Q1")
     t1.complete("A1")
     t2 = Trajectory(task="Q2")
@@ -74,7 +74,7 @@ async def test_trajectory_cache_keyed_per_question():
 @pytest.mark.asyncio
 async def test_trajectory_cache_keyed_per_artifact_version():
     arc = SQLiteArchive(":memory:")
-    v1 = genesis("prompt.test", ArtifactKind.PROMPT, "v1")
+    v1 = genesis("prompt.test", Subtype.PROMPT, "v1")
     v2 = v1.mutate("v2", created_by="spo")
     t1 = Trajectory(task="x")
     t1.complete("from v1")
@@ -211,7 +211,7 @@ def test_budget_not_exhausted_when_axes_unset():
 
 def test_agent_accepts_max_tool_calls_parameter():
     from helix.agent import Agent
-    art = genesis("prompt.test", ArtifactKind.PROMPT, "you are helpful")
+    art = genesis("prompt.test", Subtype.PROMPT, "you are helpful")
     agent = Agent(system_prompt=art, model="claude-haiku-4-5", max_tool_calls=5)
     assert agent.max_tool_calls == 5
 

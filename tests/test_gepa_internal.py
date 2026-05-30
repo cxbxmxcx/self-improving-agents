@@ -11,7 +11,7 @@ from unittest.mock import patch
 import pytest
 
 from helix.archive import SQLiteArchive
-from helix.artifact import ArtifactKind, genesis
+from helix.artifact import ArtifactKind, genesis, Subtype
 from helix.eval.dataset import EvalQuestion, EvalSet
 from helix.eval.source import FixedEvalSet
 from helix.search.base import SearchBudget, SearchKind
@@ -70,7 +70,7 @@ async def test_gepa_requires_agent():
 
 @pytest.mark.asyncio
 async def test_gepa_requires_eval_source():
-    seed = genesis("prompt.test", ArtifactKind.PROMPT, "seed content")
+    seed = genesis("prompt.test", Subtype.PROMPT, "seed content")
     with pytest.raises(ValueError):
         GEPA(agent=_make_agent(seed))
 
@@ -81,7 +81,7 @@ async def test_gepa_yields_a_single_winner_after_internal_evolution():
     internally, then yield ONE winner. The Improver model expects one
     candidate per round; GEPA's complexity stays internal."""
     archive = SQLiteArchive(":memory:")
-    seed = genesis("prompt.test", ArtifactKind.PROMPT, "seed content")
+    seed = genesis("prompt.test", Subtype.PROMPT, "seed content")
 
     # Patch _mutate_from and _crossover so we don't call the LLM.
     async def fake_mutate(self, parent, parent_feedback, sibling, archive):
@@ -135,7 +135,7 @@ async def test_gepa_yields_a_single_winner_after_internal_evolution():
 @pytest.mark.asyncio
 async def test_gepa_records_all_intermediate_candidates_to_archive():
     archive = SQLiteArchive(":memory:")
-    seed = genesis("prompt.test", ArtifactKind.PROMPT, "seed")
+    seed = genesis("prompt.test", Subtype.PROMPT, "seed")
 
     async def fake_mutate(self, parent, parent_feedback, sibling, archive):
         next_v = await archive.next_version(parent.id)

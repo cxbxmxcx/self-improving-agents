@@ -10,7 +10,7 @@ from unittest.mock import patch
 import pytest
 
 from helix.agent import Agent
-from helix.artifact import ArtifactKind, genesis
+from helix.artifact import ArtifactKind, genesis, Subtype
 from helix.guardrails import Guardrail
 
 
@@ -38,7 +38,7 @@ async def _fake_acompletion(*args, **kwargs):
 @pytest.mark.asyncio
 async def test_agent_with_input_guardrail_refuses_blocked_input():
     """A PRE_MODEL Refusal terminates the run and returns a [refused] output."""
-    prompt = genesis(id="p.sys", kind=ArtifactKind.PROMPT, content="You are helpful.")
+    prompt = genesis(id="p.sys", kind=Subtype.PROMPT, content="You are helpful.")
     guard_art = genesis(
         id="g.block_secrets",
         kind=ArtifactKind.CODE,
@@ -66,7 +66,7 @@ async def test_agent_with_input_guardrail_refuses_blocked_input():
 
 @pytest.mark.asyncio
 async def test_agent_with_input_guardrail_passes_clean_input():
-    prompt = genesis(id="p.sys", kind=ArtifactKind.PROMPT, content="You are helpful.")
+    prompt = genesis(id="p.sys", kind=Subtype.PROMPT, content="You are helpful.")
     guard_art = genesis(
         id="g.block_secrets",
         kind=ArtifactKind.CODE,
@@ -91,7 +91,7 @@ async def test_agent_with_input_guardrail_passes_clean_input():
 
 @pytest.mark.asyncio
 async def test_agent_with_output_guardrail_refuses_long_response():
-    prompt = genesis(id="p.sys", kind=ArtifactKind.PROMPT, content="You are helpful.")
+    prompt = genesis(id="p.sys", kind=Subtype.PROMPT, content="You are helpful.")
     guard_art = genesis(
         id="g.length",
         kind=ArtifactKind.CODE,
@@ -121,7 +121,7 @@ async def test_agent_with_output_guardrail_refuses_long_response():
 async def test_with_artifacts_rebuilds_guardrail_on_override():
     """If `with_artifacts` overrides a guardrail's artifact id, the clone uses
     the new guardrail. The original agent's guardrail is unchanged."""
-    prompt = genesis(id="p.sys", kind=ArtifactKind.PROMPT, content="x")
+    prompt = genesis(id="p.sys", kind=Subtype.PROMPT, content="x")
     permissive = genesis(
         id="g.policy",
         kind=ArtifactKind.CODE,
@@ -155,7 +155,7 @@ async def test_with_artifacts_rebuilds_guardrail_on_override():
 async def test_agent_with_no_guardrails_works_as_before():
     """Regression check: an agent without guardrails behaves identically to
     the pre-PR-5 baseline."""
-    prompt = genesis(id="p.sys", kind=ArtifactKind.PROMPT, content="x")
+    prompt = genesis(id="p.sys", kind=Subtype.PROMPT, content="x")
     agent = Agent(system_prompt=prompt, model="stub")
 
     with patch("helix.agent.helix_acompletion", side_effect=_fake_acompletion):

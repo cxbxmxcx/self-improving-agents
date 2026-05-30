@@ -12,7 +12,7 @@ from collections.abc import AsyncIterator
 import pytest
 
 from helix.archive import SQLiteArchive
-from helix.artifact import ArtifactKind, genesis
+from helix.artifact import ArtifactKind, genesis, Subtype
 from helix.eval.dataset import EvalQuestion, EvalSet
 from helix.eval.source import FixedEvalSet
 from helix.hooks import HookRegistry
@@ -68,7 +68,7 @@ class _StubAgent:
 
 
 def _make_improver(improver_id: str, schedule: Schedule = Schedule.MANUAL) -> OfflineImprover:
-    seed = genesis("p", ArtifactKind.PROMPT, "seed")
+    seed = genesis("p", Subtype.PROMPT, "seed")
     es = EvalSet(questions=[EvalQuestion(id="Q1", band=1, question="?", reference_answer="x")])
     return OfflineImprover(
         agent=_StubAgent(seed),

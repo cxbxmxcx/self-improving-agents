@@ -54,10 +54,10 @@ def test_load_improvers_returns_empty_for_researcher():
     contract is what we're testing here, not the corpus dependency.
     """
     from helix.agent import Agent
-    from helix.artifact import ArtifactKind, genesis
+    from helix.artifact import ArtifactKind, genesis, Subtype
 
     fake_agent = Agent(
-        system_prompt=genesis("p.fake", ArtifactKind.PROMPT, "fake"),
+        system_prompt=genesis("p.fake", Subtype.PROMPT, "fake"),
         model="claude-haiku-4-5",
     )
     result = load_improvers("researcher", fake_agent)
@@ -68,9 +68,9 @@ def test_list_improvable_artifacts_falls_back_for_researcher():
     """When the spec doesn't export list_improvable_artifacts, the loader
     returns [agent.system_prompt] as the canonical improvable artifact."""
     from helix.agent import Agent
-    from helix.artifact import ArtifactKind, genesis
+    from helix.artifact import ArtifactKind, genesis, Subtype
 
-    seed = genesis("p.researcher.test", ArtifactKind.PROMPT, "hello")
+    seed = genesis("p.researcher.test", Subtype.PROMPT, "hello")
     fake_agent = Agent(system_prompt=seed, model="claude-haiku-4-5")
 
     arts = list_improvable_artifacts("researcher", fake_agent)

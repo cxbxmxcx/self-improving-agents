@@ -17,7 +17,7 @@ import asyncio
 import pytest
 
 from helix.archive import SQLiteArchive, PromotionRecord
-from helix.artifact import ArtifactKind, genesis
+from helix.artifact import ArtifactKind, genesis, Subtype
 from helix.hooks import HookRegistry
 from helix.improvement import OfflineImprover, OnlineImprover, ImproverMode, ImproverPolicy
 from helix.improvement.promotion import (
@@ -38,7 +38,7 @@ from helix.signal import Cost, GapMeasurement, Preference
 
 async def _seed_two_versions(arc: SQLiteArchive, artifact_id: str = "p.test") -> None:
     """Record v1 and v2 of an artifact in the archive."""
-    a1 = genesis(id=artifact_id, kind=ArtifactKind.PROMPT, content="v1", created_by="human")
+    a1 = genesis(id=artifact_id, kind=Subtype.PROMPT, content="v1", created_by="human")
     a2 = a1.mutate(new_content="v2", created_by="SPO")
     m = GapMeasurement(
         score=0.5, preference=Preference.LEFT, feedback="", confidence=0.5,
@@ -49,11 +49,16 @@ async def _seed_two_versions(arc: SQLiteArchive, artifact_id: str = "p.test") ->
 
 
 def _genesis_l1() -> object:
-    return genesis(id="p.l1", kind=ArtifactKind.PROMPT, content="x", created_by="human")
+    return genesis(id="p.l1", kind=Subtype.PROMPT, content="x", created_by="human")
 
 
 def _genesis_l3() -> object:
-    return genesis(id="plan.l3", kind=ArtifactKind.PLANNER, content="x", created_by="human")
+    # A standalone planner is L1 now; the L3 risk lives on the metacognition
+    # composite that binds a planner, a monitor, and memory/state (SPEC §18.2.1).
+    return genesis(
+        id="meta.l3", kind=ArtifactKind.COMPOSITE, content=[],
+        subtype=Subtype.METACOGNITION, created_by="human",
+    )
 
 
 def _genesis_l4() -> object:
@@ -288,7 +293,7 @@ def test_online_improver_refuses_l3_artifact():
     with pytest.raises(ValueError, match="L3"):
         OnlineImprover(
             agent=agent,
-            target_artifact_id="plan.l3",
+            target_artifact_id="meta.l3",
             signal=_Stub(), search=_Stub(), archive=arc,
             policy=ImproverPolicy(),
         )
@@ -340,16 +345,154 @@ def test_default_policy_is_offline_with_auto_promote_true():
 
 
 # ---------------------------------------------------------------------------
+# Online promotion gate: candidate must clear promote_threshold_win_rate
+# on a per-request basis, not merely beat the reference on average.
+# ---------------------------------------------------------------------------
+
+class _RunAgent:
+    """Agent stand-in with a run() the online shadow path can call."""
+
+    def __init__(self, prompt) -> None:
+        self.system_prompt = prompt
+        self.hooks = HookRegistry()
+        self.max_iterations = 10
+        self.max_tool_calls = 20
+
+    def with_artifacts(self, overrides):
+        return _RunAgent(overrides.get(self.system_prompt.id, self.system_prompt))
+
+    async def run(self, task):
+        from helix.trajectory import Outcome, Trajectory
+        t = Trajectory(task=task)
+        t.complete(f"ans:{task[:20]}", Outcome.COMPLETED)
+        return t.final_output, t
+
+
+class _VersionSignal:
+    """Scores the reference (v1) at 0.5 and the candidate (v>=2) from a fixed
+    list, consumed one per shadow request. Lets a test dial the candidate's
+    per-request win rate precisely."""
+
+    def __init__(self, cand_scores) -> None:
+        self._cand = list(cand_scores)
+        self._i = 0
+        self.signal_id = "stub-online"
+        self.signal_version = 1
+
+    @property
+    def kind(self):
+        from helix.signal import SignalKind
+        return SignalKind.LLM_JUDGE_ABSOLUTE
+
+    @property
+    def cost_estimate(self):
+        return Cost()
+
+    async def measure(self, candidate, trajectory=None, reference=None, ground_truth=None):
+        if getattr(candidate, "version", 1) >= 2:
+            score = self._cand[self._i % len(self._cand)]
+            self._i += 1
+        else:
+            score = 0.5
+        return GapMeasurement(
+            score=score, signal_id=self.signal_id,
+            signal_version=self.signal_version, cost=Cost(),
+        )
+
+
+class _OneShotSearch:
+    """Proposes a single mutated candidate (v2)."""
+
+    @property
+    def kind(self):
+        from helix.search.base import SearchKind
+        return SearchKind.PAIRWISE
+
+    @property
+    def cost_model(self):
+        from helix.search.base import SearchCostModel
+        return SearchCostModel()
+
+    async def propose(self, seed, signal, archive, budget):
+        yield Variant(
+            artifact=seed.mutate("mutated", created_by="stub"),
+            parent=seed, search_method="stub",
+        )
+
+    async def select(self, candidates, signal, archive):
+        return candidates[0].artifact
+
+
+async def _drive_online(improver, n_requests: int) -> None:
+    """Feed n completed trajectories through the SESSION_END handler."""
+    from helix.trajectory import Trajectory
+    for i in range(n_requests):
+        await improver._on_session_end(Trajectory(task=f"q{i}"))
+
+
+def _make_online(cand_scores, *, promote_threshold_win_rate: float):
+    bus = EventBus()
+    archive = SQLiteArchive(":memory:")
+    seed = genesis("prompt.online", Subtype.PROMPT, "seed", created_by="human")
+    agent = _RunAgent(seed)
+    imp = OnlineImprover(
+        agent=agent,
+        target_artifact_id="prompt.online",
+        signal=_VersionSignal(cand_scores),
+        search=_OneShotSearch(),
+        archive=archive,
+        # rolling_window 4 + shadow_sample 3 -> 7 requests drives one full cycle.
+        policy=ImproverPolicy(promote_threshold_win_rate=promote_threshold_win_rate),
+        bus=bus,
+    )
+    return imp, archive
+
+
+@pytest.mark.asyncio
+async def test_online_below_win_rate_threshold_does_not_promote():
+    """Candidate beats the reference on mean shadow score (0.566 vs 0.5) but
+    wins only 1 of 3 requests; a 0.5 win-rate bar must block auto-promotion."""
+    imp, archive = _make_online([0.9, 0.4, 0.4], promote_threshold_win_rate=0.5)
+    await imp.start()
+    await _drive_online(imp, 7)  # 4 spot-checks trigger a proposal, 3 shadow runs
+    assert imp._last_error is None
+    assert await archive.live_champion("prompt.online") is None
+    assert imp.status.candidates_promoted == 0
+
+
+@pytest.mark.asyncio
+async def test_online_above_win_rate_threshold_auto_promotes():
+    """Candidate wins all 3 shadow requests, clearing the 0.5 bar, so the
+    default handler auto-promotes it to live champion."""
+    imp, archive = _make_online([0.9, 0.9, 0.9], promote_threshold_win_rate=0.5)
+    await imp.start()
+    await _drive_online(imp, 7)
+    assert imp._last_error is None
+    live = await archive.live_champion("prompt.online")
+    assert live is not None and live.version == 2
+    assert imp.status.candidates_promoted == 1
+
+
+# ---------------------------------------------------------------------------
 # Artifact layer mapping
 # ---------------------------------------------------------------------------
 
-def test_artifact_kind_layer_mapping():
-    """The L1-L4 mapping that drives the online safety check."""
-    assert ArtifactKind.PROMPT.layer == 1
-    assert ArtifactKind.SKILL.layer == 1
-    assert ArtifactKind.TOOL_DESCRIPTION.layer == 1
-    assert ArtifactKind.RUBRIC.layer == 1
-    assert ArtifactKind.MEMORY_ENTRY.layer == 2
-    assert ArtifactKind.PLANNER.layer == 3
-    assert ArtifactKind.MONITOR.layer == 3
-    assert ArtifactKind.CODE.layer == 4
+def test_artifact_layer_mapping():
+    """The L1-L4 mapping that drives the online safety check (SPEC §1.2, §18.2)."""
+    from helix.artifact import layer_of
+
+    # All text is L1 in v0.2, including planner/monitor standalone.
+    assert layer_of(ArtifactKind.TEXT, Subtype.PROMPT) == 1
+    assert layer_of(ArtifactKind.TEXT, Subtype.SKILL) == 1
+    assert layer_of(ArtifactKind.TEXT, Subtype.TOOL_DESCRIPTION) == 1
+    assert layer_of(ArtifactKind.TEXT, Subtype.RUBRIC) == 1
+    assert layer_of(ArtifactKind.TEXT, Subtype.PLANNER) == 1
+    assert layer_of(ArtifactKind.TEXT, Subtype.MONITOR) == 1
+    assert layer_of(ArtifactKind.MEMORY_ENTRY) == 2
+    assert layer_of(ArtifactKind.CODE) == 4
+    # L3 is the metacognition composite: its subtype floor lifts it above its
+    # constituents (an L1 planner, an L1 monitor, an L2 memory).
+    assert layer_of(ArtifactKind.COMPOSITE, Subtype.METACOGNITION) == 3
+    assert layer_of(ArtifactKind.COMPOSITE, Subtype.METACOGNITION, (1, 1, 2)) == 3
+    # The constituent term keeps a code-bearing bundle at L4 even with no floor.
+    assert layer_of(ArtifactKind.COMPOSITE, None, (1, 4)) == 4

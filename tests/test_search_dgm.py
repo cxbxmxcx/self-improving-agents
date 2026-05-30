@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from helix.archive import SQLiteArchive
-from helix.artifact import ArtifactKind, genesis
+from helix.artifact import ArtifactKind, genesis, Subtype
 from helix.search.base import SearchBudget, SearchKind, Variant
 from helix.search.dgm import BlindLLMMutator, DGMSearch, Mutator
 from helix.signal import Cost, GapMeasurement, Preference, SignalKind
@@ -56,7 +56,7 @@ def test_stub_mutator_satisfies_protocol():
 async def test_dgm_proposes_a_candidate_from_seed_when_archive_empty():
     """With an empty archive, the seed falls back to the propose() seed."""
     archive = SQLiteArchive(":memory:")
-    seed = genesis("tool_description.x", ArtifactKind.TOOL_DESCRIPTION, "find docs")
+    seed = genesis("tool_description.x", Subtype.TOOL_DESCRIPTION, "find docs")
     dgm = DGMSearch(mutator=_StubMutator(), rounds=1)
 
     yielded = []
@@ -77,7 +77,7 @@ async def test_dgm_samples_from_archive_history():
     (not just the propose() seed) and the candidate's parent is that sample."""
     archive = SQLiteArchive(":memory:")
     # Record three measured variants of the same artifact id.
-    a1 = genesis("tool_description.x", ArtifactKind.TOOL_DESCRIPTION, "v1")
+    a1 = genesis("tool_description.x", Subtype.TOOL_DESCRIPTION, "v1")
     a2 = a1.mutate("v2", created_by="seed")
     a3 = a2.mutate("v3", created_by="seed")
     for art, score in [(a1, 0.9), (a2, 0.3), (a3, 0.4)]:
@@ -104,7 +104,7 @@ async def test_dgm_samples_from_archive_history():
 @pytest.mark.asyncio
 async def test_dgm_candidate_carries_lineage_to_sampled_parent():
     archive = SQLiteArchive(":memory:")
-    a1 = genesis("tool_description.x", ArtifactKind.TOOL_DESCRIPTION, "v1")
+    a1 = genesis("tool_description.x", Subtype.TOOL_DESCRIPTION, "v1")
     await archive.record(
         Variant(artifact=a1, parent=a1, search_method="seed"),
         GapMeasurement(score=0.8, signal_id="stub-signal"),
@@ -125,7 +125,7 @@ async def test_dgm_candidate_carries_lineage_to_sampled_parent():
 @pytest.mark.asyncio
 async def test_dgm_respects_rounds():
     archive = SQLiteArchive(":memory:")
-    seed = genesis("tool_description.x", ArtifactKind.TOOL_DESCRIPTION, "v1")
+    seed = genesis("tool_description.x", Subtype.TOOL_DESCRIPTION, "v1")
     dgm = DGMSearch(mutator=_StubMutator(), rounds=3)
 
     count = 0
@@ -139,7 +139,7 @@ async def test_dgm_respects_rounds():
 @pytest.mark.asyncio
 async def test_dgm_select_returns_highest_scoring():
     dgm = DGMSearch(mutator=_StubMutator())
-    a = genesis("x", ArtifactKind.TOOL_DESCRIPTION, "a")
+    a = genesis("x", Subtype.TOOL_DESCRIPTION, "a")
     b = a.mutate("b", created_by="dgm")
     candidates = [
         Variant(artifact=a, parent=a, search_method="dgm",

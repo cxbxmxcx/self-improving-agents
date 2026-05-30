@@ -7,7 +7,7 @@ from collections.abc import AsyncIterator
 import pytest
 
 from helix.archive import SQLiteArchive
-from helix.artifact import Artifact, ArtifactKind, genesis
+from helix.artifact import Artifact, ArtifactKind, genesis, Subtype
 from helix.eval.dataset import EvalQuestion, EvalSet
 from helix.eval.source import FixedEvalSet
 from helix.hooks import HookRegistry
@@ -79,7 +79,7 @@ def _eval_set() -> EvalSet:
 
 def _make_improver(*, search_kind: SearchKind, label: str) -> OfflineImprover:
     archive = SQLiteArchive(":memory:")
-    seed = genesis("prompt.shared", ArtifactKind.PROMPT, "seed")
+    seed = genesis("prompt.shared", Subtype.PROMPT, "seed")
     return OfflineImprover(
         agent=_StubAgent(seed),
         target_artifact_id="prompt.shared",
@@ -98,7 +98,7 @@ async def test_two_improvers_same_target_both_attach():
     """The Agent should accept multiple Improvers targeting the same artifact
     when they have distinct improver_ids."""
     from helix.agent import Agent
-    art = genesis("prompt.shared", ArtifactKind.PROMPT, "seed")
+    art = genesis("prompt.shared", Subtype.PROMPT, "seed")
     agent = Agent(system_prompt=art, model="claude-haiku-4-5")
 
     imp_spo = _make_improver(search_kind=SearchKind.PAIRWISE, label="spo")
@@ -114,7 +114,7 @@ async def test_two_improvers_same_target_both_attach():
 @pytest.mark.asyncio
 async def test_attach_improver_idempotent_on_improver_id():
     from helix.agent import Agent
-    art = genesis("prompt.shared", ArtifactKind.PROMPT, "seed")
+    art = genesis("prompt.shared", Subtype.PROMPT, "seed")
     agent = Agent(system_prompt=art, model="claude-haiku-4-5")
 
     imp = _make_improver(search_kind=SearchKind.PAIRWISE, label="spo")
@@ -127,7 +127,7 @@ async def test_attach_improver_idempotent_on_improver_id():
 @pytest.mark.asyncio
 async def test_detach_by_improver_id():
     from helix.agent import Agent
-    art = genesis("prompt.shared", ArtifactKind.PROMPT, "seed")
+    art = genesis("prompt.shared", Subtype.PROMPT, "seed")
     agent = Agent(system_prompt=art, model="claude-haiku-4-5")
 
     imp_spo = _make_improver(search_kind=SearchKind.PAIRWISE, label="spo")
@@ -150,7 +150,7 @@ async def test_two_improvers_can_share_an_archive():
     artifacts (the shared seed + candidate from each improver).
     """
     archive = SQLiteArchive(":memory:")
-    seed = genesis("prompt.shared", ArtifactKind.PROMPT, "seed")
+    seed = genesis("prompt.shared", Subtype.PROMPT, "seed")
 
     # Both improvers say their candidate wins (LEFT) by a hefty margin.
     class _WinningSignal:

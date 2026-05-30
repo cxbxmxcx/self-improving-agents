@@ -4,7 +4,7 @@ Each module in this package describes one named agent. The convention is:
 
     # agents/<name>.py
     from helix.agent import Agent
-    from helix.artifact import Artifact, ArtifactKind, genesis
+    from helix.artifact import Artifact, ArtifactKind, genesis, Subtype
 
     SYSTEM_PROMPT_ID = "prompt.<name>.system"
     DEFAULT_SYSTEM_PROMPT = \"\"\"...\"\"\"
@@ -12,7 +12,7 @@ Each module in this package describes one named agent. The convention is:
     def build_genesis_prompt() -> Artifact:
         return genesis(
             id=SYSTEM_PROMPT_ID,
-            kind=ArtifactKind.PROMPT,
+            kind=Subtype.PROMPT,
             content=DEFAULT_SYSTEM_PROMPT,
             created_by="human",
         )

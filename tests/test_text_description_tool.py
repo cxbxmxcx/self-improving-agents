@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import pytest
 
-from helix.artifact import ArtifactKind, genesis
+from helix.artifact import ArtifactKind, genesis, Subtype
 from helix.tools import TextDescriptionTool
 
 
 def _desc(content: str = "Search the corpus for relevant passages.",
           id: str = "tool_description.retrieve") -> object:
-    return genesis(id=id, kind=ArtifactKind.TOOL_DESCRIPTION, content=content)
+    return genesis(id=id, kind=Subtype.TOOL_DESCRIPTION, content=content)
 
 
 async def _retrieve(query: str, k: int = 5) -> list[dict]:
@@ -58,14 +58,14 @@ def test_artifact_refs_returns_description_ref():
 
 
 def test_rejects_non_tool_description_artifact():
-    bad = genesis(id="p", kind=ArtifactKind.PROMPT, content="not a description")
+    bad = genesis(id="p", kind=Subtype.PROMPT, content="not a description")
     with pytest.raises(ValueError, match="TOOL_DESCRIPTION"):
         TextDescriptionTool(name="retrieve", fn=_retrieve, description_artifact=bad)
 
 
 def test_swap_rejects_non_tool_description_artifact():
     tool = TextDescriptionTool(name="retrieve", fn=_retrieve, description_artifact=_desc())
-    bad = genesis(id="p", kind=ArtifactKind.PROMPT, content="not a description")
+    bad = genesis(id="p", kind=Subtype.PROMPT, content="not a description")
     with pytest.raises(ValueError, match="TOOL_DESCRIPTION"):
         tool.swap_description(bad)
 

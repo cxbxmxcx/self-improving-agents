@@ -4,18 +4,18 @@ from __future__ import annotations
 
 import pytest
 
-from helix.artifact import Artifact, ArtifactKind, genesis
+from helix.artifact import Artifact, ArtifactKind, genesis, Subtype
 
 
 def test_genesis_artifact_has_no_parent_and_version_one():
-    art = genesis("prompt.test", ArtifactKind.PROMPT, "hello")
+    art = genesis("prompt.test", Subtype.PROMPT, "hello")
     assert art.parent_id is None
     assert art.version == 1
     assert art.created_by == "human"
 
 
 def test_mutate_increments_version_and_records_parent_pointer():
-    art = genesis("prompt.test", ArtifactKind.PROMPT, "hello")
+    art = genesis("prompt.test", Subtype.PROMPT, "hello")
     child = art.mutate("hello v2", created_by="spo")
 
     assert child.version == 2
@@ -26,7 +26,7 @@ def test_mutate_increments_version_and_records_parent_pointer():
 
 
 def test_mutate_chains_preserve_full_lineage():
-    a1 = genesis("prompt.test", ArtifactKind.PROMPT, "v1")
+    a1 = genesis("prompt.test", Subtype.PROMPT, "v1")
     a2 = a1.mutate("v2", created_by="spo")
     a3 = a2.mutate("v3", created_by="gepa")
 
@@ -36,24 +36,69 @@ def test_mutate_chains_preserve_full_lineage():
 
 
 def test_artifact_is_frozen_against_in_place_edit():
-    art = genesis("prompt.test", ArtifactKind.PROMPT, "hello")
+    art = genesis("prompt.test", Subtype.PROMPT, "hello")
     with pytest.raises(Exception):
         art.content = "this should fail"  # type: ignore[misc]
 
 
 def test_content_hash_is_stable_for_identical_content():
-    a = genesis("p", ArtifactKind.PROMPT, "same content")
-    b = genesis("p", ArtifactKind.PROMPT, "same content")
+    a = genesis("p", Subtype.PROMPT, "same content")
+    b = genesis("p", Subtype.PROMPT, "same content")
     assert a.content_hash == b.content_hash
 
 
 def test_content_hash_differs_when_content_differs():
-    a = genesis("p", ArtifactKind.PROMPT, "alpha")
+    a = genesis("p", Subtype.PROMPT, "alpha")
     b = a.mutate("beta", created_by="human")
     assert a.content_hash != b.content_hash
 
 
 def test_dict_content_hash_is_key_order_independent():
-    a = Artifact(id="r", version=1, kind=ArtifactKind.RUBRIC, content={"a": 1, "b": 2})
-    b = Artifact(id="r", version=1, kind=ArtifactKind.RUBRIC, content={"b": 2, "a": 1})
+    a = Artifact(id="r", version=1, kind=ArtifactKind.TEXT, subtype=Subtype.RUBRIC, content={"a": 1, "b": 2})
+    b = Artifact(id="r", version=1, kind=ArtifactKind.TEXT, subtype=Subtype.RUBRIC, content={"b": 2, "a": 1})
     assert a.content_hash == b.content_hash
+
+
+# ---------------------------------------------------------------------------
+# v0.2 kind/subtype model (SPEC §1.2, §18.2)
+# ---------------------------------------------------------------------------
+
+def test_genesis_from_subtype_infers_text_kind():
+    art = genesis("p.x", Subtype.SKILL, "do a thing")
+    assert art.kind is ArtifactKind.TEXT
+    assert art.subtype is Subtype.SKILL
+    assert art.layer == 1
+
+
+def test_genesis_from_base_kind_has_no_subtype():
+    art = genesis("c.x", ArtifactKind.CODE, "async def f(): ...")
+    assert art.kind is ArtifactKind.CODE
+    assert art.subtype is None
+    assert art.layer == 4
+
+
+def test_mutate_preserves_kind_and_subtype():
+    art = genesis("t.x", Subtype.TOOL_DESCRIPTION, "describes a tool")
+    child = art.mutate("describes it better", created_by="spo")
+    assert child.kind is ArtifactKind.TEXT
+    assert child.subtype is Subtype.TOOL_DESCRIPTION
+
+
+def test_metacognition_composite_floors_at_l3_above_its_constituents():
+    meta = genesis("meta", ArtifactKind.COMPOSITE, [], subtype=Subtype.METACOGNITION)
+    assert meta.layer == 3  # the subtype floor lifts it above L2 constituents
+
+
+def test_resolve_kind_rejects_subtype_that_does_not_belong_to_kind():
+    with pytest.raises(ValueError):
+        genesis("x", ArtifactKind.CODE, "...", subtype=Subtype.PROMPT)
+
+
+def test_migrate_kind_maps_retired_v01_kinds_to_text_subtypes():
+    from helix.artifact import migrate_kind
+
+    assert migrate_kind("prompt") == (ArtifactKind.TEXT, Subtype.PROMPT)
+    assert migrate_kind("planner") == (ArtifactKind.TEXT, Subtype.PLANNER)
+    # a v0.2 row passes through unchanged
+    assert migrate_kind("text", "skill") == (ArtifactKind.TEXT, Subtype.SKILL)
+    assert migrate_kind("code", None) == (ArtifactKind.CODE, None)

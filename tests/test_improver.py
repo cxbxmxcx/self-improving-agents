@@ -13,7 +13,7 @@ from collections.abc import AsyncIterator
 import pytest
 
 from helix.archive import SQLiteArchive
-from helix.artifact import Artifact, ArtifactKind, genesis
+from helix.artifact import Artifact, ArtifactKind, genesis, Subtype
 from helix.eval.dataset import EvalQuestion, EvalSet
 from helix.eval.source import FixedEvalSet
 from helix.hooks import HookRegistry
@@ -47,6 +47,34 @@ class _StubSignal:
             feedback="stub: left wins",
             confidence=1.0,
             cost=Cost(),
+        )
+
+
+class _MixedSignal:
+    """Candidate wins Q1 (contains 'X') outright, ties Q2.
+
+    Over the two-question eval set this yields a candidate that beats the
+    reference on mean score (0.75 vs 0.25) while winning only half the
+    questions (win_rate 0.5). That gap is exactly what the promotion
+    win-rate threshold is meant to catch.
+    """
+
+    @property
+    def kind(self):
+        return SignalKind.LLM_JUDGE_PAIRWISE
+
+    @property
+    def cost_estimate(self):
+        return Cost()
+
+    async def measure(self, candidate, trajectory=None, reference=None, ground_truth=None):
+        question = (ground_truth or {}).get("question", "")
+        if "X" in question:
+            return GapMeasurement(
+                score=1.0, preference=Preference.LEFT, confidence=1.0, cost=Cost()
+            )
+        return GapMeasurement(
+            score=0.5, preference=Preference.TIE, confidence=0.0, cost=Cost()
         )
 
 
@@ -105,7 +133,7 @@ def _eval_set() -> EvalSet:
 def _make_improver(*, schedule: Schedule = Schedule.MANUAL) -> tuple[OfflineImprover, SQLiteArchive, Artifact, EventBus]:
     bus = EventBus()
     archive = SQLiteArchive(":memory:")
-    seed = genesis("prompt.test", ArtifactKind.PROMPT, "seed content")
+    seed = genesis("prompt.test", Subtype.PROMPT, "seed content")
     agent = _StubAgent(seed)
     improver = OfflineImprover(
         agent=agent,
@@ -148,6 +176,55 @@ async def test_trigger_round_records_both_measurements():
     top = await archive.best(k=2)
     versions = sorted(v.artifact.version for v in top)
     assert versions == [1, 2]
+
+
+def _make_mixed_improver(*, promote_threshold_win_rate: float) -> tuple[OfflineImprover, SQLiteArchive]:
+    bus = EventBus()
+    archive = SQLiteArchive(":memory:")
+    seed = genesis("prompt.test", Subtype.PROMPT, "seed content")
+    agent = _StubAgent(seed)
+    improver = OfflineImprover(
+        agent=agent,
+        target_artifact_id="prompt.test",
+        signal=_MixedSignal(),
+        search=_StubSearch(),
+        archive=archive,
+        eval_source=FixedEvalSet(_eval_set()),
+        policy=ImproverPolicy(promote_threshold_win_rate=promote_threshold_win_rate),
+        seed_fallback=seed,
+        bus=bus,
+    )
+    return improver, archive
+
+
+@pytest.mark.asyncio
+async def test_round_below_win_rate_threshold_is_not_promotable():
+    """Candidate beats the reference on mean score but wins only half the
+    questions; a 0.9 win-rate bar must keep it from being promotable."""
+    imp, _ = _make_mixed_improver(promote_threshold_win_rate=0.9)
+    await imp.start()
+    try:
+        result = await imp.trigger_round()
+    finally:
+        await imp.stop()
+
+    assert result.candidate_score == 0.75  # beat reference on score
+    assert result.reference_score == 0.25
+    assert result.promoted is False        # but did not clear the win-rate bar
+
+
+@pytest.mark.asyncio
+async def test_round_above_win_rate_threshold_is_promotable():
+    """Same candidate, a 0.4 win-rate bar it does clear, so it is promotable."""
+    imp, _ = _make_mixed_improver(promote_threshold_win_rate=0.4)
+    await imp.start()
+    try:
+        result = await imp.trigger_round()
+    finally:
+        await imp.stop()
+
+    assert result.candidate_score == 0.75
+    assert result.promoted is True
 
 
 @pytest.mark.asyncio

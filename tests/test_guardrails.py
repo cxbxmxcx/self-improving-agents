@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from helix.artifact import ArtifactKind, genesis
+from helix.artifact import ArtifactKind, genesis, Subtype
 from helix.guardrails import (
     Guardrail,
     GuardrailFailure,
@@ -47,7 +47,7 @@ def test_compile_code_artifact_requires_async_check():
 
 
 def test_compile_code_artifact_rejects_non_code_kind():
-    art = genesis(id="g.prompt", kind=ArtifactKind.PROMPT, content="some text")
+    art = genesis(id="g.prompt", kind=Subtype.PROMPT, content="some text")
     with pytest.raises(ValueError, match="ArtifactKind.CODE"):
         compile_code_artifact(art)
 

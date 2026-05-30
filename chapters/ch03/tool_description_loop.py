@@ -32,7 +32,7 @@ if str(REPO_ROOT) not in sys.path:
 
 from helix.agent import Agent
 from helix.archive import SQLiteArchive
-from helix.artifact import Artifact
+from helix.artifact import Artifact, Subtype
 from helix.env import load_env
 from helix.eval import FixedEvalSet, load_eval_set
 from helix.improvement import OfflineImprover, ImproverPolicy, Schedule
@@ -88,7 +88,7 @@ def _system_prompt_artifact() -> Artifact:
     genesis prompt directly."""
     return genesis(
         id=PROMPT_ARTIFACT_ID,
-        kind=ArtifactKind.PROMPT,
+        kind=Subtype.PROMPT,
         content=SYSTEM_PROMPT_V0,
         created_by="human",
     )

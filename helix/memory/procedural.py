@@ -8,7 +8,7 @@ Chapter 6 is where this tier gets actively used (Voyager-style skill
 libraries, Anthropic's skill files). The contract is here from the start so
 the platform shape is stable.
 
-Skills are also Artifacts (kind=ArtifactKind.SKILL); this tier handles
+Skills are also Artifacts (kind=Subtype.SKILL); this tier handles
 their storage and retrieval. The Archive handles their lineage and
 measurements. The two systems cooperate: when SPO/GEPA produces a new skill
 candidate, the Archive records the version chain and the Improver writes

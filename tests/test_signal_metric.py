@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from helix.artifact import ArtifactKind, genesis
+from helix.artifact import ArtifactKind, genesis, Subtype
 from helix.signal import (
     GapMeasurement,
     Preference,
@@ -156,7 +156,7 @@ async def test_metric_signal_tokens_extraction():
     )
     traj = _make_trajectory(model_calls=3, tokens=2400)
     m = await sig.measure(
-        candidate=genesis("art.x", ArtifactKind.PROMPT, "x"),
+        candidate=genesis("art.x", Subtype.PROMPT, "x"),
         trajectory=traj,
     )
     assert m.raw_value == pytest.approx(2400.0)
@@ -173,7 +173,7 @@ async def test_metric_signal_latency_extraction():
     )
     traj = _make_trajectory(duration_sec=2.0)
     m = await sig.measure(
-        candidate=genesis("art.x", ArtifactKind.PROMPT, "x"),
+        candidate=genesis("art.x", Subtype.PROMPT, "x"),
         trajectory=traj,
     )
     assert m.raw_value == pytest.approx(2.0, abs=0.01)
@@ -188,7 +188,7 @@ async def test_metric_signal_tool_calls_count():
     )
     traj = _make_trajectory(tool_calls=4)
     m = await sig.measure(
-        candidate=genesis("art.x", ArtifactKind.PROMPT, "x"),
+        candidate=genesis("art.x", Subtype.PROMPT, "x"),
         trajectory=traj,
     )
     assert m.raw_value == pytest.approx(4.0)
@@ -203,7 +203,7 @@ async def test_metric_signal_model_calls_count():
     )
     traj = _make_trajectory(model_calls=5)
     m = await sig.measure(
-        candidate=genesis("art.x", ArtifactKind.PROMPT, "x"),
+        candidate=genesis("art.x", Subtype.PROMPT, "x"),
         trajectory=traj,
     )
     assert m.raw_value == pytest.approx(5.0)
@@ -217,7 +217,7 @@ async def test_metric_signal_no_trajectory_returns_empty():
         threshold=SignalThreshold(baseline=1000, threshold=500),
     )
     m = await sig.measure(
-        candidate=genesis("art.x", ArtifactKind.PROMPT, "x"),
+        candidate=genesis("art.x", Subtype.PROMPT, "x"),
         trajectory=None,
     )
     assert m.score is None
@@ -234,7 +234,7 @@ async def test_metric_signal_below_threshold_not_triggered():
     )
     traj = _make_trajectory(model_calls=1, tokens=800)
     m = await sig.measure(
-        candidate=genesis("art.x", ArtifactKind.PROMPT, "x"),
+        candidate=genesis("art.x", Subtype.PROMPT, "x"),
         trajectory=traj,
     )
     # 800 < 1000 + 500
