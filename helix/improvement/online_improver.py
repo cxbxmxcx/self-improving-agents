@@ -99,20 +99,25 @@ class OnlineImprover:
         self.bus = bus or get_bus()
 
         # Layer safety: online auto-promotes; L3/L4 need a deploy gate.
-        # The target artifact id alone doesn't tell us the kind, so we look
-        # up the agent's current binding (system_prompt for Ch 2; future
-        # chapters will route by id pattern). If the agent has no matching
-        # binding, we defer the check until the first proposal (we don't
-        # know the layer yet).
-        if hasattr(self.agent, "system_prompt") and self.agent.system_prompt.id == target_artifact_id:
-            layer = self.agent.system_prompt.layer
-            if layer >= 3:
-                raise ValueError(
-                    f"OnlineImprover {self.improver_id}: cannot target an L{layer} "
-                    f"artifact (kind={self.agent.system_prompt.kind.value}). "
-                    f"Online auto-promotes; L3/L4 need a deploy gate. "
-                    f"Use OfflineImprover for L3/L4 work."
-                )
+        # Resolve the target artifact wherever it is bound on the agent (not
+        # just the system prompt) so the check fires for any L3/L4 target, then
+        # raise at construction. SPEC §17.3. A target the agent does not bind
+        # is a misconfiguration, not a deployed L3/L4 artifact, so it is left
+        # for the first proposal to surface rather than failing construction.
+        target_art = None
+        if hasattr(self.agent, "find_artifact"):
+            target_art = self.agent.find_artifact(target_artifact_id)
+        if target_art is None and getattr(self.agent, "system_prompt", None) is not None:
+            if self.agent.system_prompt.id == target_artifact_id:
+                target_art = self.agent.system_prompt
+        if target_art is not None and target_art.layer >= 3:
+            raise ValueError(
+                f"OnlineImprover {self.improver_id}: cannot target an "
+                f"L{target_art.layer} artifact (kind={target_art.kind.value}"
+                f"{', subtype=' + target_art.subtype.value if target_art.subtype else ''}). "
+                f"Online auto-promotes; L3/L4 need a deploy gate. "
+                f"Use OfflineImprover for L3/L4 work."
+            )
 
         # Wire into the default promotion handler chain so CandidateWins
         # produces an archive.promote() under online + auto_promote.

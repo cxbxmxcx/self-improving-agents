@@ -12,6 +12,7 @@ from helix.search.base import (
     SearchKind,
     Variant,
 )
+from helix.search.composed import ComposedSearch
 from helix.search.strategy_chain import StrategyChain
 
 __all__ = [
@@ -20,5 +21,6 @@ __all__ = [
     "SearchCostModel",
     "SearchKind",
     "Variant",
+    "ComposedSearch",
     "StrategyChain",
 ]

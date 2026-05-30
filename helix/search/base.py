@@ -37,6 +37,7 @@ class SearchKind(str, Enum):
     EVOLUTIONARY_ARCHIVE = "evolutionary_archive"  # DGM, AlphaEvolve, ShinkaEvolve
     MEMORY_Q_LEARNING = "memory_q_learning"  # MemRL
     EDITABLE_META = "editable_meta"  # HyperAgents
+    COMPOSED = "composed"  # joint search over a composite's constituents (§18)
     HUMAN = "human"  # hand-authored variants, treated as a Search
 
 
