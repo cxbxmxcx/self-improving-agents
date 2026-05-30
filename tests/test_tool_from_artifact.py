@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from helix.artifact import ArtifactKind, genesis
+from helix.artifact import ArtifactKind, genesis, Subtype
 from helix.tools import ToolFromArtifact
 
 
@@ -18,7 +18,7 @@ def _make_pair(
     desc_id: str = "prompt.tool.add.description",
 ):
     code_art = genesis(id=code_id, kind=ArtifactKind.CODE, content=code)
-    desc_art = genesis(id=desc_id, kind=ArtifactKind.TOOL_DESCRIPTION, content=description)
+    desc_art = genesis(id=desc_id, kind=Subtype.TOOL_DESCRIPTION, content=description)
     return code_art, desc_art
 
 
@@ -67,8 +67,8 @@ def test_tool_from_artifact_records_both_refs():
 
 
 def test_tool_from_artifact_rejects_non_code_for_implementation():
-    bad = genesis(id="bad", kind=ArtifactKind.PROMPT, content="async def add(): pass")
-    desc = genesis(id="d", kind=ArtifactKind.TOOL_DESCRIPTION, content="x")
+    bad = genesis(id="bad", kind=Subtype.PROMPT, content="async def add(): pass")
+    desc = genesis(id="d", kind=Subtype.TOOL_DESCRIPTION, content="x")
     with pytest.raises(ValueError, match="ArtifactKind.CODE"):
         ToolFromArtifact(code_artifact=bad, description_artifact=desc)
 
@@ -79,7 +79,7 @@ def test_tool_from_artifact_rejects_non_tool_description_for_description():
         kind=ArtifactKind.CODE,
         content="async def add(a: int, b: int) -> int:\n    return a + b\n",
     )
-    bad = genesis(id="b", kind=ArtifactKind.PROMPT, content="x")
+    bad = genesis(id="b", kind=Subtype.PROMPT, content="x")
     with pytest.raises(ValueError, match="TOOL_DESCRIPTION"):
         ToolFromArtifact(code_artifact=code, description_artifact=bad)
 
@@ -92,7 +92,7 @@ def test_tool_from_artifact_wraps_sync_callable_in_async():
     code_art = genesis(id="code.mul", kind=ArtifactKind.CODE, content=code)
     desc_art = genesis(
         id="prompt.mul.description",
-        kind=ArtifactKind.TOOL_DESCRIPTION,
+        kind=Subtype.TOOL_DESCRIPTION,
         content="Multiply two integers.",
     )
     # Need expected_callable since the heuristic looks for async functions
@@ -115,7 +115,7 @@ def test_tool_from_artifact_ambiguous_callable_raises():
     code_art = genesis(id="c.amb", kind=ArtifactKind.CODE, content=code)
     desc_art = genesis(
         id="d.amb",
-        kind=ArtifactKind.TOOL_DESCRIPTION,
+        kind=Subtype.TOOL_DESCRIPTION,
         content="ambiguous",
     )
     with pytest.raises(ValueError, match="cannot infer tool name"):

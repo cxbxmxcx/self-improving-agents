@@ -62,8 +62,8 @@ def test_load_improvers_returns_empty_when_spec_lacks_build_improvers(tmp_path):
 
     def build(system_prompt=None, **overrides):
         from helix.agent import Agent
-        from helix.artifact import ArtifactKind, genesis
-        seed = system_prompt or genesis("p.min", ArtifactKind.PROMPT, "minimal")
+        from helix.artifact import ArtifactKind, genesis, Subtype
+        seed = system_prompt or genesis("p.min", Subtype.PROMPT, "minimal")
         return Agent(system_prompt=seed, model="claude-haiku-4-5")
 
     spec_mod.build = build
@@ -96,8 +96,8 @@ def test_list_improvable_artifacts_default_is_system_prompt():
 
     def build(**overrides):
         from helix.agent import Agent
-        from helix.artifact import ArtifactKind, genesis
-        seed = genesis("p.x", ArtifactKind.PROMPT, "x")
+        from helix.artifact import ArtifactKind, genesis, Subtype
+        seed = genesis("p.x", Subtype.PROMPT, "x")
         return Agent(system_prompt=seed, model="claude-haiku-4-5")
 
     spec_mod.build = build

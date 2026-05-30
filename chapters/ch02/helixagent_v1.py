@@ -26,7 +26,7 @@ if str(REPO_ROOT) not in sys.path:
 
 from helix.agent import Agent
 from helix.archive import SQLiteArchive
-from helix.artifact import Artifact, ArtifactKind, genesis
+from helix.artifact import Artifact, ArtifactKind, genesis, Subtype
 from helix.env import load_env
 from helix.search.base import Variant
 from helix.signal import GapMeasurement
@@ -78,7 +78,7 @@ async def get_or_create_seed(archive: SQLiteArchive) -> Artifact:
     # measurement), and return it as the unscored fallback.
     seed = genesis(
         id=PROMPT_ARTIFACT_ID,
-        kind=ArtifactKind.PROMPT,
+        kind=Subtype.PROMPT,
         content=SYSTEM_PROMPT_V0,
         created_by="human",
     )

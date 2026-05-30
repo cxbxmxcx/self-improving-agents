@@ -16,7 +16,7 @@ from unittest.mock import patch
 import pytest
 
 from helix.agent import Agent
-from helix.artifact import ArtifactKind, genesis
+from helix.artifact import ArtifactKind, genesis, Subtype
 from helix.memory.base import (
     MemoryContext,
     MemoryEntry,
@@ -68,7 +68,7 @@ def fake_llm():
 @pytest.mark.asyncio
 async def test_agent_runs_without_memory_when_none_attached(fake_llm):
     agent = Agent(
-        system_prompt=genesis("p", ArtifactKind.PROMPT, "you are helpful"),
+        system_prompt=genesis("p", Subtype.PROMPT, "you are helpful"),
         model="claude-haiku-4-5",
     )
     answer, traj = await agent.run("hello")
@@ -81,7 +81,7 @@ async def test_agent_runs_without_memory_when_none_attached(fake_llm):
 async def test_agent_writes_to_episodic_on_session_end(fake_llm):
     em = EpisodicMemory(":memory:")
     agent = Agent(
-        system_prompt=genesis("p", ArtifactKind.PROMPT, "you are helpful"),
+        system_prompt=genesis("p", Subtype.PROMPT, "you are helpful"),
         model="claude-haiku-4-5",
         memory_tiers={"episodic": em},
     )
@@ -104,7 +104,7 @@ async def test_episodic_recall_appears_in_system_prompt(fake_llm):
     ))
 
     agent = Agent(
-        system_prompt=genesis("p", ArtifactKind.PROMPT, "you are helpful"),
+        system_prompt=genesis("p", Subtype.PROMPT, "you are helpful"),
         model="claude-haiku-4-5",
         memory_tiers={"episodic": em},
     )
@@ -128,7 +128,7 @@ async def test_semantic_facts_appear_in_system_prompt(fake_llm):
     await sm.write_fact("os", "Linux", ScopeKey(Scope.USER, "alice"))
 
     agent = Agent(
-        system_prompt=genesis("p", ArtifactKind.PROMPT, "you are helpful"),
+        system_prompt=genesis("p", Subtype.PROMPT, "you are helpful"),
         model="claude-haiku-4-5",
         memory_tiers={"semantic": sm},
     )
@@ -155,7 +155,7 @@ async def test_scope_isolation_in_episodic_recall(fake_llm):
     ))
 
     agent = Agent(
-        system_prompt=genesis("p", ArtifactKind.PROMPT, "you are helpful"),
+        system_prompt=genesis("p", Subtype.PROMPT, "you are helpful"),
         model="claude-haiku-4-5",
         memory_tiers={"episodic": em},
     )
@@ -175,7 +175,7 @@ async def test_agent_run_without_context_skips_memory_write(fake_llm):
     """Stateless mode: no session_id, no episodic write."""
     em = EpisodicMemory(":memory:")
     agent = Agent(
-        system_prompt=genesis("p", ArtifactKind.PROMPT, "you are helpful"),
+        system_prompt=genesis("p", Subtype.PROMPT, "you are helpful"),
         model="claude-haiku-4-5",
         memory_tiers={"episodic": em},
     )
@@ -207,7 +207,7 @@ async def test_memory_write_failure_does_not_break_run(fake_llm):
             return ConsolidationReport(tier="episodic")
 
     agent = Agent(
-        system_prompt=genesis("p", ArtifactKind.PROMPT, "you are helpful"),
+        system_prompt=genesis("p", Subtype.PROMPT, "you are helpful"),
         model="claude-haiku-4-5",
         memory_tiers={"episodic": _BrokenEpisodic()},
     )

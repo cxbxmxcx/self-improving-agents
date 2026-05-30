@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 import pytest
 
-from helix.artifact import ArtifactKind, genesis
+from helix.artifact import ArtifactKind, genesis, Subtype
 from helix.observability.bus import EventBus
 from helix.observability.events import SearchStrategySwitched
 from helix.search.base import (
@@ -50,7 +50,7 @@ class _StubRoundResult:
 
 
 def _seed():
-    return genesis("prompt.test", ArtifactKind.PROMPT, "seed content")
+    return genesis("prompt.test", Subtype.PROMPT, "seed content")
 
 
 @pytest.mark.asyncio

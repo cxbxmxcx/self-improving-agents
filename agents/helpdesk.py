@@ -17,7 +17,7 @@ from pathlib import Path
 
 from helix.agent import Agent
 from helix.archive import SQLiteArchive
-from helix.artifact import Artifact, ArtifactKind, genesis
+from helix.artifact import Artifact, ArtifactKind, genesis, Subtype
 from helix.eval import RecentTrajectorySource
 from helix.improvement import OfflineImprover, ImproverPolicy, Schedule
 from helix.memory import EpisodicMemory, ProceduralMemory, SemanticMemory
@@ -76,7 +76,7 @@ def build_genesis_prompt() -> Artifact:
     """Return the genesis prompt artifact for this agent."""
     return genesis(
         id=SYSTEM_PROMPT_ID,
-        kind=ArtifactKind.PROMPT,
+        kind=Subtype.PROMPT,
         content=DEFAULT_SYSTEM_PROMPT,
         created_by="human",
     )

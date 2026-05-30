@@ -5,15 +5,38 @@ from __future__ import annotations
 import pytest
 
 from helix.archive import SQLiteArchive, SamplingStrategy
-from helix.artifact import ArtifactKind, genesis
+from helix.artifact import ArtifactKind, genesis, Subtype
 from helix.search.base import Variant
 from helix.signal import GapMeasurement, Preference
 
 
 @pytest.mark.asyncio
+async def test_legacy_v01_artifact_row_migrates_on_read():
+    """A row written under v0.1 (kind='prompt', no subtype) reads back as a
+    v0.2 (text, prompt) artifact via the on-read migration. SPEC §1.2, §14."""
+    arc = SQLiteArchive(":memory:")
+    arc._conn.execute(
+        "INSERT INTO artifacts "
+        "(artifact_id, version, kind, subtype, content, content_is_json, "
+        " parent_id, parent_version, created_by, created_at, content_hash, "
+        " artifact_metadata) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        ("legacy.p", 1, "prompt", None, "old content", 0, None, None,
+         "human", "2025-01-01T00:00:00+00:00", "deadbeef", "{}"),
+    )
+    arc._conn.commit()
+
+    v = await arc.by_id("legacy.p", 1)
+    assert v is not None
+    assert v.artifact.kind is ArtifactKind.TEXT
+    assert v.artifact.subtype is Subtype.PROMPT
+    assert v.artifact.layer == 1
+
+
+@pytest.mark.asyncio
 async def test_record_and_retrieve_by_id():
     arc = SQLiteArchive(":memory:")
-    a = genesis("p", ArtifactKind.PROMPT, "hello")
+    a = genesis("p", Subtype.PROMPT, "hello")
     await arc.record(
         Variant(artifact=a, parent=a, search_method="human"),
         GapMeasurement(score=0.5),
@@ -27,7 +50,7 @@ async def test_record_and_retrieve_by_id():
 @pytest.mark.asyncio
 async def test_best_orders_by_score_descending():
     arc = SQLiteArchive(":memory:")
-    a = genesis("p", ArtifactKind.PROMPT, "v1")
+    a = genesis("p", Subtype.PROMPT, "v1")
     b = a.mutate("v2", created_by="spo")
     c = b.mutate("v3", created_by="spo")
     await arc.record(Variant(artifact=a, parent=a, search_method="human"), GapMeasurement(score=0.3))
@@ -41,7 +64,7 @@ async def test_best_orders_by_score_descending():
 @pytest.mark.asyncio
 async def test_lineage_reconstructs_genesis_to_leaf():
     arc = SQLiteArchive(":memory:")
-    a = genesis("p", ArtifactKind.PROMPT, "v1")
+    a = genesis("p", Subtype.PROMPT, "v1")
     b = a.mutate("v2", created_by="spo")
     c = b.mutate("v3", created_by="spo")
     await arc.record(Variant(artifact=a, parent=a, search_method="human"), GapMeasurement(score=0.3))
@@ -58,13 +81,13 @@ async def test_descendants_returns_immediate_children():
     # so they get their own (id, version) primary keys. Forks across ids is
     # the realistic shape: SPO and GEPA produce different *named* artifacts.
     arc = SQLiteArchive(":memory:")
-    a = genesis("p", ArtifactKind.PROMPT, "v1")
+    a = genesis("p", Subtype.PROMPT, "v1")
     b_kind = a.mutate("v2-a", created_by="spo")
     # Simulate a second-line fork by using a different id but pointing parent
     # back at a. In practice GEPA would do this when forking off a known seed.
     from helix.artifact import Artifact
     c_fork = Artifact(
-        id="p_fork", version=1, kind=a.kind, content="v2-b",
+        id="p_fork", version=1, kind=a.kind, subtype=a.subtype, content="v2-b",
         parent_id=a.ref, created_by="gepa",
     )
     await arc.record(Variant(artifact=a, parent=a, search_method="human"), GapMeasurement(score=0.3))
@@ -78,7 +101,7 @@ async def test_descendants_returns_immediate_children():
 @pytest.mark.asyncio
 async def test_sample_best_returns_top_scorer():
     arc = SQLiteArchive(":memory:")
-    a = genesis("p", ArtifactKind.PROMPT, "v1")
+    a = genesis("p", Subtype.PROMPT, "v1")
     b = a.mutate("v2", created_by="spo")
     await arc.record(Variant(artifact=a, parent=a, search_method="human"), GapMeasurement(score=0.3))
     await arc.record(Variant(artifact=b, parent=a, search_method="spo"), GapMeasurement(score=0.9))
@@ -89,7 +112,7 @@ async def test_sample_best_returns_top_scorer():
 @pytest.mark.asyncio
 async def test_pareto_front_single_objective_returns_max():
     arc = SQLiteArchive(":memory:")
-    a = genesis("p", ArtifactKind.PROMPT, "v1")
+    a = genesis("p", Subtype.PROMPT, "v1")
     b = a.mutate("v2", created_by="spo")
     c = b.mutate("v3", created_by="spo")
     await arc.record(Variant(artifact=a, parent=a, search_method="human"), GapMeasurement(score=0.3))
@@ -103,7 +126,7 @@ async def test_pareto_front_single_objective_returns_max():
 @pytest.mark.asyncio
 async def test_all_artifacts_with_measurements_returns_complete_set():
     arc = SQLiteArchive(":memory:")
-    a = genesis("p", ArtifactKind.PROMPT, "v1")
+    a = genesis("p", Subtype.PROMPT, "v1")
     b = a.mutate("v2", created_by="spo")
     await arc.record(Variant(artifact=a, parent=a, search_method="human"), GapMeasurement(score=0.4))
     await arc.record(Variant(artifact=b, parent=a, search_method="spo"), GapMeasurement(score=0.6))
@@ -117,7 +140,7 @@ async def test_all_artifacts_with_measurements_returns_complete_set():
 @pytest.mark.asyncio
 async def test_measurement_history_returns_chronological_list():
     arc = SQLiteArchive(":memory:")
-    a = genesis("p", ArtifactKind.PROMPT, "seed")
+    a = genesis("p", Subtype.PROMPT, "seed")
     variant = Variant(artifact=a, parent=a, search_method="human")
     # Record three measurements over time.
     await arc.record(variant, GapMeasurement(score=0.3))
@@ -130,7 +153,7 @@ async def test_measurement_history_returns_chronological_list():
 @pytest.mark.asyncio
 async def test_lineage_tree_returns_nested_forest():
     arc = SQLiteArchive(":memory:")
-    a = genesis("p", ArtifactKind.PROMPT, "v1")
+    a = genesis("p", Subtype.PROMPT, "v1")
     b = a.mutate("v2", created_by="spo")
     c = b.mutate("v3", created_by="spo")
     await arc.record(Variant(artifact=a, parent=a, search_method="human"), GapMeasurement(score=0.4))
@@ -149,7 +172,7 @@ async def test_lineage_tree_returns_nested_forest():
 @pytest.mark.asyncio
 async def test_diversity_metrics_counts_unique_hashes():
     arc = SQLiteArchive(":memory:")
-    a = genesis("p", ArtifactKind.PROMPT, "v1")
+    a = genesis("p", Subtype.PROMPT, "v1")
     b = a.mutate("v2", created_by="spo")
     await arc.record(Variant(artifact=a, parent=a, search_method="human"), GapMeasurement(score=0.3))
     await arc.record(Variant(artifact=b, parent=a, search_method="spo"), GapMeasurement(score=0.6))
@@ -166,7 +189,7 @@ async def test_diversity_metrics_counts_unique_hashes():
 async def test_record_persists_signal_identity_and_extra_fields():
     """signal_id, signal_version, raw_value, triggered survive a round trip."""
     arc = SQLiteArchive(":memory:")
-    a = genesis("p", ArtifactKind.PROMPT, "v1")
+    a = genesis("p", Subtype.PROMPT, "v1")
     m = GapMeasurement(
         score=0.7,
         signal_id="JudgeX:abc123",
@@ -187,7 +210,7 @@ async def test_record_persists_signal_identity_and_extra_fields():
 async def test_best_without_signal_id_returns_all_measurements():
     """The signal_id kwarg defaults to None; behavior matches pre-attribution."""
     arc = SQLiteArchive(":memory:")
-    a = genesis("p", ArtifactKind.PROMPT, "v1")
+    a = genesis("p", Subtype.PROMPT, "v1")
     b = a.mutate("v2", created_by="spo")
     await arc.record(
         Variant(artifact=a, parent=a, search_method="human"),
@@ -205,7 +228,7 @@ async def test_best_without_signal_id_returns_all_measurements():
 async def test_best_filters_by_signal_id():
     """When signal_id is provided, only matching measurements compete."""
     arc = SQLiteArchive(":memory:")
-    a = genesis("p", ArtifactKind.PROMPT, "v1")
+    a = genesis("p", Subtype.PROMPT, "v1")
     b = a.mutate("v2", created_by="spo")
     c = b.mutate("v3", created_by="spo")
     # a scored under judge A at 0.9 (would otherwise win)
@@ -236,7 +259,7 @@ async def test_best_filters_by_signal_id():
 @pytest.mark.asyncio
 async def test_measurements_for_signal_returns_matching_rows():
     arc = SQLiteArchive(":memory:")
-    a = genesis("p", ArtifactKind.PROMPT, "v1")
+    a = genesis("p", Subtype.PROMPT, "v1")
     b = a.mutate("v2", created_by="spo")
     await arc.record(
         Variant(artifact=a, parent=a, search_method="human"),
@@ -259,7 +282,7 @@ async def test_measurements_for_signal_returns_matching_rows():
 @pytest.mark.asyncio
 async def test_measurements_for_signal_filters_by_version():
     arc = SQLiteArchive(":memory:")
-    a = genesis("p", ArtifactKind.PROMPT, "v1")
+    a = genesis("p", Subtype.PROMPT, "v1")
     await arc.record(
         Variant(artifact=a, parent=a, search_method="human"),
         GapMeasurement(score=0.4, signal_id="JudgeA:x", signal_version=1),
@@ -279,7 +302,7 @@ async def test_measurements_for_signal_filters_by_version():
 @pytest.mark.asyncio
 async def test_measurements_for_signal_empty_when_no_match():
     arc = SQLiteArchive(":memory:")
-    a = genesis("p", ArtifactKind.PROMPT, "v1")
+    a = genesis("p", Subtype.PROMPT, "v1")
     await arc.record(
         Variant(artifact=a, parent=a, search_method="human"),
         GapMeasurement(score=0.4, signal_id="JudgeA:x"),

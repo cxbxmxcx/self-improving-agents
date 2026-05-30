@@ -19,7 +19,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from helix.agent import Agent
-from helix.artifact import Artifact, ArtifactKind, genesis
+from helix.artifact import Artifact, ArtifactKind, genesis, Subtype
 from helix.retrieval.index import open_index
 from helix.tools import Tool, tool
 
@@ -49,7 +49,7 @@ Keep answers concise and grounded in citations."""
 def build_genesis_prompt() -> Artifact:
     return genesis(
         id=SYSTEM_PROMPT_ID,
-        kind=ArtifactKind.PROMPT,
+        kind=Subtype.PROMPT,
         content=DEFAULT_SYSTEM_PROMPT,
         created_by="human",
     )

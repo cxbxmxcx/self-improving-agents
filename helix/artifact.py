@@ -26,41 +26,127 @@ from typing import Any
 
 
 class ArtifactKind(str, Enum):
-    PROMPT = "prompt"
-    SKILL = "skill"
-    TOOL_DESCRIPTION = "tool_description"
+    """The search-economics kind of an artifact (SPEC §1.2).
+
+    Kind answers "how is this searched," not "what role does it play." Role is
+    carried by an optional Subtype, and deploy risk by a derived layer. The set
+    is the v0.2 consolidation of the earlier per-role kinds.
+    """
+
+    TEXT = "text"
     MEMORY_ENTRY = "memory_entry"
+    CODE = "code"
+    COMPOSITE = "composite"
+
+
+class Subtype(str, Enum):
+    """The role of an artifact within its kind (SPEC §1.2, §18.2.1).
+
+    The text subtypes are a closed set; the composite subtypes are open, and a
+    composite subtype names a blessed composition shape (metacognition first).
+    """
+
+    # text subtypes (closed set)
+    PROMPT = "prompt"
+    TOOL_DESCRIPTION = "tool_description"
+    SKILL = "skill"
     RUBRIC = "rubric"
     PLANNER = "planner"
     MONITOR = "monitor"
-    CODE = "code"
-
-    @property
-    def layer(self) -> int:
-        """The improvement-layer this kind belongs to (1-4).
-
-        L1 prompt: PROMPT, SKILL, TOOL_DESCRIPTION, RUBRIC.
-        L2 memory: MEMORY_ENTRY.
-        L3 metacognition: PLANNER, MONITOR.
-        L4 code: CODE.
-
-        Online improvers refuse to target L3 or L4 artifacts because those
-        layers carry changes too structural to apply without a deploy gate.
-        See DESIGN_NOTES.md section 10.
-        """
-        return _LAYER_BY_KIND[self]
+    # composite subtypes (open set; metacognition is the first, SPEC §18.2.1)
+    METACOGNITION = "metacognition"
 
 
-_LAYER_BY_KIND: dict[ArtifactKind, int] = {
-    ArtifactKind.PROMPT: 1,
-    ArtifactKind.SKILL: 1,
-    ArtifactKind.TOOL_DESCRIPTION: 1,
-    ArtifactKind.RUBRIC: 1,
+# Which base kind a subtype belongs to. Lets genesis/mutate accept a bare
+# Subtype and infer its kind, so call sites stay terse (genesis(id, PROMPT, ...)).
+_KIND_OF_SUBTYPE: dict[Subtype, ArtifactKind] = {
+    Subtype.PROMPT: ArtifactKind.TEXT,
+    Subtype.TOOL_DESCRIPTION: ArtifactKind.TEXT,
+    Subtype.SKILL: ArtifactKind.TEXT,
+    Subtype.RUBRIC: ArtifactKind.TEXT,
+    Subtype.PLANNER: ArtifactKind.TEXT,
+    Subtype.MONITOR: ArtifactKind.TEXT,
+    Subtype.METACOGNITION: ArtifactKind.COMPOSITE,
+}
+
+# Composite subtypes that declare an emergent-risk layer floor above their
+# constituents (SPEC §18.2.1). Metacognition self-modifies the agent's
+# reasoning, so it is L3 even though its parts (L1 planner, L1 monitor, L2
+# memory) top out at L2.
+_COMPOSITE_LAYER_FLOOR: dict[Subtype | None, int] = {
+    Subtype.METACOGNITION: 3,
+}
+
+_BASE_LAYER: dict[ArtifactKind, int] = {
+    ArtifactKind.TEXT: 1,
     ArtifactKind.MEMORY_ENTRY: 2,
-    ArtifactKind.PLANNER: 3,
-    ArtifactKind.MONITOR: 3,
     ArtifactKind.CODE: 4,
 }
+
+# Retired v0.1 top-level kinds, mapped to their (kind, subtype) under v0.2.
+# The archive uses this to migrate old rows on read (SPEC §1.2, §14).
+_RETIRED_KIND_MIGRATION: dict[str, tuple[ArtifactKind, Subtype]] = {
+    "prompt": (ArtifactKind.TEXT, Subtype.PROMPT),
+    "tool_description": (ArtifactKind.TEXT, Subtype.TOOL_DESCRIPTION),
+    "skill": (ArtifactKind.TEXT, Subtype.SKILL),
+    "rubric": (ArtifactKind.TEXT, Subtype.RUBRIC),
+    "planner": (ArtifactKind.TEXT, Subtype.PLANNER),
+    "monitor": (ArtifactKind.TEXT, Subtype.MONITOR),
+}
+
+
+def layer_of(
+    kind: ArtifactKind,
+    subtype: Subtype | None = None,
+    constituent_layers: tuple[int, ...] = (),
+) -> int:
+    """The improvement layer (1-4) for a (kind, subtype). SPEC §1.2, §18.2.
+
+    text -> 1, memory_entry -> 2, code -> 4. A composite is
+    `max(subtype floor, max over constituent layers)`: the floor lets a blessed
+    composition such as metacognition (L3) carry a risk higher than its parts,
+    while the constituent term keeps a bundle holding code at L4. Online
+    improvers refuse any target at layer >= 3 (SPEC §17.3).
+    """
+    if kind is ArtifactKind.COMPOSITE:
+        floor = _COMPOSITE_LAYER_FLOOR.get(subtype, 1)
+        return max(floor, max(constituent_layers, default=1))
+    return _BASE_LAYER[kind]
+
+
+def resolve_kind(
+    kind: ArtifactKind | Subtype,
+    subtype: Subtype | None = None,
+) -> tuple[ArtifactKind, Subtype | None]:
+    """Normalize a (kind-or-subtype, subtype) pair to (ArtifactKind, Subtype | None).
+
+    Callers may pass a bare Subtype (which implies its base kind) or an
+    ArtifactKind plus an optional Subtype. Raises if the subtype does not
+    belong to the kind.
+    """
+    if isinstance(kind, Subtype):
+        if subtype is not None and subtype is not kind:
+            raise ValueError(
+                f"conflicting subtype: kind token {kind} vs subtype {subtype}"
+            )
+        return _KIND_OF_SUBTYPE[kind], kind
+    if subtype is not None and _KIND_OF_SUBTYPE.get(subtype) is not kind:
+        raise ValueError(f"subtype {subtype} does not belong to kind {kind}")
+    return kind, subtype
+
+
+def migrate_kind(
+    raw_kind: str, raw_subtype: str | None = None
+) -> tuple[ArtifactKind, Subtype | None]:
+    """Map a persisted (kind, subtype) to v0.2, migrating retired v0.1 kinds.
+
+    A v0.1 row stores a retired top-level kind (e.g. "prompt") and no subtype;
+    it migrates to `(text, prompt)`. A v0.2 row stores `("text", "prompt")` and
+    passes through. SPEC §1.2, §14.
+    """
+    if raw_kind in _RETIRED_KIND_MIGRATION:
+        return _RETIRED_KIND_MIGRATION[raw_kind]
+    return ArtifactKind(raw_kind), (Subtype(raw_subtype) if raw_subtype else None)
 
 
 ParentRef = tuple[str, int] | None
@@ -78,13 +164,24 @@ class Artifact:
     id: str
     version: int
     kind: ArtifactKind
-    content: str | dict[str, Any]
+    content: str | dict[str, Any] | list[Any]
+    subtype: Subtype | None = None
     parent_id: ParentRef = None
     created_by: str = "human"
     created_at: datetime = field(
         default_factory=lambda: datetime.now(timezone.utc)
     )
     metadata: dict[str, Any] = field(default_factory=dict)
+
+    @property
+    def layer(self) -> int:
+        """This artifact's improvement layer (1-4). SPEC §1.2, §18.2.
+
+        Derived from (kind, subtype). Composite constituent layers are folded
+        in once composites are built (§18); a bare composite uses its subtype
+        floor.
+        """
+        return layer_of(self.kind, self.subtype)
 
     @property
     def content_hash(self) -> str:
@@ -125,6 +222,7 @@ class Artifact:
             version=version if version is not None else self.version + 1,
             kind=self.kind,
             content=new_content,
+            subtype=self.subtype,
             parent_id=self.ref,
             created_by=created_by,
             metadata=metadata or {},
@@ -133,21 +231,25 @@ class Artifact:
 
 def genesis(
     id: str,
-    kind: ArtifactKind,
-    content: str | dict[str, Any],
+    kind: ArtifactKind | Subtype,
+    content: str | dict[str, Any] | list[Any],
     created_by: str = "human",
     metadata: dict[str, Any] | None = None,
+    subtype: Subtype | None = None,
 ) -> Artifact:
     """Create the first (genesis) version of an artifact.
 
-    Genesis artifacts have parent_id=None and version=1. Most artifacts in a
-    fresh project start here.
+    Genesis artifacts have parent_id=None and version=1. The kind argument may
+    be a bare Subtype (which implies its base kind, e.g. `genesis(id, PROMPT,
+    ...)` makes a text artifact) or an ArtifactKind with an optional subtype.
     """
+    base_kind, sub = resolve_kind(kind, subtype)
     return Artifact(
         id=id,
         version=1,
-        kind=kind,
+        kind=base_kind,
         content=content,
+        subtype=sub,
         parent_id=None,
         created_by=created_by,
         metadata=metadata or {},

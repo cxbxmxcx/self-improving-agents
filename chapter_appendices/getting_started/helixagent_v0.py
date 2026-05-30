@@ -20,7 +20,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from helix.agent import Agent
-from helix.artifact import Artifact, ArtifactKind, genesis
+from helix.artifact import Artifact, ArtifactKind, genesis, Subtype
 from helix.env import load_env
 from helix.retrieval.index import open_index
 from helix.tools import TextDescriptionTool, Tool, tool
@@ -80,7 +80,7 @@ def build_retrieve_description_artifact() -> Artifact:
     when and how to call the tool."""
     return genesis(
         id=RETRIEVE_DESCRIPTION_ID,
-        kind=ArtifactKind.TOOL_DESCRIPTION,
+        kind=Subtype.TOOL_DESCRIPTION,
         content=RETRIEVE_DESCRIPTION_V0,
         created_by="human",
     )
@@ -116,7 +116,7 @@ def build_system_prompt() -> Artifact:
     """The genesis system prompt artifact. v1 mutates this."""
     return genesis(
         id="prompt.helixagent.system",
-        kind=ArtifactKind.PROMPT,
+        kind=Subtype.PROMPT,
         content=SYSTEM_PROMPT_V0,
         created_by="human",
     )

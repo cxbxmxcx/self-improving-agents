@@ -63,8 +63,8 @@ def test_gepa_has_correct_kind():
 
 
 def test_variant_dataclass_carries_parent_and_search_method():
-    from helix.artifact import genesis, ArtifactKind
-    parent = genesis("p", ArtifactKind.PROMPT, "v1")
+    from helix.artifact import genesis, ArtifactKind, Subtype
+    parent = genesis("p", Subtype.PROMPT, "v1")
     child = parent.mutate("v2", created_by="spo")
     v = Variant(artifact=child, parent=parent, search_method="spo")
     assert v.artifact.parent_id == parent.ref

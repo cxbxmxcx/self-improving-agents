@@ -105,7 +105,7 @@ class OnlineImprover:
         # binding, we defer the check until the first proposal (we don't
         # know the layer yet).
         if hasattr(self.agent, "system_prompt") and self.agent.system_prompt.id == target_artifact_id:
-            layer = self.agent.system_prompt.kind.layer
+            layer = self.agent.system_prompt.layer
             if layer >= 3:
                 raise ValueError(
                     f"OnlineImprover {self.improver_id}: cannot target an L{layer} "
@@ -136,6 +136,10 @@ class OnlineImprover:
         # Backlog of in-flight shadow evaluations keyed by candidate variant.
         self._shadow_ref_scores: list[float] = []
         self._shadow_cand_scores: list[float] = []
+        # Per-request (reference, candidate) score pairs. Kept alongside the
+        # flat lists so the promotion gate can compute a per-request win rate
+        # rather than only comparing averages (SPEC §17.2 step 5).
+        self._shadow_pairs: list[tuple[float, float]] = []
         self._shadow_requests_remaining: int = 0
 
     # ---------------- lifecycle ----------------
@@ -251,6 +255,7 @@ class OnlineImprover:
                 self._reference = seed
                 self._shadow_ref_scores = []
                 self._shadow_cand_scores = []
+                self._shadow_pairs = []
                 self._shadow_requests_remaining = self.policy.shadow_sample
                 _log.info(
                     "OnlineImprover %s proposed candidate v%d (target %s)",
@@ -273,11 +278,13 @@ class OnlineImprover:
         ref_m = await self.signal.measure(
             candidate=self._reference, trajectory=trajectory
         )
-        if ref_m.score is not None:
-            self._shadow_ref_scores.append(ref_m.score)
+        ref_score = ref_m.score
+        if ref_score is not None:
+            self._shadow_ref_scores.append(ref_score)
 
         # Run the candidate against the same task and score it.
         clone = self.agent.with_artifacts({self.target_artifact_id: candidate_prompt})
+        cand_score: float | None = None
         try:
             answer, cand_traj = await clone.run(trajectory.task)
         except Exception as exc:  # noqa: BLE001
@@ -288,7 +295,13 @@ class OnlineImprover:
                 candidate=candidate_prompt, trajectory=cand_traj
             )
             if cand_m.score is not None:
-                self._shadow_cand_scores.append(cand_m.score)
+                cand_score = cand_m.score
+                self._shadow_cand_scores.append(cand_score)
+
+        # Pair the two scores for this same request so the promotion gate can
+        # measure a per-request win rate, not just a difference of averages.
+        if ref_score is not None and cand_score is not None:
+            self._shadow_pairs.append((ref_score, cand_score))
 
         self._shadow_requests_remaining -= 1
         if self._shadow_requests_remaining > 0:
@@ -303,11 +316,13 @@ class OnlineImprover:
         reference = self._reference
         ref_scores = self._shadow_ref_scores
         cand_scores = self._shadow_cand_scores
+        pairs = self._shadow_pairs
         # Reset shadow state regardless of outcome so the next round can start.
         self._candidate_in_flight = None
         self._reference = None
         self._shadow_ref_scores = []
         self._shadow_cand_scores = []
+        self._shadow_pairs = []
         self._shadow_requests_remaining = 0
         self._rolling.clear()
 
@@ -349,12 +364,26 @@ class OnlineImprover:
         )
         await self.archive.record(ref_variant, ref_measurement)
 
+        # The candidate has to beat the reference at all before we signal a
+        # win; sub-par candidates are recorded above but go no further.
         if cand_avg <= ref_avg:
             return
 
-        # Candidate wins. Fire CandidateWins; the default promotion handler
-        # picks this up because mode == "online" + auto_promote and calls
-        # archive.promote() on our behalf.
+        # Promotion gate: the candidate must win at least
+        # promote_threshold_win_rate of the shadow requests head-to-head
+        # (SPEC §17.2 step 5). Comparing per-request wins, not just averages,
+        # stops a candidate that wins big on one request but loses the
+        # majority from auto-deploying.
+        if pairs:
+            wins = sum(1 for r, c in pairs if c > r)
+            win_rate = wins / len(pairs)
+        else:
+            win_rate = 0.0
+        cleared_threshold = win_rate >= self.policy.promote_threshold_win_rate
+
+        # Candidate beat the reference. Fire CandidateWins so the improvement
+        # is observable; the default promotion handler auto-promotes only when
+        # auto_promote is set AND the win-rate bar was cleared.
         await self.bus.publish(CandidateWins(
             improver_id=self.improver_id,
             target_artifact_id=self.target_artifact_id,
@@ -363,6 +392,7 @@ class OnlineImprover:
             candidate_score=cand_avg,
             reference_score=ref_avg,
             mode="online",
-            auto_promote=self.policy.auto_promote,
+            auto_promote=self.policy.auto_promote and cleared_threshold,
         ))
-        self._candidates_promoted += 1
+        if self.policy.auto_promote and cleared_threshold:
+            self._candidates_promoted += 1

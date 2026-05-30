@@ -35,27 +35,38 @@ Artifact:
     id: stable identifier across versions (e.g. "prompt.retrieval_router")
     version: monotonically increasing integer per id
     parent_id: (id, version) of the artifact this was mutated from, or None for genesis
-    kind: enum {prompt, skill, tool_description, memory_entry, rubric, planner, monitor, code}
-    content: the artifact's payload (string for text artifacts, dict for structured)
+    kind: enum {text, memory_entry, code, composite}  (search economics; see §1.2)
+    subtype: role within the kind (text -> {prompt, tool_description, skill, rubric, planner, monitor}); None when the kind has no subtypes
+    content: the artifact's payload (string for text, dict for memory_entry, source string for code, list of constituent refs for composite)
     metadata: open dict for signals, scores, provenance, search method that produced it
     created_at: timestamp
     created_by: search method that produced it, or "human" for hand-authored
 ```
 
-### 1.2 Kinds
+### 1.2 Kinds, subtypes, and layers
 
-The framework recognizes a closed set of artifact kinds. Each kind has a content type and a set of search methods that are known to apply usefully. The kinds are:
+The framework recognizes a closed set of artifact kinds. A kind encodes how an artifact is searched: its content type and the search methods that apply usefully. Role is carried by an optional subtype, and improvement risk is carried by a separate layer derived from `(kind, subtype)`.
 
-- **prompt**: a system prompt, an instruction template, or a step prompt in a workflow.
-- **skill**: a named, self-contained procedure with a description, instructions, and optional code. Modeled on Anthropic's Skills format.
-- **tool_description**: the natural-language description of a tool that the LLM sees. The tool's implementation is not the artifact; its description is.
-- **memory_entry**: an episodic or semantic memory record. The entry's storage representation (embeddings, timestamps, retrieval count) is fixed; its content and metadata are mutable artifacts.
-- **rubric**: a judge prompt or scoring rubric. Rubrics are artifacts that score other artifacts, which is what makes eval-of-eval tractable.
-- **planner**: a planning prompt or planner code that decomposes tasks.
-- **monitor**: a monitor scaffold that watches the agent's own behavior.
-- **code**: at the frontier, executable agent code itself. Restricted to Chapter 7 thought experiments and the HITL-gated patterns in Chapter 6.
+The kinds are:
 
-New kinds can be added without changing the framework. Each kind is registered with a default content type and a default signal compatibility set.
+- **text**: natural language the LLM reads, mutated by text search (SPO, GEPA, reflective mutation). The subtype names the role and is a closed set: `prompt`, `tool_description`, `skill`, `rubric`, `planner`, `monitor`. A prompt and a tool description differ in where they attach to the agent, not in how they are mutated, which is why they share a kind.
+- **memory_entry**: an episodic or semantic memory record. The storage representation (embeddings, timestamps, retrieval count) is fixed; its content and metadata are the mutable artifact.
+- **code**: executable agent code: a tool implementation, a guardrail, or at the frontier agent code itself. Different economics from text (sandboxed, test-gated), which is why it is its own kind rather than a text subtype.
+- **composite**: an artifact whose content is a set of constituent refs plus a binding descriptor. Unlike text, its subtype set is open: a composite subtype names a blessed composition shape (`metacognition` is the first, §11.5), and new subtypes are added as new coupled patterns appear. It is the unit of joint search and joint deployment for coupled artifacts; see §18.
+
+The **layer** is a separate property that classifies promotion risk, and it is what the online-safety rule reads (§17.3): online improvers refuse any target at layer 3 or higher. Layer is a function of `(kind, subtype)`, not of kind alone:
+
+| Layer | Members |
+| --- | --- |
+| L1 | text:prompt, text:tool_description, text:skill, text:rubric, text:planner, text:monitor |
+| L2 | memory_entry |
+| L3 | composite:metacognition (and other composite subtypes that declare an L3 floor) |
+| L4 | code |
+| derived | composite, whose layer is `max(subtype floor, max over constituents)` (§18) |
+
+A standalone planner or monitor is L1 text: mutating its wording is a low-risk change, mutated and promoted like any prompt. The L3 risk attaches to the `metacognition` composite that binds a planner, a monitor, and the memory/state the agent reasons over, because the danger of self-modifying reasoning is emergent from the combination, not present in any single part. This is the point of the v0.2 consolidation: search economics live on the kind, deploy risk lives on the layer, and a composite can carry a risk floor higher than any of its constituents.
+
+Archives written under v0.1 carry a retired top-level kind (`prompt`, `skill`, `tool_description`, `rubric`, `planner`, `monitor`) in the `kind` column. The repository migrates them on read by mapping each to `(text, subtype)`; `memory_entry` and `code` are unchanged. New kinds and new subtypes can be added without changing the framework, and each registers a default content type and a default search-compatibility set.
 
 ### 1.3 The content-addressed discipline
 
@@ -298,6 +309,8 @@ This is why the book teaches RL-style methods and evolutionary methods in the sa
 A Search proposes-and-selects against any artifact kind it is compatible with. SPO works on prompts, on memory entries, on skill files, on rubrics. GEPA works on the same set. DGM works on all of them and on code. The book teaches this once in Chapter 1 and reaps the payoff across every layer chapter.
 
 The compatibility matrix (which Search applies to which Artifact kind) is data, not code. It is the search-by-signal grid figure rendered as a registry. This is what makes the grid an executable artifact in the repo rather than a static diagram in the book.
+
+Composite artifacts (§18) extend the matrix with a second key. A Search registers against the `composite` kind generically, or against a composite shape: the sorted multiset of constituent `(kind, subtype)` pairs, for example `{memory_entry, text:skill}`. Resolution prefers the most specific match, so a bespoke search for one composition shape overrides the generic composed search for that shape. This keeps the matrix data even as composition makes the artifact space richer.
 
 ### 4.4 The search budget
 
@@ -601,7 +614,7 @@ The framework's claim is that ten primitives compose into the entire book. This 
 
 ### 11.1 The minimal agent (Chapter 2, HelixAgent v0)
 
-An Agent is composed of: a system prompt (Artifact kind=prompt), zero or more tools (each with a tool_description Artifact), an optional output type, and a memory subsystem with at least working memory. It runs the loop from Section 6.1. No hooks beyond trajectory recording.
+An Agent is composed of: a system prompt (Artifact kind=text, subtype=prompt), zero or more tools (each with a text/tool_description Artifact), an optional output type, and a memory subsystem with at least working memory. It runs the loop from Section 6.1. No hooks beyond trajectory recording.
 
 ### 11.2 The improving agent (Chapter 2, HelixAgent v1)
 
@@ -618,6 +631,8 @@ Adds MemRL: a Search whose artifact is the episodic memory entry, whose signal i
 ### 11.5 The metacognitive agent (Chapter 5, HelixAgent v4)
 
 Adds the Planner/Monitor/Reflector/TSM scaffold as three coordinated hooks plus a state object that survives the run. The Reflector is a Reflection Signal applied to the trajectory at SESSION_END, with its output written to semantic memory as a learned-lesson artifact. Reflection-theater diagnostic is a behavior-diff Signal: it compares the trajectory before and after reflection and demands measurable divergence.
+
+The scaffold is the framework's first composite artifact: a `composite` with subtype `metacognition` (§18.2.1) that binds the planner (L1 text), the monitor (L1 text), and the memory/state the agent reasons over (L2) into one L3 artifact. This is why Chapter 5 is where artifact composition (§18) enters the book: metacognition is the case that needs joint search and joint deployment, so the chapter that teaches it drives the composite code. The planner and monitor remain L1 text in isolation; the L3 deploy risk is a property of the metacognition composite, not of its text constituents.
 
 ### 11.6 The self-modifying-skills agent (Chapter 6, HelixAgent v5)
 
@@ -655,7 +670,7 @@ Items where the spec is provisional and the manuscript decision is pending.
 
 **Multi-agent composition shape.** Section 11.8 treats sub-agents as tools, and §16.1 covers the multi-artifact pattern for a single agent. Chapter 10 still needs to validate whether sub-agents-as-tools handles orchestrator-worker and group-chat patterns cleanly, or whether a richer composition primitive is needed. Provisionally settled by §16.1 + sub-agents-as-tools; open pending Chapter 10 drafting.
 
-**Planner as artifact kind.** Earlier drafts treated `planner` (and `monitor`) as their own artifact kinds. Author decision in design discussion: planners are prompts, not a distinct kind — a planner is a prompt whose role is decomposition, and the framework does not need a kind enum to recognize that. The two kinds remain in §1.2 for backward compatibility with existing archives, but new agents should use `PROMPT` for planner-shaped artifacts. Metacognition is treated as a composition (multiple agents and memories) rather than a primitive kind.
+**Planner as artifact kind.** Resolved in v0.2. A planner and a monitor are `text` artifacts with subtypes `planner` and `monitor`, and standalone they are L1 (§1.2). Metacognition is not a primitive kind but a `composite` with subtype `metacognition` (§18.2.1) that binds a planner, a monitor, and memory/state into one L3 artifact; the L3 deploy risk is emergent from the composition, not a property of the text constituents. This is the resolution the earlier "metacognition is a composition" note was reaching for, now made concrete by the composite kind.
 
 **Code as an artifact kind.** Section 1.2 lists `code` as a recognized kind. The spec does not specify the execution sandbox or the diff representation for code artifacts. These are Chapter 7 frontier territory and deliberately under-specified.
 
@@ -667,7 +682,9 @@ Items where the spec is provisional and the manuscript decision is pending.
 
 ## 14. Versioning and Stability
 
-This spec is versioned. The current version is 0.1. Breaking changes between book chapters are not allowed: any chapter that builds on a primitive defined here can assume the protocol shape is stable. Additive changes (new artifact kinds, new signal families, new hook points) are permitted between chapters.
+This spec is versioned. The current version is 0.2. Breaking changes between book chapters are not allowed: any chapter that builds on a primitive defined here can assume the protocol shape is stable. Additive changes (new artifact kinds, new signal families, new hook points) are permitted between chapters.
+
+Version 0.2 consolidated the per-role artifact kinds of v0.1 into the layer-shaped `text` kind with subtypes (§1.2) and added artifact composition (§18). The kind-enum change is breaking, taken under the author's clean-break policy (no production users yet, the same call recorded in DESIGN_NOTES §14 for the Improver rename); the repository migrates v0.1 archives on read. Spec changes that fold or rename existing shapes bump the minor version and ship a migration, while purely additive changes do not.
 
 The companion repository tracks the spec version. The repo's README declares which spec version it implements. Readers reading the book and running the repo should be able to align by version number.
 
@@ -816,7 +833,7 @@ This pattern does not guarantee that the deployed combination of `(best L1) × (
 
 #### 16.1.4 The richer pattern (future extension)
 
-When per-artifact improvement is insufficient, the framework supports a `MultiArtifactImprover` that mutates multiple artifacts per round and measures the bundle as a unit under one composite signal. It owns multiple Searches, one per artifact under joint improvement, and invokes them together each round. The reference implementation realizes this as a peer of OfflineImprover with a different round body; the spec contract is "mutate multiple artifacts per round; measure the bundle." It is mentioned here so the architectural answer to "what about joint optimization?" is on the page; the foundational pattern is one improver per artifact.
+When per-artifact improvement is insufficient, the framework escalates to joint search over a composite artifact (§18). A composite binds several coupled artifacts under one identity; a composed Search mutates them together and one composite signal measures the bundle, which is both the unit of search and the unit of deployment. This supersedes the earlier `MultiArtifactImprover` sketch: rather than a special improver that mutates several artifacts per round, the coupling is declared in the data (the composite's constituents) and an ordinary Search compatible with the `composite` kind drives it. The foundational pattern remains one improver per artifact for the uncoupled majority; §18 is the escalation for the coupled minority.
 
 #### 16.1.5 The eval-disjointness requirement
 
@@ -879,8 +896,8 @@ A tool sourced from artifacts is two artifacts: a CODE artifact for the implemen
 ```
 @dataclass
 class ToolFromArtifact:
-    code_artifact: Artifact          # ArtifactKind.CODE (L4)
-    description_artifact: Artifact   # ArtifactKind.TOOL_DESCRIPTION (L1)
+    code_artifact: Artifact          # kind=code (L4)
+    description_artifact: Artifact   # kind=text, subtype=tool_description (L1)
 ```
 
 Both refs are recorded in `Trajectory.artifacts_used` on every invocation, so lineage tracks both artifacts independently. This is what enables the dual-improver pattern: the L1 improver for the description (online-eligible, mutated by SPO) and the L4 improver for the implementation (offline-only, mutated by CodeEvolution) operate on the same logical tool without coordinating.
@@ -941,3 +958,62 @@ OnlineImprover spends LLM tokens on three things:
 - Every shadow-evaluated request runs the agent twice (reference + candidate) for the duration of the shadow sample.
 
 Reasonable production knobs to tune: `policy.sample_rate` to spot-check a fraction of traffic rather than every request; `policy.rolling_window` and `policy.rolling_threshold` to make the trigger less or more sensitive; `policy.shadow_sample` to control how confidently the improver promotes.
+
+---
+
+## 18. Artifact Composition
+
+§16.1 establishes one improver per artifact, with combination drift left for the next round to correct. That is the right default for weakly-coupled artifacts, but it has no answer for artifacts whose optimal content depends on each other: a memory layout that consumes a skill, or a prompt that depends on the exact wording of a tool description. Artifact composition is the framework's account of those coupled cases, and it is additive: it introduces the `composite` kind (§1.2) and a composed Search family, but no new primitive.
+
+### 18.1 The coordination problem
+
+An agent under improvement has many artifacts, each with its own signal and search family. Run them all as independent improvers and nothing accounts for which artifacts work well together; two improvers can climb their own gradients into a joint saddle, the eval-disjointness hazard of §16.1.5. Run one global joint search over every artifact and the candidate space is the product of every artifact's variants, which does not scale.
+
+Composition resolves this by factoring the search by a declared coupling graph. Coupled artifacts form a cluster that is searched jointly, and everything else stays on cheap independent improvers. The graph is the factorization: joint where coupling is declared, independent everywhere else.
+
+### 18.2 The composite artifact
+
+A composite is an Artifact with `kind = composite` whose content is an ordered list of constituent refs plus a binding descriptor that records how the constituents combine, for example the injection point at which a memory tier consumes a skill. Its content hash is taken over the constituent refs and the binding, so two composites that bind the same constituent versions the same way deduplicate (§1.3). It carries its own id, version, and parent pointer, so a new bundle is a new composite version pointing at the constituent versions it bound, and the constituents keep their own independent lineage (§1.1).
+
+A composite's layer is `max(subtype floor, max over constituent layers)`. The constituent term keeps a bundle containing a `code` constituent at L4 and online-ineligible (§17.3), so composition cannot become a backdoor around the layer-safety rule. The subtype-floor term lets a blessed composition declare a risk higher than any of its parts: the `metacognition` subtype (§18.2.1) floors at L3 even though its constituents (an L1 planner, an L1 monitor, an L2 memory) top out at L2, because the danger of self-modifying reasoning is emergent from the combination. Nested composites, whose constituents are themselves composites, are out of scope in v1, the same way code execution is deliberately under-specified (§13).
+
+#### 18.2.1 Composite subtypes
+
+A composite's subtype names a blessed composition shape, and unlike the closed text-subtype set the composite-subtype set is open. A subtype binds four things: a constituent signature (which kinds and subtypes it composes), a layer floor (the emergent-risk floor above), a default composed search, and a default composite signal. Anonymous composites (subtype `None`) are still legal and are identified by their shape key (§4.3); a subtype is what you register once a shape is common enough to deserve a name, a default search, and a risk classification.
+
+`metacognition` is the first composite subtype and the worked example the book introduces in Chapter 5 (§11.5). It binds a planner, a monitor, and the memory/state the agent reasons over into one L3 artifact, so the metacognitive scaffold is searched and deployed as a unit and is barred from online auto-promotion. The chapter that teaches metacognition is therefore the chapter that motivates and drives the composition machinery; Chapter 6's skill-in-memory composite reuses it.
+
+### 18.3 The composition graph
+
+The capability to compose lives on the kind: a `memory_entry` may consume a `text:skill`, expressed in the kind's compatibility data. The specific binding, this memory consumes that skill, is declared where the agent is assembled rather than hardcoded on the artifact, because the agent definition is already the single source of truth for what artifacts compose it (DESIGN_NOTES §11). Declaring a composite is therefore an assembly-time act, and it is what opts its constituents out of independent improvement (§18.7).
+
+```mermaid
+graph LR
+    SP[text:prompt<br/>system prompt] --> IMP1[Solo improver<br/>SPO + pairwise judge]
+    subgraph K["Composite (memory + skill)"]
+        MEM[memory_entry] -. consumes .-> SK[text:skill]
+    end
+    K --> CSEARCH[ComposedSearch<br/>coordinate descent<br/>+ composite signal]
+```
+
+### 18.4 The composed search
+
+A composite is improved by a Search compatible with the `composite` kind. The framework provides a generic `ComposedSearch` that needs no bespoke code: it looks up each constituent's own per-kind child search, drives them, measures each resulting bundle with the composite signal, and selects the winning bundle. Its default strategy is coordinate descent: each round it mutates one constituent with that constituent's child search, holds the others at their champion versions, measures the whole bundle, and on a win promotes the bundle atomically as a new composite version.
+
+Coordinate descent is the cheap default because it is barely more than a solo improver round: the only differences are that measurement is whole-bundle, selection uses the composite signal, and promotion is atomic over constituents. Strongly-coupled clusters can opt into joint sampling, where a group of bundles is sampled and selected by group-relative advantage, the GRPO-style round of §4.2.1, at higher cost. Where a composition benefits from correlated mutation, an author registers a bespoke Search against the composite shape, the sorted multiset of constituent `(kind, subtype)` pairs (§4.3), and it overrides the generic search for that shape.
+
+### 18.5 The composite signal
+
+The composed search measures with exactly one Signal, as every Search does (§4.1). The default is a whole-agent signal that scores the bundle's effect on end-task quality, because the constituents are coupled precisely so their joint effect is what matters; decomposing into per-constituent signals would reintroduce the independence composition removes. That objective may be wrapped in a CompositeSignal (§3.5) to fold in per-constituent metrics such as skill token cost or memory latency, so the joint search stays multi-objective-aware, but the single whole-agent objective remains the arbiter.
+
+### 18.6 Composite as the unit of deployment
+
+Because a composite is a real artifact, it has a live champion (§5.5), and that champion is the unit the agent deploys: resolving the agent's artifacts expands the composite champion into the exact constituent versions it bound. This closes the gap §16.1.3 names, that per-artifact improvement does not guarantee the deployed combination was ever evaluated as a unit. With a composite champion the deployed combination is, by construction, a combination that was measured as a unit, promotion of a composite is atomic over its constituents, and a rollback is the promotion of an earlier composite version (§5.5).
+
+### 18.7 Replace, enforced at construction
+
+Declaring a constituent inside a composite removes it from independent improvement. The framework enforces this structurally: constructing a solo OfflineImprover or OnlineImprover whose target is already a constituent of a composite raises at construction, the same earliest-possible-failure discipline as the layer-safety check (§17.3). This prevents the contradiction of a solo improver and a composed search both mutating one artifact, which is the combination-drift fight composition exists to end.
+
+### 18.8 Eval disjointness, revisited
+
+§16.1.5 asks each per-artifact improver to use a partially disjoint eval source so independent improvers do not all optimize toward one set. Composition refines the rule: eval should be shared within a cluster, because the cluster is searched for a joint optimum, and disjoint across clusters, for the original reason. The dashboard's overlap warning applies across clusters, not within them.

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import pytest
 
-from helix.artifact import ArtifactKind, genesis
+from helix.artifact import ArtifactKind, genesis, Subtype
 from helix.eval.dataset import EvalQuestion, EvalSet
 from helix.signal import Preference, Signal
 from helix.signals.golden_set import GoldenSetCalibrator
@@ -59,7 +59,7 @@ async def test_perfect_answers_score_one():
         golden_set=_make_golden(),
         agent_factory=_make_factory({"france": "paris is the capital", "germany": "berlin is the capital"}),
     )
-    art = genesis("p", ArtifactKind.PROMPT, "v1")
+    art = genesis("p", Subtype.PROMPT, "v1")
     m = await cal.measure(candidate=art)
     assert m.score == 1.0
     assert m.metadata["n_correct"] == 2
@@ -72,7 +72,7 @@ async def test_failed_answers_score_zero():
         golden_set=_make_golden(),
         agent_factory=_make_factory({"france": "berlin", "germany": "paris"}),
     )
-    art = genesis("p", ArtifactKind.PROMPT, "v1")
+    art = genesis("p", Subtype.PROMPT, "v1")
     m = await cal.measure(candidate=art)
     assert m.score == 0.0
 
@@ -83,7 +83,7 @@ async def test_partial_correctness():
         golden_set=_make_golden(),
         agent_factory=_make_factory({"france": "paris is the capital"}),
     )
-    art = genesis("p", ArtifactKind.PROMPT, "v1")
+    art = genesis("p", Subtype.PROMPT, "v1")
     m = await cal.measure(candidate=art)
     assert m.score == 0.5
     assert m.metadata["n_correct"] == 1
@@ -97,7 +97,7 @@ async def test_cache_returns_quickly_on_second_call():
         agent_factory=_make_factory({"france": "paris", "germany": "berlin"}),
         cache_ttl_sec=3600,
     )
-    art = genesis("p", ArtifactKind.PROMPT, "v1")
+    art = genesis("p", Subtype.PROMPT, "v1")
     m1 = await cal.measure(candidate=art)
     m2 = await cal.measure(candidate=art)
     assert m1.score == m2.score
@@ -113,7 +113,7 @@ async def test_cache_busts_on_new_artifact_version():
         agent_factory=_make_factory({"france": "paris", "germany": "berlin"}),
         cache_ttl_sec=3600,
     )
-    v1 = genesis("p", ArtifactKind.PROMPT, "v1")
+    v1 = genesis("p", Subtype.PROMPT, "v1")
     v2 = v1.mutate("v2", created_by="test")
     m1 = await cal.measure(candidate=v1)
     m2 = await cal.measure(candidate=v2)
@@ -134,7 +134,7 @@ async def test_clear_cache_drops_entries():
         golden_set=_make_golden(),
         agent_factory=_make_factory({"france": "paris", "germany": "berlin"}),
     )
-    art = genesis("p", ArtifactKind.PROMPT, "v1")
+    art = genesis("p", Subtype.PROMPT, "v1")
     await cal.measure(candidate=art)
     assert cal.status()["cache_entries"] == 1
     cal.clear_cache()

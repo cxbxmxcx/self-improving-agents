@@ -506,20 +506,22 @@ async def run_improvement_round(
     )
     await archive.record(reference_variant, reference_agg)
 
-    # 6) Decide if the candidate "won" this round (score beats the reference).
-    # Whether that win becomes a live promotion is a separate decision made
-    # by handlers on the CandidateWins event. Online improvers' default
-    # handler calls archive.promote(); offline improvers' default handler
-    # no-ops and waits for a human to promote via the dashboard or chat UI.
-    # See DESIGN_NOTES.md section 10.
+    # 6) Decide if the candidate "won" this round (score beats the reference)
+    # and whether that win is promotable (clears the policy's win-rate bar).
+    # These are two distinct gates: a candidate can edge the reference on mean
+    # score while winning too few individual questions to clear the deploy bar
+    # (SPEC §15.4). Whether a promotable win becomes a live promotion is a
+    # further decision made by handlers on the CandidateWins event. Online
+    # improvers' default handler calls archive.promote(); offline improvers'
+    # default handler no-ops and waits for a human. See DESIGN_NOTES.md §10.
     cand_score = candidate_agg.score or 0.0
     ref_score = reference_agg.score or 0.0
-    candidate_won_round = cand_score > ref_score
-    confidence_above_threshold = (
+    beat_reference = cand_score > ref_score
+    cleared_threshold = (
         (candidate_agg.confidence or 0.0) >= promote_threshold_win_rate
     )
 
-    if candidate_won_round:
+    if beat_reference:
         await bus.publish(
             CandidateWins(
                 improver_id=improver_id,
@@ -529,15 +531,19 @@ async def run_improvement_round(
                 candidate_score=candidate_agg.score,
                 reference_score=reference_agg.score,
                 mode=mode,
-                auto_promote=auto_promote,
+                # auto_promote authorizes the default handler to promote. Gate
+                # it on the win-rate threshold so a sub-threshold win is still
+                # surfaced as a found improvement but never auto-deploys.
+                auto_promote=auto_promote and cleared_threshold,
             )
         )
 
-    # The `promoted` flag on RoundResult / ImproverRoundCompleted retains
-    # its historical meaning ("candidate beat reference in this round").
-    # The new live-champion state is tracked separately in the promotions
-    # table; callers wanting that read it via archive.live_champion(id).
-    promoted = candidate_won_round
+    # The `promoted` flag on RoundResult / ImproverRoundCompleted now means
+    # "candidate beat the reference AND cleared the promotion win-rate
+    # threshold" — i.e. the round produced a promotable winner. The live-
+    # champion state is tracked separately in the promotions table; callers
+    # wanting that read it via archive.live_champion(id).
+    promoted = beat_reference and cleared_threshold
 
     elapsed = time.perf_counter() - t_round_start
     await bus.publish(

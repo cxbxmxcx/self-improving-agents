@@ -25,7 +25,7 @@ from typing import Any, get_type_hints
 
 from pydantic import BaseModel, create_model
 
-from helix.artifact import Artifact, ArtifactKind
+from helix.artifact import Artifact, ArtifactKind, Subtype
 
 
 @dataclass
@@ -157,7 +157,7 @@ class ToolFromArtifact:
 
     code_artifact: ArtifactKind.CODE (L4). Must define an async function with
                    the same name as the tool. Compiled at construction.
-    description_artifact: ArtifactKind.TOOL_DESCRIPTION (L1). Content is the
+    description_artifact: Subtype.TOOL_DESCRIPTION (L1). Content is the
                           LLM-facing description string.
     tool_name: Optional override for the tool's exposed name. Defaults to the
                name of the function defined in code_artifact.
@@ -180,10 +180,10 @@ class ToolFromArtifact:
     fn: Callable[..., Awaitable[Any]] = field(init=False)
 
     def __post_init__(self) -> None:
-        if self.description_artifact.kind != ArtifactKind.TOOL_DESCRIPTION:
+        if self.description_artifact.subtype != Subtype.TOOL_DESCRIPTION:
             raise ValueError(
                 f"ToolFromArtifact: description artifact must be "
-                f"ArtifactKind.TOOL_DESCRIPTION, got {self.description_artifact.kind}"
+                f"Subtype.TOOL_DESCRIPTION, got {self.description_artifact.kind}"
             )
         if not isinstance(self.description_artifact.content, str):
             raise ValueError(
@@ -265,7 +265,7 @@ class TextDescriptionTool:
         retrieve = TextDescriptionTool(
             name="retrieve",
             fn=async_retrieve_callable,        # plain Python, same as Tool.fn
-            description_artifact=desc_artifact, # ArtifactKind.TOOL_DESCRIPTION
+            description_artifact=desc_artifact, # Subtype.TOOL_DESCRIPTION
         )
 
     The args model derives from `fn`'s type hints (same as the `tool`
@@ -280,10 +280,10 @@ class TextDescriptionTool:
         fn: Callable[..., Any],
         description_artifact: Artifact,
     ) -> None:
-        if description_artifact.kind != ArtifactKind.TOOL_DESCRIPTION:
+        if description_artifact.subtype != Subtype.TOOL_DESCRIPTION:
             raise ValueError(
                 f"TextDescriptionTool: description artifact must be "
-                f"ArtifactKind.TOOL_DESCRIPTION, got {description_artifact.kind}"
+                f"Subtype.TOOL_DESCRIPTION, got {description_artifact.kind}"
             )
         if not isinstance(description_artifact.content, str):
             raise ValueError(
@@ -310,9 +310,9 @@ class TextDescriptionTool:
         """Rebind the description to a new artifact version. The implementation
         and args model are unchanged. The agent calls this when a newly
         promoted description becomes the live champion."""
-        if new_artifact.kind != ArtifactKind.TOOL_DESCRIPTION:
+        if new_artifact.subtype != Subtype.TOOL_DESCRIPTION:
             raise ValueError(
-                f"swap_description: artifact must be ArtifactKind.TOOL_DESCRIPTION, "
+                f"swap_description: artifact must be Subtype.TOOL_DESCRIPTION, "
                 f"got {new_artifact.kind}"
             )
         if not isinstance(new_artifact.content, str):

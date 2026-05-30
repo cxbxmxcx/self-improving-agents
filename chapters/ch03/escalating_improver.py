@@ -34,7 +34,7 @@ if str(REPO_ROOT) not in sys.path:
 
 from helix.agent import Agent
 from helix.archive import SQLiteArchive
-from helix.artifact import Artifact, ArtifactKind, genesis
+from helix.artifact import Artifact, ArtifactKind, genesis, Subtype
 from helix.env import load_env
 from helix.eval import FixedEvalSet, load_eval_set
 from helix.improvement import OfflineImprover, ImproverPolicy, Schedule
@@ -93,7 +93,7 @@ async def get_or_create_description(archive: SQLiteArchive) -> Artifact:
 def _system_prompt_artifact() -> Artifact:
     return genesis(
         id=PROMPT_ARTIFACT_ID,
-        kind=ArtifactKind.PROMPT,
+        kind=Subtype.PROMPT,
         content=SYSTEM_PROMPT_V0,
         created_by="human",
     )
