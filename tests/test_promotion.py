@@ -311,6 +311,29 @@ def test_online_improver_refuses_l4_artifact():
         )
 
 
+def test_online_improver_refuses_bound_l4_artifact_that_is_not_the_system_prompt():
+    """The layer check resolves any bound artifact, not just the system prompt,
+    so an L4 artifact bound elsewhere can no longer slip past (fix #2, §17.3)."""
+    arc = SQLiteArchive(":memory:")
+    code = _genesis_l4()
+
+    class _AgentWithBoundCode(_StubAgent):
+        def find_artifact(self, artifact_id):
+            for a in (self.system_prompt, code):
+                if a.id == artifact_id:
+                    return a
+            return None
+
+    agent = _AgentWithBoundCode(_genesis_l1())  # L1 system prompt
+    with pytest.raises(ValueError, match="L4"):
+        OnlineImprover(
+            agent=agent,
+            target_artifact_id="code.l4",  # bound, but not the system prompt
+            signal=_Stub(), search=_Stub(), archive=arc,
+            policy=ImproverPolicy(),
+        )
+
+
 def test_online_improver_allows_l1_artifact():
     arc = SQLiteArchive(":memory:")
     agent = _StubAgent(_genesis_l1())

@@ -102,3 +102,43 @@ def test_migrate_kind_maps_retired_v01_kinds_to_text_subtypes():
     # a v0.2 row passes through unchanged
     assert migrate_kind("text", "skill") == (ArtifactKind.TEXT, Subtype.SKILL)
     assert migrate_kind("code", None) == (ArtifactKind.CODE, None)
+
+
+# ---------------------------------------------------------------------------
+# Composite artifacts (SPEC §18)
+# ---------------------------------------------------------------------------
+
+def test_compose_builds_metacognition_composite_floored_at_l3():
+    from helix.artifact import compose
+
+    planner = genesis("plan", Subtype.PLANNER, "decompose the task")
+    monitor = genesis("mon", Subtype.MONITOR, "watch for loops")
+    mem = genesis("mem", ArtifactKind.MEMORY_ENTRY, {"state": "ok"})
+    meta = compose(
+        "meta",
+        [(planner, "planner"), (monitor, "monitor"), (mem, "memory")],
+        subtype=Subtype.METACOGNITION,
+    )
+    assert meta.kind is ArtifactKind.COMPOSITE
+    assert meta.subtype is Subtype.METACOGNITION
+    assert meta.layer == 3  # subtype floor L3 beats the L2 constituent max
+    assert meta.constituent_refs == [("plan", 1), ("mon", 1), ("mem", 1)]
+
+
+def test_composite_layer_takes_max_of_floor_and_constituents():
+    from helix.artifact import compose
+
+    code = genesis("c", ArtifactKind.CODE, "async def f(): ...")
+    prompt = genesis("p", Subtype.PROMPT, "hi")
+    # No subtype floor, but an L4 code constituent makes the bundle L4.
+    bundle = compose("b", [code, prompt])
+    assert bundle.layer == 4
+
+
+def test_composite_content_hash_is_stable_across_equal_bindings():
+    from helix.artifact import compose
+
+    p = genesis("p", Subtype.PROMPT, "hi")
+    a = compose("x", [p], subtype=Subtype.METACOGNITION)
+    b = compose("x", [p], subtype=Subtype.METACOGNITION)
+    assert a.content_hash == b.content_hash

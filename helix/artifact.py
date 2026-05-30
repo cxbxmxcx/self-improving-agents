@@ -177,11 +177,34 @@ class Artifact:
     def layer(self) -> int:
         """This artifact's improvement layer (1-4). SPEC §1.2, §18.2.
 
-        Derived from (kind, subtype). Composite constituent layers are folded
-        in once composites are built (§18); a bare composite uses its subtype
-        floor.
+        For a composite, the constituent layers are read from content and folded
+        into `max(subtype floor, max constituents)`; other kinds derive from
+        (kind, subtype) alone.
         """
+        if self.kind is ArtifactKind.COMPOSITE:
+            return layer_of(self.kind, self.subtype, self._constituent_layers())
         return layer_of(self.kind, self.subtype)
+
+    @property
+    def constituents(self) -> list[dict[str, Any]]:
+        """For a composite, the ordered constituent descriptors; else []."""
+        if self.kind is ArtifactKind.COMPOSITE and isinstance(self.content, dict):
+            return list(self.content.get("constituents", []))
+        return []
+
+    @property
+    def constituent_refs(self) -> list[tuple[str, int]]:
+        """The (id, version) refs of a composite's constituents (SPEC §18.2)."""
+        return [(c["id"], int(c["version"])) for c in self.constituents]
+
+    def _constituent_layers(self) -> tuple[int, ...]:
+        return tuple(
+            layer_of(
+                ArtifactKind(c["kind"]),
+                Subtype(c["subtype"]) if c.get("subtype") else None,
+            )
+            for c in self.constituents
+        )
 
     @property
     def content_hash(self) -> str:
@@ -250,6 +273,60 @@ def genesis(
         kind=base_kind,
         content=content,
         subtype=sub,
+        parent_id=None,
+        created_by=created_by,
+        metadata=metadata or {},
+    )
+
+
+def composite_content(
+    constituents: list[Artifact | tuple[Artifact, str]],
+    binding: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build the content payload for a composite from its constituents.
+
+    Each entry records the constituent's ref, kind, subtype, and binding role,
+    so a composite's layer is computable without an archive lookup (SPEC §18.2).
+    A constituent may be an Artifact (role defaults to its subtype or kind) or
+    an (artifact, role) tuple.
+    """
+    items: list[dict[str, Any]] = []
+    for c in constituents:
+        art, role = c if isinstance(c, tuple) else (c, None)
+        items.append(
+            {
+                "id": art.id,
+                "version": art.version,
+                "kind": art.kind.value,
+                "subtype": art.subtype.value if art.subtype else None,
+                "role": role or (art.subtype.value if art.subtype else art.kind.value),
+            }
+        )
+    return {"constituents": items, "binding": binding or {}}
+
+
+def compose(
+    id: str,
+    constituents: list[Artifact | tuple[Artifact, str]],
+    *,
+    subtype: Subtype | None = None,
+    binding: dict[str, Any] | None = None,
+    created_by: str = "human",
+    metadata: dict[str, Any] | None = None,
+) -> Artifact:
+    """Create a genesis composite artifact binding the given constituents.
+
+    The composite is the unit of joint search and joint deployment for a
+    coupled cluster (SPEC §18). Its layer is `max(subtype floor, max constituent
+    layers)`, so a metacognition composite (subtype floor L3) over an L1 planner,
+    an L1 monitor, and an L2 memory is L3.
+    """
+    return Artifact(
+        id=id,
+        version=1,
+        kind=ArtifactKind.COMPOSITE,
+        content=composite_content(constituents, binding),
+        subtype=subtype,
         parent_id=None,
         created_by=created_by,
         metadata=metadata or {},

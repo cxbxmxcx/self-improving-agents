@@ -204,6 +204,31 @@ class Agent:
             guardrails=new_guardrails,
         )
 
+    def find_artifact(self, artifact_id: str) -> Artifact | None:
+        """Resolve an artifact id to the Artifact bound on this agent, or None.
+
+        Searches the system prompt, tool code/description artifacts, and
+        guardrail artifacts. Improvers use this to classify a target's layer for
+        the online-safety check (SPEC §17.3) regardless of which slot it fills.
+        """
+        for art in self._bound_artifacts():
+            if art.id == artifact_id:
+                return art
+        return None
+
+    def _bound_artifacts(self) -> list[Artifact]:
+        arts: list[Artifact] = [self.system_prompt]
+        for t in self.tools.values():
+            for attr in ("description_artifact", "code_artifact"):
+                a = getattr(t, attr, None)
+                if isinstance(a, Artifact):
+                    arts.append(a)
+        for g in self.guardrails:
+            a = getattr(g, "artifact", None)
+            if isinstance(a, Artifact):
+                arts.append(a)
+        return arts
+
     def attach_improver(self, improver) -> None:
         """Register an Improver on this agent.
 

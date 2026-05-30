@@ -34,6 +34,28 @@ async def test_legacy_v01_artifact_row_migrates_on_read():
 
 
 @pytest.mark.asyncio
+async def test_composite_round_trips_through_archive():
+    """A composite stores and reads back with its constituents and layer intact."""
+    from helix.artifact import compose
+
+    arc = SQLiteArchive(":memory:")
+    p = genesis("p", Subtype.PLANNER, "plan it")
+    m = genesis("m", ArtifactKind.MEMORY_ENTRY, {"k": 1})
+    comp = compose("meta", [(p, "planner"), (m, "memory")], subtype=Subtype.METACOGNITION)
+    await arc.record(
+        Variant(artifact=comp, parent=comp, search_method="human"),
+        GapMeasurement(score=0.5),
+    )
+
+    v = await arc.by_id("meta", 1)
+    assert v is not None
+    assert v.artifact.kind is ArtifactKind.COMPOSITE
+    assert v.artifact.subtype is Subtype.METACOGNITION
+    assert v.artifact.layer == 3
+    assert v.artifact.constituent_refs == [("p", 1), ("m", 1)]
+
+
+@pytest.mark.asyncio
 async def test_record_and_retrieve_by_id():
     arc = SQLiteArchive(":memory:")
     a = genesis("p", Subtype.PROMPT, "hello")
