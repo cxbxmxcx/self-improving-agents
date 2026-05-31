@@ -51,6 +51,20 @@ class PromotionRecord:
     promoted_at: str  # ISO-8601 UTC
 
 
+@dataclass(frozen=True)
+class RecordResult:
+    """Outcome of persisting an artifact (SPEC §1.3 content-addressed dedup).
+
+    `canonical_ref` is the (id, version) the caller should use: the artifact's
+    own ref when stored fresh, or the earlier version it collapsed onto when its
+    content was a duplicate. `was_duplicate` is True when a no-op mutation
+    collapsed; `inserted` is True when a new row was actually created.
+    """
+    canonical_ref: tuple[str, int]
+    was_duplicate: bool = False
+    inserted: bool = False
+
+
 @runtime_checkable
 class Archive(Protocol):
     """The Archive protocol. SPEC section 5.2.
@@ -60,7 +74,9 @@ class Archive(Protocol):
     wrappers so the protocol is uniform.
     """
 
-    async def record(self, variant: Variant, measurement: GapMeasurement) -> None: ...
+    async def record(self, variant: Variant, measurement: GapMeasurement) -> "RecordResult": ...
+
+    async def put_artifact(self, artifact: Artifact) -> "RecordResult": ...
 
     async def best(
         self,

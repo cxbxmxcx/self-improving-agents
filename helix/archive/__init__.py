@@ -8,6 +8,7 @@ from helix.archive.archive import (
     Archive,
     DiversityMetrics,
     PromotionRecord,
+    RecordResult,
     SamplingStrategy,
 )
 from helix.archive.sqlite_backend import SQLiteArchive
@@ -16,6 +17,7 @@ __all__ = [
     "Archive",
     "DiversityMetrics",
     "PromotionRecord",
+    "RecordResult",
     "SamplingStrategy",
     "SQLiteArchive",
 ]

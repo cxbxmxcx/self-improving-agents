@@ -17,17 +17,36 @@ from __future__ import annotations
 import json
 import random
 import sqlite3
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from helix.artifact import Artifact, ArtifactKind, migrate_kind
-from helix.archive.archive import DiversityMetrics, PromotionRecord, SamplingStrategy
+from helix.archive.archive import (
+    DiversityMetrics,
+    PromotionRecord,
+    RecordResult,
+    SamplingStrategy,
+)
 from helix.observability.bus import EventBus, get_bus
-from helix.observability.events import ArtifactCreated, ArtifactMeasured, Promoted
+from helix.observability.events import (
+    ArtifactCreated,
+    ArtifactDuplicate,
+    ArtifactMeasured,
+    Promoted,
+)
 from helix.search.base import Variant
 from helix.signal import GapMeasurement
+
+
+@dataclass
+class _StoreOutcome:
+    """Internal result of _store_artifact: whether a row was inserted, the
+    canonical (id, version) to use, and whether content collapsed (SPEC §1.3)."""
+    inserted: bool
+    canonical_ref: tuple[str, int]
+    collapsed: bool
 
 if TYPE_CHECKING:
     from helix.trajectory import Trajectory
@@ -194,14 +213,30 @@ class SQLiteArchive:
             metadata=json.loads(row["artifact_metadata"]),
         )
 
-    def _store_artifact(self, art: Artifact) -> bool:
-        """Insert an artifact if not already present. Returns True if new."""
+    def _store_artifact(self, art: Artifact) -> _StoreOutcome:
+        """Insert an artifact unless its (id, version) already exists or its
+        content duplicates an earlier version of the same id (SPEC §1.3).
+
+        Returns a _StoreOutcome carrying whether a row was inserted, the
+        canonical (id, version) the caller should use, and whether the content
+        collapsed onto an earlier version.
+        """
         existing = self._conn.execute(
             "SELECT 1 FROM artifacts WHERE artifact_id = ? AND version = ?",
             (art.id, art.version),
         ).fetchone()
         if existing:
-            return False
+            return _StoreOutcome(False, (art.id, art.version), False)
+        # Content-addressed dedup within the artifact id: a mutation that
+        # reproduces an earlier version's content collapses onto it rather than
+        # minting a redundant row (uses idx_artifacts_hash).
+        dup = self._conn.execute(
+            "SELECT version FROM artifacts WHERE artifact_id = ? AND content_hash = ? "
+            "ORDER BY version ASC LIMIT 1",
+            (art.id, art.content_hash),
+        ).fetchone()
+        if dup is not None:
+            return _StoreOutcome(False, (art.id, int(dup["version"])), True)
         content_str, is_json = self._serialize_content(art.content)
         parent_id = art.parent_id[0] if art.parent_id else None
         parent_version = art.parent_id[1] if art.parent_id else None
@@ -227,7 +262,7 @@ class SQLiteArchive:
                 json.dumps(art.metadata),
             ),
         )
-        return True
+        return _StoreOutcome(True, (art.id, art.version), False)
 
     def _latest_measurement(
         self,
@@ -303,10 +338,16 @@ class SQLiteArchive:
 
     # ---------------- protocol methods ----------------
 
-    async def record(self, variant: Variant, measurement: GapMeasurement) -> None:
-        # Track which artifacts were freshly created so we know which to announce.
-        parent_was_new = self._store_artifact(variant.parent)
-        artifact_was_new = self._store_artifact(variant.artifact)
+    async def record(self, variant: Variant, measurement: GapMeasurement) -> RecordResult:
+        # Genesis variants carry parent == artifact; storing it twice would make
+        # the artifact's own outcome read "already exists." Only store a distinct
+        # parent.
+        if variant.parent.ref != variant.artifact.ref:
+            self._store_artifact(variant.parent)
+        outcome = self._store_artifact(variant.artifact)
+        # On a content collapse the measurement enriches the canonical version
+        # of the same id rather than orphaning on an unstored row (SPEC §1.3).
+        target_id, target_version = outcome.canonical_ref
 
         rid = measurement.rubric_id[0] if measurement.rubric_id else None
         rv = measurement.rubric_id[1] if measurement.rubric_id else None
@@ -320,8 +361,8 @@ class SQLiteArchive:
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
-                variant.artifact.id,
-                variant.artifact.version,
+                target_id,
+                target_version,
                 measurement.score,
                 measurement.preference.value,
                 measurement.feedback,
@@ -339,25 +380,36 @@ class SQLiteArchive:
                 1 if measurement.triggered else 0,
             ),
         )
-        self._conn.execute(
-            """
-            INSERT OR REPLACE INTO variants
-            (artifact_id, version, search_method, variant_metadata, recorded_at)
-            VALUES (?, ?, ?, ?, ?)
-            """,
-            (
-                variant.artifact.id,
-                variant.artifact.version,
-                variant.search_method,
-                json.dumps(variant.metadata),
-                datetime.now(timezone.utc).isoformat(),
-            ),
-        )
+        # Don't overwrite the canonical variant row when content collapsed.
+        if not outcome.collapsed:
+            self._conn.execute(
+                """
+                INSERT OR REPLACE INTO variants
+                (artifact_id, version, search_method, variant_metadata, recorded_at)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (
+                    target_id,
+                    target_version,
+                    variant.search_method,
+                    json.dumps(variant.metadata),
+                    datetime.now(timezone.utc).isoformat(),
+                ),
+            )
         self._conn.commit()
 
-        # Emit events on the bus so observers (console renderer, drift
-        # detection, cost dashboards) see archive activity in real time.
-        if artifact_was_new:
+        # Emit events so observers (console renderer, drift detection, cost
+        # dashboards) see archive activity in real time.
+        if outcome.collapsed:
+            await self._bus.publish(
+                ArtifactDuplicate(
+                    artifact_id=variant.artifact.id,
+                    version=variant.artifact.version,
+                    canonical_version=target_version,
+                    search_method=variant.search_method,
+                )
+            )
+        elif outcome.inserted:
             await self._bus.publish(
                 ArtifactCreated(
                     artifact_id=variant.artifact.id,
@@ -370,8 +422,8 @@ class SQLiteArchive:
             )
         await self._bus.publish(
             ArtifactMeasured(
-                artifact_id=variant.artifact.id,
-                version=variant.artifact.version,
+                artifact_id=target_id,
+                version=target_version,
                 signal_kind=str(measurement.metadata.get("role", "unknown")),
                 score=measurement.score,
                 preference=measurement.preference.value,
@@ -379,6 +431,47 @@ class SQLiteArchive:
                 cost_tokens=measurement.cost.tokens,
                 cost_dollars=measurement.cost.dollars,
             )
+        )
+
+        return RecordResult(
+            canonical_ref=outcome.canonical_ref,
+            was_duplicate=outcome.collapsed,
+            inserted=outcome.inserted,
+        )
+
+    async def put_artifact(self, artifact: Artifact) -> RecordResult:
+        """Persist an artifact (no measurement) with content-addressed dedup.
+
+        Searches that mint intermediate versions before scoring them (GEPA's
+        mutate/crossover) use this instead of reaching into storage internals.
+        Returns the canonical ref so the caller works on the surviving version
+        when its content collapsed (SPEC §1.3, fix #5)."""
+        outcome = self._store_artifact(artifact)
+        self._conn.commit()
+        if outcome.collapsed:
+            await self._bus.publish(
+                ArtifactDuplicate(
+                    artifact_id=artifact.id,
+                    version=artifact.version,
+                    canonical_version=outcome.canonical_ref[1],
+                    search_method=artifact.created_by,
+                )
+            )
+        elif outcome.inserted:
+            await self._bus.publish(
+                ArtifactCreated(
+                    artifact_id=artifact.id,
+                    version=artifact.version,
+                    kind=artifact.kind.value,
+                    parent_id=artifact.parent_id[0] if artifact.parent_id else None,
+                    parent_version=artifact.parent_id[1] if artifact.parent_id else None,
+                    created_by=artifact.created_by,
+                )
+            )
+        return RecordResult(
+            canonical_ref=outcome.canonical_ref,
+            was_duplicate=outcome.collapsed,
+            inserted=outcome.inserted,
         )
 
     async def best(
