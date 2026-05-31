@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import logging
 from typing import TYPE_CHECKING
+from weakref import WeakSet
 
 from helix.observability.bus import EventBus, get_bus
 from helix.observability.events import CandidateWins
@@ -104,10 +105,12 @@ async def default_promotion_handler(event: CandidateWins) -> None:
 
 
 # Module-level subscription. Imported lazily by Improver.__init__ so the
-# bus singleton is the one the rest of the package uses. We track whether
-# we've already registered so re-imports (or test code that re-imports
-# the package) don't stack duplicate handlers.
-_subscribed_buses: set[int] = set()
+# bus singleton is the one the rest of the package uses. We track which buses
+# already have the handler so re-imports (or test code that re-imports the
+# package) don't stack duplicate handlers. A WeakSet of the bus objects, not a
+# set of id()s: ids of garbage-collected buses get reused, and an id-keyed set
+# would then skip subscribing a fresh bus that happens to reuse a dead id.
+_subscribed_buses: "WeakSet[EventBus]" = WeakSet()
 
 
 def ensure_default_handler_registered(bus: EventBus | None = None) -> None:
@@ -116,7 +119,7 @@ def ensure_default_handler_registered(bus: EventBus | None = None) -> None:
     Safe to call repeatedly; only the first call per bus subscribes.
     """
     target = bus or get_bus()
-    if id(target) in _subscribed_buses:
+    if target in _subscribed_buses:
         return
     target.subscribe("candidate_wins", default_promotion_handler)
-    _subscribed_buses.add(id(target))
+    _subscribed_buses.add(target)

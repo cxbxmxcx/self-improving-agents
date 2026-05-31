@@ -41,6 +41,7 @@ from typing import Any
 from helix.archive.archive import Archive
 from helix.artifact import Artifact
 from helix.hooks import HookPoint
+from helix.improvement.guards import reject_composite_constituent
 from helix.improvement.policy import ImproverPolicy
 from helix.improvement.promotion import (
     ensure_default_handler_registered,
@@ -121,6 +122,10 @@ class OnlineImprover:
 
         # Wire into the default promotion handler chain so CandidateWins
         # produces an archive.promote() under online + auto_promote.
+        # Replace-enforcement: a constituent of a declared composite is improved
+        # jointly, not by a solo improver (SPEC §18.7).
+        reject_composite_constituent(self.agent, target_artifact_id, self.improver_id)
+
         register_improver_archive(self.improver_id, self.archive)
         ensure_default_handler_registered(self.bus)
 

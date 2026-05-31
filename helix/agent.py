@@ -104,10 +104,18 @@ class Agent:
         bus: EventBus | None = None,
         memory_tiers: dict[str, MemoryTier] | None = None,
         guardrails: list | None = None,  # list[Guardrail], avoid circular import
+        composites: list[Artifact] | None = None,
     ) -> None:
         if not isinstance(system_prompt.content, str):
             raise TypeError("system_prompt artifact must have string content")
         self.system_prompt = system_prompt
+        # Composite artifacts this agent declares (SPEC §18). Each binds a
+        # coupled cluster of constituents that is improved jointly by a
+        # ComposedSearch and deployed as a unit. Declaring a composite opts its
+        # constituents out of solo improvement (SPEC §18.7).
+        self.composites: dict[str, Artifact] = {
+            c.id: c for c in (composites or [])
+        }
         self.tools: dict[str, Tool] = {t.name: t for t in (tools or [])}
         self.model = model
         self.max_iterations = max_iterations
@@ -192,6 +200,11 @@ class Agent:
             else:
                 new_guardrails.append(g)
 
+        # Composites carry over, swapped when an override matches a composite id.
+        new_composites = [
+            overrides.get(c.id, c) for c in self.composites.values()
+        ]
+
         return Agent(
             system_prompt=new_system_prompt,
             tools=new_tools,
@@ -202,6 +215,7 @@ class Agent:
             bus=self.bus,
             memory_tiers=dict(self.memory),
             guardrails=new_guardrails,
+            composites=new_composites,
         )
 
     def find_artifact(self, artifact_id: str) -> Artifact | None:
@@ -227,7 +241,21 @@ class Agent:
             a = getattr(g, "artifact", None)
             if isinstance(a, Artifact):
                 arts.append(a)
+        arts.extend(self.composites.values())
         return arts
+
+    def composite_constituent_ids(self) -> set[str]:
+        """Ids of every constituent bound inside one of this agent's composites.
+
+        Declaring a composite opts its constituents out of solo improvement, so
+        improvers consult this set to reject a solo target that belongs to a
+        composite (SPEC §18.7).
+        """
+        ids: set[str] = set()
+        for comp in self.composites.values():
+            for ref in comp.constituent_refs:
+                ids.add(ref[0])
+        return ids
 
     def attach_improver(self, improver) -> None:
         """Register an Improver on this agent.
