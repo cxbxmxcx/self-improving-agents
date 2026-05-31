@@ -81,3 +81,15 @@ async def test_write_via_entry_interface_requires_key_value():
 async def test_read_fact_returns_none_when_missing():
     sm = SemanticMemory(":memory:")
     assert await sm.read_fact("missing", ScopeKey(Scope.USER, "u")) is None
+
+
+@pytest.mark.asyncio
+async def test_evict_by_max_entries_drops_excess_and_counts():
+    """max_entries must evict and be counted (fix #7: semantic ignored it)."""
+    sm = SemanticMemory(":memory:")
+    sk = ScopeKey(Scope.USER, "alice")
+    for i in range(5):
+        await sm.write_fact(f"k{i}", f"v{i}", sk)
+    dropped = await sm.evict(EvictionPolicy(max_entries=2))
+    assert dropped == 3
+    assert len(await sm.list_facts(sk)) == 2

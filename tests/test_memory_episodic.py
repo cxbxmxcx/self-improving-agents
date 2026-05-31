@@ -112,6 +112,7 @@ async def test_evict_by_max_entries_keeps_newest():
         await em.write(e)
     dropped = await em.evict(EvictionPolicy(max_entries=3))
     assert await em.count() == 3
+    assert dropped == 2  # 5 written, 3 kept (fix #7: max_entries-only was miscounted as 0)
 
 
 @pytest.mark.asyncio
