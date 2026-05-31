@@ -1,4 +1,4 @@
-"""Chapter 3 §3.4 — escalating strategy chain: SPO -> GEPA -> DGM.
+"""Chapter 3 §3.4 (RAG agent example) — escalating strategy chain: SPO -> GEPA -> DGM.
 
 Demonstrates the StrategyChain Search: an ordered list of Search methods
 with a failure budget per method. Cheap methods (SPO) try first; expensive

@@ -1,4 +1,4 @@
-"""Chapter 3 §3.3 — DGM from scratch.
+"""Chapter 3 §3.3 (RAG agent example) — DGM from scratch.
 
 The Darwin Goedel Machine (Zhang et al., 2025) is archive-evolutionary
 search. Where GEPA evolves a fixed-size population that gets replaced each
