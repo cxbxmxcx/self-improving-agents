@@ -1,4 +1,4 @@
-"""Chapter 3 §3.1 warmup — improving a tool description offline.
+"""Chapter 3 §3.1 warmup (RAG agent example) — improving a tool description offline.
 
 Everything you learned in Ch 2 §2.4 carries over to a different artifact.
 Here the artifact under improvement is the retrieve tool's DESCRIPTION —

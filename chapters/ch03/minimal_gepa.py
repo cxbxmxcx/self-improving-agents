@@ -1,4 +1,4 @@
-"""Chapter 3 §3.2 — GEPA from scratch.
+"""Chapter 3 §3.2 (RAG agent example) — GEPA from scratch.
 
 GEPA (Agrawal et al., ICLR 2026) is population-based reflective mutation
 with Pareto selection. This file builds the three distinctive ideas by

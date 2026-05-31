@@ -1,4 +1,4 @@
-"""Chapter 3 §3.4 — three search methods on one artifact (parallel).
+"""Chapter 3 §3.4 (RAG agent example) — three search methods on one artifact (parallel).
 
 Demonstrates the multi-improver pattern (SPEC §16.1): an SPO improver, a
 GEPA improver, and a DGM improver all target the SAME artifact — the
