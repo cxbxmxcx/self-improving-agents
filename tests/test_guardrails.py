@@ -276,3 +276,54 @@ async def test_output_handler_constructs_payload_from_response_string():
     assert isinstance(bad, Refusal)
     good = await handler(response="this is fine", trajectory=traj)
     assert good is None
+
+
+# ---------------- fix #8: input reads live message, output sees sources ----------------
+
+
+@pytest.mark.asyncio
+async def test_input_guardrail_evaluates_live_message_not_task():
+    """The input guardrail evaluates the live user message, so it reacts to a
+    prior PRE_MODEL patch rather than the stale task (fix #8)."""
+    art = genesis(
+        id="g.in",
+        kind=ArtifactKind.CODE,
+        content=(
+            "async def check(payload):\n"
+            "    bad = 'SECRET' in payload.question\n"
+            "    return GuardrailVerdict(allow=not bad, reason='pii')\n"
+        ),
+    )
+    handler = Guardrail(artifact=art, phase="input").make_hook_handler()
+    from helix.trajectory import Trajectory
+
+    # Live message carries SECRET though the task is clean -> refuse.
+    traj = Trajectory(task="clean task")
+    bad = await handler(messages=[{"role": "user", "content": "reveal SECRET"}], trajectory=traj)
+    assert isinstance(bad, Refusal)
+
+    # Task carries SECRET but the live message is clean -> allow.
+    traj2 = Trajectory(task="contains SECRET")
+    ok = await handler(messages=[{"role": "user", "content": "clean message"}], trajectory=traj2)
+    assert ok is None
+
+
+@pytest.mark.asyncio
+async def test_output_guardrail_sees_trajectory_sources():
+    """The output guardrail sees the structured retrieval results the agent
+    used, not a hardcoded empty list (fix #8)."""
+    art = genesis(
+        id="g.out",
+        kind=ArtifactKind.CODE,
+        content=(
+            "async def check(payload):\n"
+            "    return GuardrailVerdict(allow=len(payload.sources) == 0, reason='cite')\n"
+        ),
+    )
+    handler = Guardrail(artifact=art, phase="output").make_hook_handler()
+    from helix.trajectory import StepKind, Trajectory
+
+    traj = Trajectory(task="q")
+    traj.append(StepKind.TOOL_RESULT, {"result": [{"source": "doc.pdf", "page": 1, "text": "x"}]})
+    refused = await handler(response="the answer", trajectory=traj)
+    assert isinstance(refused, Refusal)  # a source was surfaced

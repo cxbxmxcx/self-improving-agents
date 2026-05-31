@@ -334,6 +334,50 @@ def test_online_improver_refuses_bound_l4_artifact_that_is_not_the_system_prompt
         )
 
 
+@pytest.mark.asyncio
+async def test_attach_improver_subscribes_online_to_session_end():
+    """attach_improver is the wiring step: after attach, the agent's SESSION_END
+    hook routes to the online improver (SPEC §17.1, fix #13)."""
+    from helix.agent import Agent
+    from helix.hooks import HookPoint
+    from helix.signal import Cost, GapMeasurement, SignalKind
+    from helix.trajectory import Outcome, Trajectory
+
+    class _ScoreSignal:
+        signal_id = "s"
+        signal_version = 1
+
+        @property
+        def kind(self):
+            return SignalKind.LLM_JUDGE_ABSOLUTE
+
+        @property
+        def cost_estimate(self):
+            return Cost()
+
+        async def measure(self, candidate, trajectory=None, reference=None, ground_truth=None):
+            return GapMeasurement(score=0.9, cost=Cost())
+
+    prompt = genesis("p.sys", Subtype.PROMPT, "you are helpful")
+    agent = Agent(system_prompt=prompt, model="claude-haiku-4-5")
+    online = OnlineImprover(
+        agent=agent, target_artifact_id="p.sys",
+        signal=_ScoreSignal(), search=_Stub(),
+        archive=SQLiteArchive(":memory:"), policy=ImproverPolicy(),
+    )
+
+    agent.attach_improver(online)
+    assert online._subscribed  # wired at attach, before start()
+
+    await online.start()
+    traj = Trajectory(task="q")
+    traj.complete("a", Outcome.COMPLETED)
+    await agent.hooks.fire(HookPoint.SESSION_END, trajectory=traj)
+
+    assert online.status.trajectories_seen == 1
+    assert online.status.spot_checks_done == 1
+
+
 def test_online_improver_allows_l1_artifact():
     arc = SQLiteArchive(":memory:")
     agent = _StubAgent(_genesis_l1())
