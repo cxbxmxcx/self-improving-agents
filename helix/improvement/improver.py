@@ -35,6 +35,7 @@ from helix.agent import Agent
 from helix.archive.archive import Archive
 from helix.artifact import Artifact
 from helix.eval.source import EvalSource
+from helix.improvement.guards import reject_composite_constituent
 from helix.improvement.policy import ImproverMode, ImproverPolicy, Schedule
 from helix.improvement.promotion import (
     ensure_default_handler_registered,
@@ -101,6 +102,10 @@ class OfflineImprover:
         # OfflineImprover places no layer restrictions on its target; offline
         # is the safe mode for L3/L4 artifacts because promotion is gated on
         # human review. OnlineImprover carries the L1/L2-only restriction.
+
+        # Replace-enforcement: a constituent of a declared composite is improved
+        # jointly, not by a solo improver (SPEC §18.7).
+        reject_composite_constituent(self.agent, target_artifact_id, self.improver_id)
 
         # Wire this Improver into the default promotion handler so the
         # bus-level handler can look up the archive when it fires.
