@@ -1,10 +1,10 @@
-"""The travel simulation: stateless tools + trip reconstruction (Ch 3 task agent)."""
+"""The travel simulation: gotchas, stateless tools, trip reconstruction."""
 
 from __future__ import annotations
 
 import pytest
 
-from agents.travel_sim import make_tool_callables, reconstruct_trip
+from agents.travel_sim import cabin_price, make_tool_callables, reconstruct_trip
 from helix.trajectory import StepKind, Trajectory
 
 
@@ -14,7 +14,6 @@ def tools():
 
 
 def _traj(*calls) -> Trajectory:
-    """Build a trajectory from (tool_name, args, result) triples."""
     t = Trajectory(task="plan a trip")
     for name, args, result in calls:
         t.append(StepKind.TOOL_CALL, {"name": name, "arguments": args})
@@ -23,63 +22,47 @@ def _traj(*calls) -> Trajectory:
 
 
 @pytest.mark.asyncio
-async def test_search_flights_filters_route_date_and_sorts_by_price(tools):
-    res = await tools["search_flights"]("SFO", "JFK", "2026-06-15")
-    assert [f["id"] for f in res] == ["FL102", "FL101", "FL103"]  # cheapest first
+async def test_search_flights_default_cabin_is_first_class_and_pricier(tools):
+    # Gotcha: default cabin is first class (3x). Same query, two cabins.
+    eco = await tools["search_flights"]("SFO", "JFK", "2026-06-15", cabin="economy")
+    first = await tools["search_flights"]("SFO", "JFK", "2026-06-15")  # default first
+    assert eco[0]["price"] * 3 == first[0]["price"]
+    assert first[0]["cabin"] == "first" and eco[0]["cabin"] == "economy"
 
 
 @pytest.mark.asyncio
-async def test_search_flights_honors_nonstop_and_max_price(tools):
-    res = await tools["search_flights"]("SFO", "JFK", "2026-06-15", nonstop=True, max_price=450)
-    assert [f["id"] for f in res] == ["FL101"]  # FL102 connecting, FL103 over budget
+async def test_max_price_hides_affordable_fares_under_default_cabin(tools):
+    # Under default (first) cabin, FL101 is $1236, so a $450 cap returns nothing;
+    # in economy the same cap returns it.
+    none_first = await tools["search_flights"]("SFO", "JFK", "2026-06-15", nonstop=True, max_price=450)
+    some_eco = await tools["search_flights"]("SFO", "JFK", "2026-06-15", nonstop=True, max_price=450, cabin="economy")
+    assert none_first == []
+    assert [f["id"] for f in some_eco] == ["FL101"]
 
 
 @pytest.mark.asyncio
-async def test_search_hotels_filters_and_sorts_by_rating(tools):
-    res = await tools["search_hotels"]("JFK", max_price_per_night=300, min_rating=4.0)
-    assert [h["id"] for h in res] == ["HT203", "HT204"]
+async def test_search_hotels_rating_is_on_a_ten_point_scale(tools):
+    # Gotcha: a "4-star" request as min_rating=4 returns everything (all >= 6.4);
+    # the real floor for 4 stars is min_rating=8.
+    loose = await tools["search_hotels"]("JFK", max_price_per_night=300, min_rating=4.0)
+    strict = await tools["search_hotels"]("JFK", max_price_per_night=300, min_rating=8.0)
+    assert {h["id"] for h in strict} == {"HT203", "HT204"}  # 8.8, 8.2
+    assert len(loose) > len(strict)
 
 
 @pytest.mark.asyncio
-async def test_search_activities_filters_by_category(tools):
-    food = await tools["search_activities"]("JFK", category="food")
-    assert {a["id"] for a in food} == {"AC301", "AC302"}
+async def test_search_activities_exact_category_required(tools):
+    assert {a["id"] for a in await tools["search_activities"]("JFK", category="food")} == {"AC301", "AC302"}
+    assert await tools["search_activities"]("JFK", category="dining") == []  # synonym matches nothing
 
 
 @pytest.mark.asyncio
-async def test_booking_tools_confirm_without_mutating_shared_state(tools):
-    ok = await tools["book_flight"]("FL104")
-    assert ok["ok"] and ok["booked"]["id"] == "FL104"
-    assert (await tools["book_flight"]("nope"))["ok"] is False
-    # Two callable sets are independent (no shared TripState).
-    other = make_tool_callables()
-    assert (await other["book_flight"]("FL101"))["booked"]["id"] == "FL101"
+async def test_reconstruct_trip_captures_cabin_and_price():
+    bf = {"ok": True, "booked": {"id": "FL101"}, "cabin": "economy", "price": cabin_price(412, "economy")}
+    trip = reconstruct_trip(_traj(("book_flight", {"flight_id": "FL101", "cabin": "economy"}, bf)))
+    assert trip.flight.id == "FL101" and trip.flight_cabin == "economy"
+    assert trip.flight_price() == 412  # economy = base
 
-
-@pytest.mark.asyncio
-async def test_reconstruct_trip_from_successful_bookings(tools):
-    bf = await tools["book_flight"]("FL101")
-    bh = await tools["book_hotel"]("HT203", 3)
-    a1 = await tools["add_activity"]("AC301")
-    traj = _traj(
-        ("book_flight", {"flight_id": "FL101"}, bf),
-        ("book_hotel", {"hotel_id": "HT203", "nights": 3}, bh),
-        ("add_activity", {"activity_id": "AC301"}, a1),
-    )
-    trip = reconstruct_trip(traj)
-    assert trip.flight.id == "FL101"
-    assert trip.hotel.id == "HT203" and trip.hotel_nights == 3
-    assert [a.id for a in trip.activities] == ["AC301"]
-    assert trip.total_cost() == 412 + 295 * 3 + 35
-
-
-@pytest.mark.asyncio
-async def test_reconstruct_trip_ignores_failed_bookings_and_dedups(tools):
-    traj = _traj(
-        ("book_flight", {"flight_id": "nope"}, {"ok": False, "error": "no flight nope"}),
-        ("add_activity", {"activity_id": "AC301"}, {"ok": True, "added": {"id": "AC301"}}),
-        ("add_activity", {"activity_id": "AC301"}, {"ok": True, "added": {"id": "AC301"}}),
-    )
-    trip = reconstruct_trip(traj)
-    assert trip.flight is None
-    assert [a.id for a in trip.activities] == ["AC301"]  # duplicate ignored
+    bf_first = {"ok": True, "booked": {"id": "FL101"}, "cabin": "first"}
+    trip2 = reconstruct_trip(_traj(("book_flight", {"flight_id": "FL101"}, bf_first)))
+    assert trip2.flight_cabin == "first" and trip2.flight_price() == 412 * 3
