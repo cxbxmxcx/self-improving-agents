@@ -188,7 +188,7 @@ class GEPA:
                 if budget.exhausted():
                     break
                 child, mut_tokens = await self._mutate_from(seed, parent_feedback=None, sibling=None, archive=archive)
-                total_tokens += mut_tokens
+                total_tokens += mut_tokens; budget.charge(Cost(tokens=mut_tokens))
                 measurement, cand_tokens = await self._evaluate_candidate(
                     candidate=child,
                     reference=seed,
@@ -196,7 +196,7 @@ class GEPA:
                     reference_runs=reference_runs,
                     signal=signal,
                 )
-                total_tokens += cand_tokens
+                total_tokens += cand_tokens; budget.charge(Cost(tokens=cand_tokens))
                 variant = Variant(
                     artifact=child,
                     parent=seed,
@@ -246,7 +246,7 @@ class GEPA:
                         child, mut_tokens = await self._crossover(a.artifact, b.artifact, archive=archive)
                         parent_art = a.artifact
                         operator = "crossover"
-                    total_tokens += mut_tokens
+                    total_tokens += mut_tokens; budget.charge(Cost(tokens=mut_tokens))
 
                     measurement, cand_tokens = await self._evaluate_candidate(
                         candidate=child,
@@ -255,7 +255,7 @@ class GEPA:
                         reference_runs=reference_runs,
                         signal=signal,
                     )
-                    total_tokens += cand_tokens
+                    total_tokens += cand_tokens; budget.charge(Cost(tokens=cand_tokens))
                     variant = Variant(
                         artifact=child,
                         parent=parent_art,
