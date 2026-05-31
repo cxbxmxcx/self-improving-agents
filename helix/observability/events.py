@@ -56,6 +56,18 @@ class ArtifactCreated(Event):
 
 
 @dataclass
+class ArtifactDuplicate(Event):
+    """A mutation produced content identical to an existing version of the same
+    artifact id, so it collapsed onto that version instead of creating a new row
+    (SPEC §1.3). Observability can trend this as wasted search effort."""
+    event_type: str = "artifact_duplicate"
+    artifact_id: str = ""
+    version: int = 0           # the version the search minted (not stored)
+    canonical_version: int = 0  # the existing version it collapsed onto
+    search_method: str = ""
+
+
+@dataclass
 class ArtifactMeasured(Event):
     event_type: str = "artifact_measured"
     artifact_id: str = ""

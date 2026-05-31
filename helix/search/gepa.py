@@ -355,9 +355,8 @@ Produce a single mutated offspring."""
             metadata={"proposer_model": self.proposer_model},
             version=next_v,
         )
-        if hasattr(archive, "_store_artifact"):
-            archive._store_artifact(child)
-            archive._conn.commit()
+        if hasattr(archive, "put_artifact"):
+            await archive.put_artifact(child)
 
         await self.bus.publish(
             MutationProposed(
@@ -410,9 +409,8 @@ Produce a single offspring combining A's strengths and B's strengths."""
             metadata={"proposer_model": self.proposer_model, "other_parent_version": b.version},
             version=next_v,
         )
-        if hasattr(archive, "_store_artifact"):
-            archive._store_artifact(child)
-            archive._conn.commit()
+        if hasattr(archive, "put_artifact"):
+            await archive.put_artifact(child)
 
         await self.bus.publish(
             MutationProposed(

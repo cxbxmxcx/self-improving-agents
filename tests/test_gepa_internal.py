@@ -83,29 +83,29 @@ async def test_gepa_yields_a_single_winner_after_internal_evolution():
     archive = SQLiteArchive(":memory:")
     seed = genesis("prompt.test", Subtype.PROMPT, "seed content")
 
-    # Patch _mutate_from and _crossover so we don't call the LLM.
+    # Patch _mutate_from and _crossover so we don't call the LLM. Content
+    # includes the unique next version so candidates are distinct rows (real
+    # GEPA produces distinct text; identical content would collapse, §1.3).
     async def fake_mutate(self, parent, parent_feedback, sibling, archive):
         next_v = await archive.next_version(parent.id) if hasattr(archive, "next_version") else parent.version + 1
         child = parent.mutate(
-            new_content=f"mutated from v{parent.version} (sib={sibling.version if sibling else None})",
+            new_content=f"mutated v{next_v} from v{parent.version}",
             created_by="gepa_mutation",
             version=next_v,
         )
-        if hasattr(archive, "_store_artifact"):
-            archive._store_artifact(child)
-            archive._conn.commit()
+        if hasattr(archive, "put_artifact"):
+            await archive.put_artifact(child)
         return child, 0
 
     async def fake_crossover(self, a, b, archive):
         next_v = await archive.next_version(a.id) if hasattr(archive, "next_version") else a.version + 1
         child = a.mutate(
-            new_content=f"crossover v{a.version} x v{b.version}",
+            new_content=f"crossover v{next_v} ({a.version} x {b.version})",
             created_by="gepa_crossover",
             version=next_v,
         )
-        if hasattr(archive, "_store_artifact"):
-            archive._store_artifact(child)
-            archive._conn.commit()
+        if hasattr(archive, "put_artifact"):
+            await archive.put_artifact(child)
         return child, 0
 
     gepa = GEPA(

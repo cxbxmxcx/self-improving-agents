@@ -34,6 +34,56 @@ async def test_legacy_v01_artifact_row_migrates_on_read():
 
 
 @pytest.mark.asyncio
+async def test_duplicate_content_collapses_within_id_and_notifies():
+    """A mutation reproducing an earlier version's content collapses onto it,
+    emits ArtifactDuplicate, and routes its measurement to the canonical
+    version (SPEC §1.3, fix #3)."""
+    from helix.observability.bus import EventBus
+
+    bus = EventBus()
+    arc = SQLiteArchive(":memory:", bus=bus)
+    dups = []
+    bus.subscribe("artifact_duplicate", lambda ev: dups.append(ev))
+
+    a1 = genesis("p", Subtype.PROMPT, "same content")
+    r1 = await arc.record(Variant(artifact=a1, parent=a1, search_method="human"),
+                          GapMeasurement(score=0.5))
+    assert r1.inserted and not r1.was_duplicate
+
+    a2 = a1.mutate("same content", created_by="spo")  # v2, identical content
+    r2 = await arc.record(Variant(artifact=a2, parent=a1, search_method="spo"),
+                          GapMeasurement(score=0.8))
+    assert r2.was_duplicate
+    assert not r2.inserted
+    assert r2.canonical_ref == ("p", 1)        # collapsed onto v1
+    assert await arc.by_id("p", 2) is None      # v2 was never stored
+    assert len(await arc.get_measurement_history("p", 1)) == 2  # both enrich v1
+    assert len(dups) == 1 and dups[0].canonical_version == 1
+
+    # A different id with identical content is NOT collapsed (within-id scope).
+    b = genesis("q", Subtype.PROMPT, "same content")
+    r3 = await arc.record(Variant(artifact=b, parent=b, search_method="human"),
+                          GapMeasurement(score=0.3))
+    assert r3.inserted and not r3.was_duplicate
+    assert await arc.by_id("q", 1) is not None
+
+
+@pytest.mark.asyncio
+async def test_put_artifact_persists_with_dedup_and_returns_canonical():
+    """put_artifact is the public persist-without-measurement path GEPA uses
+    instead of private storage internals (fix #5), with the same dedup (#3)."""
+    arc = SQLiteArchive(":memory:")
+    a1 = genesis("p", Subtype.PROMPT, "body")
+    r1 = await arc.put_artifact(a1)
+    assert r1.inserted and r1.canonical_ref == ("p", 1)
+
+    a2 = a1.mutate("body", created_by="gepa")  # identical content
+    r2 = await arc.put_artifact(a2)
+    assert r2.was_duplicate and r2.canonical_ref == ("p", 1)
+    assert await arc.by_id("p", 2) is None
+
+
+@pytest.mark.asyncio
 async def test_best_and_measurements_for_signal_attach_the_right_measurement():
     """best(signal_id=...) and measurements_for_signal attach the measurement
     taken under that signal, not a signal-agnostic latest (fix #6)."""
