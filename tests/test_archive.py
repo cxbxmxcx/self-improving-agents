@@ -34,6 +34,30 @@ async def test_legacy_v01_artifact_row_migrates_on_read():
 
 
 @pytest.mark.asyncio
+async def test_best_and_measurements_for_signal_attach_the_right_measurement():
+    """best(signal_id=...) and measurements_for_signal attach the measurement
+    taken under that signal, not a signal-agnostic latest (fix #6)."""
+    arc = SQLiteArchive(":memory:")
+    a = genesis("p", Subtype.PROMPT, "hi")
+    v = Variant(artifact=a, parent=a, search_method="human")
+    await arc.record(v, GapMeasurement(score=0.9, signal_id="judge", signal_version=1))
+    await arc.record(v, GapMeasurement(score=0.2, signal_id="metric", signal_version=1))
+
+    best_judge = await arc.best(k=1, signal_id="judge")
+    assert best_judge[0].measurement.signal_id == "judge"
+    assert best_judge[0].measurement.score == 0.9
+
+    best_metric = await arc.best(k=1, signal_id="metric")
+    assert best_metric[0].measurement.signal_id == "metric"
+    assert best_metric[0].measurement.score == 0.2
+
+    for_judge = await arc.measurements_for_signal("judge")
+    assert len(for_judge) == 1
+    assert for_judge[0][1].signal_id == "judge"
+    assert for_judge[0][1].score == 0.9
+
+
+@pytest.mark.asyncio
 async def test_composite_round_trips_through_archive():
     """A composite stores and reads back with its constituents and layer intact."""
     from helix.artifact import compose

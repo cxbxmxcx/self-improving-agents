@@ -35,3 +35,15 @@ def test_complete_sets_outcome_output_and_end_time():
     assert t.outcome == Outcome.COMPLETED
     assert t.final_output == "the answer"
     assert t.ended_at is not None
+
+
+def test_artifacts_used_round_trips_as_tuples_and_skips_none():
+    from helix.trajectory import Trajectory
+    t = Trajectory(task="x")
+    t.record_artifact(0, ("p", 1))
+    t.record_artifact(0, ("q", 2))
+    t.record_artifact(1, None)  # ignored: artifacts_used holds only refs (fix #11)
+    assert 1 not in t.artifacts_used
+    restored = Trajectory.from_dict(t.to_dict())
+    assert restored.artifacts_used[0] == [("p", 1), ("q", 2)]
+    assert all(isinstance(r, tuple) for refs in restored.artifacts_used.values() for r in refs)

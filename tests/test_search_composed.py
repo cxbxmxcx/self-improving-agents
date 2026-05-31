@@ -132,3 +132,12 @@ async def test_roles_without_a_child_search_are_held_fixed():
     refs = dict((c["role"], (c["id"], c["version"])) for c in variants[0].artifact.constituents)
     assert refs["memory"] == ("mem", 2)
     assert refs["planner"] == ("plan", 1)
+
+
+@pytest.mark.asyncio
+async def test_composed_select_raises_on_empty_candidates():
+    """select() promises -> Artifact, so empty input raises rather than
+    returning None (fix #9)."""
+    search = ComposedSearch({}, {})
+    with pytest.raises(ValueError):
+        await search.select([], _NullSignal(), None)

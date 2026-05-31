@@ -196,7 +196,9 @@ class SPO:
         best = await archive.best(k=1)
         if best:
             return best[0].artifact
-        return candidates[0].artifact if candidates else None  # type: ignore[return-value]
+        if candidates:
+            return candidates[0].artifact
+        raise ValueError("SPO.select: no winning candidate, no candidates, and empty archive")
 
     async def _read_recent_feedback(
         self,

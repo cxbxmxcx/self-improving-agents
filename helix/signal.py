@@ -23,6 +23,7 @@ from helix.trajectory import Trajectory
 class SignalKind(str, Enum):
     """Signal families per SPEC section 3.3."""
     GROUND_TRUTH = "ground_truth"
+    ENVIRONMENT_REWARD = "environment_reward"  # implicit/derived reward from real outcomes
     LLM_JUDGE_ABSOLUTE = "llm_judge_absolute"
     LLM_JUDGE_PAIRWISE = "llm_judge_pairwise"
     CONTRASTIVE = "contrastive"

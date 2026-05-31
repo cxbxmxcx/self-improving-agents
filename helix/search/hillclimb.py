@@ -160,7 +160,12 @@ class HillClimb:
     ) -> Artifact:
         scored = [c for c in candidates if c.measurement and c.measurement.score is not None]
         if not scored:
-            return candidates[0].artifact if candidates else (await archive.best(k=1))[0].artifact
+            if candidates:
+                return candidates[0].artifact
+            best = await archive.best(k=1)
+            if best:
+                return best[0].artifact
+            raise ValueError("HillClimb.select: no scored candidates, no candidates, and empty archive")
         scored.sort(key=lambda v: v.measurement.score, reverse=True)
         return scored[0].artifact
 

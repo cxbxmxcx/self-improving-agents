@@ -308,7 +308,9 @@ class GEPA:
         if candidates:
             return candidates[0].artifact
         best = await archive.best(k=1)
-        return best[0].artifact if best else None  # type: ignore[return-value]
+        if best:
+            return best[0].artifact
+        raise ValueError("GEPA.select: no candidates and empty archive")
 
     # ---------------- internal helpers ----------------
 

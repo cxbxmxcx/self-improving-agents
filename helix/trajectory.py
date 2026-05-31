@@ -62,7 +62,7 @@ class Trajectory:
     id: str = field(default_factory=lambda: str(uuid4()))
     task: str = ""
     steps: list[Step] = field(default_factory=list)
-    artifacts_used: dict[int, list[ParentRef]] = field(default_factory=dict)
+    artifacts_used: dict[int, list[tuple[str, int]]] = field(default_factory=dict)
     final_output: Any | None = None
     outcome: Outcome = Outcome.IN_PROGRESS
     started_at: datetime = field(
@@ -77,7 +77,13 @@ class Trajectory:
         return step
 
     def record_artifact(self, step_index: int, ref: tuple[str, int]) -> None:
-        """Note which artifact was read at this step, for replay and lineage."""
+        """Note which artifact was read at this step, for replay and lineage.
+
+        Genesis-less refs (None) are not recorded; artifacts_used holds only
+        concrete (artifact_id, version) tuples (SPEC §2.1, fix #11).
+        """
+        if ref is None:
+            return
         self.artifacts_used.setdefault(step_index, []).append(ref)
 
     def complete(self, output: Any, outcome: Outcome = Outcome.COMPLETED) -> None:
@@ -104,7 +110,7 @@ class Trajectory:
                 for s in self.steps
             ],
             "artifacts_used": {
-                str(idx): [list(ref) if ref else None for ref in refs]
+                str(idx): [list(ref) for ref in refs]
                 for idx, refs in self.artifacts_used.items()
             },
             "final_output": self.final_output,
@@ -135,7 +141,7 @@ class Trajectory:
             for s in data.get("steps", [])
         ]
         traj.artifacts_used = {
-            int(idx): [tuple(ref) if ref else None for ref in refs]
+            int(idx): [tuple(ref) for ref in refs if ref]
             for idx, refs in data.get("artifacts_used", {}).items()
         }
         return traj

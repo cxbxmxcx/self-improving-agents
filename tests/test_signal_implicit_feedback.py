@@ -105,3 +105,12 @@ async def test_returns_none_score_when_no_kinds_match():
     m = await signal.measure(candidate=None, trajectory=traj)
     # No matching kinds; score defaults to 0.5 (neutral)
     assert m.score == 0.5
+
+
+@pytest.mark.asyncio
+async def test_implicit_feedback_kind_is_environment_reward():
+    """Implicit feedback is environment-derived reward, not ground truth
+    (fix #12: mislabeling inflated its verifiability ceiling)."""
+    from helix.signal import SignalKind
+    signal = ImplicitFeedbackSignal(store=FeedbackStore(":memory:"))
+    assert signal.kind == SignalKind.ENVIRONMENT_REWARD

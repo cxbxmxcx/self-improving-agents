@@ -126,7 +126,9 @@ class StrategyChain:
         archive: Archive,
     ) -> Artifact:
         if self.active_strategy is None:
-            return candidates[0].artifact if candidates else None  # type: ignore[return-value]
+            if candidates:
+                return candidates[0].artifact
+            raise ValueError("StrategyChain.select: no active strategy and no candidates")
         return await self.active_strategy.select(candidates, signal, archive)
 
     async def on_round_result(self, result: RoundResult) -> None:
