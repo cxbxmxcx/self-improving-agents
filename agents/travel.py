@@ -21,7 +21,16 @@ from typing import Any
 
 from helix.agent import Agent
 from helix.artifact import Artifact, Subtype, genesis
+from helix.eval.dataset import EvalQuestion, EvalSet
+from helix.signal import (
+    Cost,
+    GapMeasurement,
+    Preference,
+    SignalKind,
+    derive_signal_id,
+)
 from helix.tools import TextDescriptionTool, tool
+from helix.trajectory import Trajectory
 
 from agents.travel_sim import (
     FIXED_DESCRIPTIONS,
@@ -29,6 +38,7 @@ from agents.travel_sim import (
     SEARCHABLE_TOOL_DESCRIPTION_IDS,
     TripState,
     make_tool_callables,
+    reconstruct_trip,
 )
 
 DEFAULT_MODEL = "claude-haiku-4-5"
@@ -61,18 +71,18 @@ def genesis_descriptions() -> dict[str, Artifact]:
 
 def build_travel_agent(
     descriptions: dict[str, Artifact],
-    trip: TripState,
     *,
     system_prompt: Artifact | None = None,
     model: str = DEFAULT_MODEL,
 ) -> Agent:
-    """Build the travel agent with its tools bound to one TripState.
+    """Build the travel agent with stateless tools.
 
     Searchable tools (search_flights/hotels/activities) get artifact-backed
-    descriptions from `descriptions`; the book/add tools keep fixed strings.
-    A fresh TripState per build keeps each scenario run isolated.
+    descriptions from `descriptions`; the book/add tools keep fixed strings. The
+    tools hold no state, so the agent clones cleanly under `with_artifacts`; the
+    booked itinerary is read back from the trajectory via reconstruct_trip.
     """
-    callables = make_tool_callables(trip)
+    callables = make_tool_callables()
     tools: list[Any] = []
     for tool_name, desc_id in SEARCHABLE_TOOL_DESCRIPTION_IDS.items():
         tools.append(
@@ -192,12 +202,93 @@ def make_score_scenario(
     async def score_scenario(candidate: Artifact, scenario: TravelScenario) -> tuple[float, dict]:
         descriptions = dict(base_descriptions)
         descriptions[candidate.id] = candidate
-        trip = TripState()
-        agent = build_travel_agent(descriptions, trip, system_prompt=system_prompt, model=model)
-        answer, _trajectory = await agent.run(scenario.request)
+        agent = build_travel_agent(descriptions, system_prompt=system_prompt, model=model)
+        answer, trajectory = await agent.run(scenario.request)
+        trip = reconstruct_trip(trajectory)
         return scenario.score(trip), {
             "booked": trip.summary(),
             "answer_excerpt": (answer or "")[:160],
         }
 
     return score_scenario
+
+
+def load_travel_eval_set(path: str | Path) -> EvalSet:
+    """Travel scenarios as an EvalSet for the framework search path.
+
+    Each scenario becomes an EvalQuestion whose `question` is the request and
+    whose `reference_answer` is the JSON of the expected constraints. The
+    framework round runs the agent on the question; TravelTaskJudge reads the
+    constraints back out of reference_answer.
+    """
+    questions = [
+        EvalQuestion(
+            id=s.id, band=3, question=s.request,
+            reference_answer=json.dumps(s.constraints),
+        )
+        for s in load_travel_scenarios(path)
+    ]
+    return EvalSet(questions=questions, description="travel task scenarios")
+
+
+class TravelTaskJudge:
+    """Pairwise ground-truth signal for the framework search path (§3.4).
+
+    The framework round and GEPA judge candidate vs reference trajectories. This
+    signal reconstructs each trip from its trajectory, scores both against the
+    scenario constraints (passed as reference_answer JSON in ground_truth), and
+    prefers the higher-scoring one. It also fills `score` with the candidate's
+    task-success fraction so absolute consumers (GEPA's score sort) work too.
+    """
+
+    def __init__(self, version: int = 1) -> None:
+        self._version = version
+
+    @property
+    def kind(self) -> SignalKind:
+        return SignalKind.GROUND_TRUTH
+
+    @property
+    def cost_estimate(self) -> Cost:
+        return Cost()
+
+    @property
+    def signal_id(self) -> str:
+        return derive_signal_id("TravelTaskJudge", {"version": self._version})
+
+    @property
+    def signal_version(self) -> int:
+        return self._version
+
+    async def measure(
+        self,
+        candidate: Artifact,
+        trajectory: Trajectory | None = None,
+        reference: Artifact | None = None,
+        ground_truth: Any | None = None,
+    ) -> GapMeasurement:
+        gt = ground_truth or {}
+        try:
+            constraints = json.loads(gt.get("reference_answer") or "{}")
+        except (TypeError, ValueError):
+            constraints = {}
+        scenario = TravelScenario("_", "", constraints)
+        cand_traj = gt.get("candidate_trajectory") or trajectory
+        ref_traj = gt.get("reference_trajectory")
+        cand = scenario.score(reconstruct_trip(cand_traj)) if cand_traj is not None else 0.0
+        ref = scenario.score(reconstruct_trip(ref_traj)) if ref_traj is not None else 0.0
+        if cand > ref:
+            pref = Preference.LEFT
+        elif cand < ref:
+            pref = Preference.RIGHT
+        else:
+            pref = Preference.TIE
+        return GapMeasurement(
+            score=cand,
+            preference=pref,
+            confidence=abs(cand - ref),
+            feedback=f"task success: candidate {cand:.2f} vs reference {ref:.2f}",
+            signal_id=self.signal_id,
+            signal_version=self.signal_version,
+            cost=Cost(),
+        )
