@@ -17,7 +17,31 @@
       "Bash(powershell *)",
       "PowerShell(python \"C:\\\\Users\\\\Micheal Lanham\\\\.claude\\\\skills\\\\docx\\\\scripts\\\\office\\\\unpack.py\" \"C:\\\\Book_Code\\\\self-improving-agents\\\\CH01_Lanham5_Self-Improving_Agents.docx\" \"C:\\\\Book_Code\\\\self-improving-agents\\\\.ch01_unpacked\" 2>&1 | Select-Object -Last 10)",
       "Bash(ls .venv)",
-      "Bash(ls venv *)"
+      "Bash(ls venv *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(git mv *)",
+      "Bash(HELIX_ONLINE_TOTAL_REQUESTS=8 HELIX_ONLINE_SAMPLE_RATE=0.5 HELIX_ONLINE_ROLLING_WINDOW=3 HELIX_ONLINE_ROLLING_THRESHOLD=0.85 HELIX_ONLINE_SHADOW_SAMPLE=2 .venv/Scripts/python.exe chapters/ch02/spo_online_loop.py)",
+      "Bash(python -m pytest tests/ -x --tb=short)",
+      "Bash(git checkout *)",
+      "Bash(git ls-tree *)",
+      "Bash(grep -E '\\\\.\\(py\\)$')",
+      "Bash(git restore *)",
+      "Bash(grep -E '\\\\.py$')",
+      "Bash(xargs wc -l)",
+      "Bash(python -m pytest -q --no-header -p no:cacheprovider)",
+      "Bash(python -m pip list)",
+      "Bash(uv --version)",
+      "Bash(py -0p)",
+      "Bash(py -3.13 -m venv .venv)",
+      "Bash(echo \"exit=$?\")",
+      "Bash(grep -vE \"Warning|distutils|_distutils_hack|Remainder|^$\")",
+      "Bash(awk '/## 18\\\\. Artifact Composition/,/$/' SPEC.md)",
+      "Bash(awk '/## 15\\\\. The TEXT kind/,0' DESIGN_NOTES.md)",
+      "Bash(echo \"exit: $?  \\(empty above = all compiled clean\\)\")",
+      "Bash(git commit *)",
+      "Bash(git config *)"
     ]
   }
 }
