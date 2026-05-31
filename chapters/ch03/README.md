@@ -20,14 +20,15 @@ Four sections, runnable scripts:
 |---|---------|--------|
 | 3.1 | Evolutionary economics, tool descriptions as artifacts, the task agent + ground-truth signal | `travel_tool_optimization.py` |
 | 3.2 | GEPA from scratch: population, reflective mutation, Pareto over two objectives | `gepa_travel_from_scratch.py` |
-| 3.3 | DGM from scratch: archive of variants, quality-diversity sampling | `minimal_dgm.py` |
-| 3.4 | Several methods on one artifact: SPO + GEPA + DGM via the multi-improver pattern | `travel_tool_optimization.py`, `escalating_improver.py` |
+| 3.3 | DGM from scratch: archive of variants, quality-diversity sampling | `dgm_travel_from_scratch.py` |
+| 3.4 | Several methods on one artifact: SPO + GEPA + DGM via the multi-improver pattern | `travel_tool_optimization.py`, `escalating_travel.py` |
 
 The simulation, agent, and signal live in `agents/travel_sim.py`,
 `agents/travel.py`, and `helix/signals/task_success.py`; the scenarios are
-`chapters/ch03/travel_scenarios.json`. The Chapter 2 RAG scripts
-(`tool_description_loop.py`, `minimal_gepa.py`, `dual_improver.py`) remain in
-the directory as the prior, judge-based variants for comparison.
+`chapters/ch03/travel_scenarios.json`. The earlier RAG-based scripts
+(`tool_description_loop.py`, `minimal_gepa.py`, `minimal_dgm.py`,
+`dual_improver.py`, `escalating_improver.py`) remain in the directory as the
+prior, judge-based variants for comparison.
 
 This chapter is denser than Ch 2 (~30 pages versus ~22). The pedagogy
 remains "build it twice": each method is hand-written first in 80 lines,
@@ -216,19 +217,19 @@ distinctive ideas:
 Run:
 
 ```
-python chapters/ch03/minimal_dgm.py
+python chapters/ch03/dgm_travel_from_scratch.py
 ```
 
-The script:
+The script (nothing imported from `helix.search.dgm`):
 
-- Defines an `Archive` as a list of `(artifact, score, parent_id)`
-  tuples. (~15 lines.)
-- Defines `sample_with_quality_diversity(archive, k)`: weight by score,
-  penalize recent picks. (~20 lines.)
-- Defines `mutate(parent)`: one LLM call to rewrite, conditioned on
-  the parent's score and feedback. (~15 lines.)
-- Runs ~10 rounds and prints which round/parent the sampler picked each
-  time. (~30 lines.)
+- Defines an `Archive` of `Entry(artifact, score, parent_version,
+  times_sampled)` over candidate `search_flights` descriptions. (~15 lines.)
+- Defines `sample_quality_diversity()`: weight by score, halved each time a
+  branch is re-sampled. (~10 lines.)
+- Defines `mutate(seed)`: one LLM call to rewrite the sampled description,
+  conditioned on its task-success score. (~15 lines.)
+- Scores each candidate with `TaskSuccessSignal` (ground truth) and runs
+  ~8 rounds, printing which version the sampler forked from each time.
 
 The reader sees that round 10 didn't fork from round 9's winner — it
 forked from round 3, because round 3 was high-scoring and the sampler
@@ -276,22 +277,19 @@ Two runnable demonstrations:
 **Parallel: three improvers, same artifact**
 
 ```
-python chapters/ch03/dual_improver.py
+python chapters/ch03/travel_tool_optimization.py
 ```
 
-(The script name predates the chapter's expansion to three methods; the
-file now runs SPO + GEPA + DGM in parallel rounds on the tool description.
-The shape is identical to running two improvers; the framework treats
-each `OfflineImprover` independently and the archive arbitrates by score.)
-
-Each method has its own per-round budget. The reader sees three columns
-of round-by-round output, the final archive contains candidates from
-all three methods, and the best candidate may have come from any of them.
+The script attaches three `OfflineImprover`s (SPO, GEPA, DGM) to the travel
+agent, all targeting `prompt.tool.search_flights.description` and judged by
+`TravelTaskJudge`. The framework treats each independently and the shared
+archive arbitrates by score, so the best candidate may have come from any
+method.
 
 **Sequential: escalating strategy chain**
 
 ```
-python chapters/ch03/escalating_improver.py
+python chapters/ch03/escalating_travel.py
 ```
 
 A `StrategyChain` runs SPO until it fails N times consecutively, then
@@ -300,9 +298,11 @@ plateau and brings in the next strategy. The cost shape is: cheap
 (SPO) → moderate (GEPA, more candidates per round) → thorough (DGM,
 sampling from full history).
 
-Both scripts use a two-objective signal: `LiveTrajectoryJudge` weighted
-0.7, `MetricSignal(metric="tokens")` weighted 0.3. The Pareto-aware
-methods (GEPA) keep the front; the others use the weighted average
+Both scripts grade with `TravelTaskJudge`, the deterministic ground-truth
+signal: it reconstructs the booked trip from each trajectory and prefers the
+description that satisfied more constraints. To make it multi-objective
+(quality versus token cost), wrap it with a `MetricSignal(metric="tokens")`
+in a `CompositeSignal`; the from-scratch scripts show the Pareto idea
 directly.
 
 After running either script, launch the dashboard:
