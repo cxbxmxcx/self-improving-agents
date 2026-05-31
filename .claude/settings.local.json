@@ -41,7 +41,8 @@
       "Bash(awk '/## 15\\\\. The TEXT kind/,0' DESIGN_NOTES.md)",
       "Bash(echo \"exit: $?  \\(empty above = all compiled clean\\)\")",
       "Bash(git commit *)",
-      "Bash(git config *)"
+      "Bash(git config *)",
+      "Bash(git branch *)"
     ]
   }
 }
