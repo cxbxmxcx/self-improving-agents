@@ -198,6 +198,27 @@ def _make_mixed_improver(*, promote_threshold_win_rate: float) -> tuple[OfflineI
 
 
 @pytest.mark.asyncio
+async def test_seed_is_target_specific_not_global_best():
+    """Multi-improver pattern (shared archive): _seed must return the target
+    artifact's best, not the global best, or a hotel improver would seed from
+    the flight description (regression for the cross-seed bug)."""
+    archive = SQLiteArchive(":memory:")
+    a = genesis("prompt.a", Subtype.PROMPT, "A")
+    b = genesis("prompt.b", Subtype.PROMPT, "B")
+    await archive.record(Variant(artifact=a, parent=a, search_method="human"),
+                         GapMeasurement(score=0.9))  # global best
+    await archive.record(Variant(artifact=b, parent=b, search_method="human"),
+                         GapMeasurement(score=0.1))
+    imp_b = OfflineImprover(
+        agent=_StubAgent(b), target_artifact_id="prompt.b",
+        signal=_StubSignal(), search=_StubSearch(), archive=archive,
+        eval_source=FixedEvalSet(_eval_set()), seed_fallback=b,
+    )
+    seed = await imp_b._seed()
+    assert seed.id == "prompt.b"  # not prompt.a despite its higher score
+
+
+@pytest.mark.asyncio
 async def test_round_below_win_rate_threshold_is_not_promotable():
     """Candidate beats the reference on mean score but wins only half the
     questions; a 0.9 win-rate bar must keep it from being promotable."""

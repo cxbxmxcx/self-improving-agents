@@ -46,10 +46,50 @@ SYSTEM_PROMPT_ID = "prompt.travel.system"
 
 DEFAULT_SYSTEM_PROMPT = """\
 You are a travel assistant. Plan and book a trip that satisfies the user's
-request using the available tools. Search before you book, respect every stated
-constraint (route, date, nonstop, budget, rating, activity type and count), and
-finish by confirming the itinerary. Prefer the cheapest option that still meets
-all constraints."""
+request using the available tools. A request may have several components: a
+flight, a hotel, and one or more activities. Book every component the user asks
+for before you finish; do not stop after the flight. Search before you book,
+pass every stated constraint to the search tools (route, date, nonstop, budget,
+rating, activity type and count), prefer the cheapest option that still meets
+all constraints, and confirm the full itinerary at the end."""
+
+
+# Real tool signatures, used to ground the description-mutation prompt so the
+# proposer mentions the parameters that exist and never invents ones that do not.
+TOOL_SCHEMAS: dict[str, str] = {
+    "search_flights": (
+        "origin (str, e.g. SFO), destination (str), date (str YYYY-MM-DD), "
+        "nonstop (bool, default false), max_price (int USD, 0 = no cap). "
+        "Returns matching flights sorted cheapest first."
+    ),
+    "search_hotels": (
+        "city (str), max_price_per_night (int USD, 0 = no cap), "
+        "min_rating (float stars 1.0-5.0, 0 = no floor). "
+        "Returns matching hotels, highest-rated first."
+    ),
+    "search_activities": (
+        "city (str), category (str, one of food|museum|outdoor|nightlife|"
+        "landmark; empty = all). Returns matching activities."
+    ),
+}
+
+
+def grounded_mutation_prompt(tool_name: str) -> str:
+    """A mutation system prompt grounded in the tool's real signature.
+
+    The framework's generic mutators see only the description text, so without
+    this they invent plausible-but-wrong parameters. Feeding the real schema is
+    what lets the search write descriptions the agent can actually act on.
+    """
+    return (
+        f"You are improving the natural-language DESCRIPTION of the `{tool_name}` "
+        f"tool that an LLM agent reads to decide how to call it.\n\n"
+        f"The tool's real parameters: {TOOL_SCHEMAS[tool_name]}\n\n"
+        f"Rewrite the description so the agent reliably passes every relevant "
+        f"parameter whenever the user states a matching constraint. Name the "
+        f"parameters explicitly. Never invent parameters the tool does not have. "
+        f"Output only the new description, one or two sentences, no preamble."
+    )
 
 
 def build_genesis_prompt() -> Artifact:
