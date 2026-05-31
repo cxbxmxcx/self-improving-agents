@@ -299,7 +299,11 @@ class SwapAndAgree:
             Preference.TIE: Preference.TIE,
             Preference.NONE: Preference.NONE,
         }
-        reverse = await self.inner.measure(reference, None, candidate, swapped_ctx)
+        # On the reverse pass the `reference` artifact takes the candidate slot,
+        # so its trajectory is the positional trajectory. Passing None here lost
+        # it for any inner judge that reads the positional arg (fix #10).
+        ref_trajectory = (ground_truth or {}).get("reference_trajectory")
+        reverse = await self.inner.measure(reference, ref_trajectory, candidate, swapped_ctx)
         # After swap, LEFT-pref means the original reference won; map back.
         reverse_pref = reversed_pref_map[reverse.preference]
 
