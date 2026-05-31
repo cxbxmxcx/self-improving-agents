@@ -1,22 +1,33 @@
 # Chapter 3: Searching for better text with evolutionary methods
 
-Chapter 2 introduced one search method (SPO) and one artifact under
-improvement (the system prompt). Chapter 3 widens both axes. The reader
-learns two evolutionary search methods built from scratch — GEPA and
-DGM — and applies them to a *tool description* artifact, demonstrating
-that the same search machinery works on any L1 text artifact, not just
-the system prompt. The chapter closes by running SPO, GEPA, and DGM
-together on the same tool description with the framework's
-multi-improver pattern.
+Chapter 2 introduced one search method (SPO), one artifact (the system
+prompt), and one signal family (the LLM-as-judge) on a RAG agent. Chapter
+3 widens all three. The running example becomes a **travel task agent**: a
+multi-tool agent that books flights, hotels, and activities against a
+deterministic simulation. With several tools, the natural-language *tool
+description* is what tells the model which tool to call and which
+constraints to pass, so optimizing it produces a visible jump in task
+success, which a single-tool RAG agent cannot show. And because the trip is
+checkable, the signal becomes **ground truth**, not a judge: a
+deterministic task-success score that evolutionary search (GEPA) is best
+driven by. The reader learns GEPA and DGM from scratch, applies them to a
+tool description, and runs the framework's multi-improver pattern on the
+same artifact.
 
-Four sections, five runnable scripts:
+Four sections, runnable scripts:
 
 | § | Concept | Script |
 |---|---------|--------|
-| 3.1 | The economics of evolutionary search + tool descriptions as artifacts | `tool_description_loop.py` |
-| 3.2 | GEPA from scratch: population, reflective mutation, Pareto over two objectives | `minimal_gepa.py` |
+| 3.1 | Evolutionary economics, tool descriptions as artifacts, the task agent + ground-truth signal | `travel_tool_optimization.py` |
+| 3.2 | GEPA from scratch: population, reflective mutation, Pareto over two objectives | `gepa_travel_from_scratch.py` |
 | 3.3 | DGM from scratch: archive of variants, quality-diversity sampling | `minimal_dgm.py` |
-| 3.4 | Three methods on one artifact: SPO + GEPA + DGM via the multi-improver pattern | `dual_improver.py`, `escalating_improver.py` |
+| 3.4 | Several methods on one artifact: SPO + GEPA + DGM via the multi-improver pattern | `travel_tool_optimization.py`, `escalating_improver.py` |
+
+The simulation, agent, and signal live in `agents/travel_sim.py`,
+`agents/travel.py`, and `helix/signals/task_success.py`; the scenarios are
+`chapters/ch03/travel_scenarios.json`. The Chapter 2 RAG scripts
+(`tool_description_loop.py`, `minimal_gepa.py`, `dual_improver.py`) remain in
+the directory as the prior, judge-based variants for comparison.
 
 This chapter is denser than Ch 2 (~30 pages versus ~22). The pedagogy
 remains "build it twice": each method is hand-written first in 80 lines,
@@ -94,17 +105,32 @@ stays a normal Python function. The description is a `TOOL_DESCRIPTION`
 artifact in the archive. Search methods mutate the description; the
 agent reads the current live description on every request.
 
+### The task agent and the ground-truth signal
+
+The travel agent's `search_flights` tool accepts `nonstop` and `max_price`,
+but its genesis description ("Search for flights.") never mentions them, so
+the agent ignores those constraints and books the wrong flight. That is the
+failure mode the chapter fixes by searching over the description.
+
+Because a trip is checkable, the signal is ground truth, not a judge.
+`helix.signals.task_success.TaskSuccessSignal` runs the agent against each
+scenario and scores the booked trip deterministically (right route, date,
+nonstop, under budget, the activities asked for), and `TravelTaskJudge`
+(`agents/travel.py`) is the pairwise form the framework round consumes. The
+itinerary is read back from the trajectory by `reconstruct_trip`, so the
+agent stays stateless and clones cleanly under `with_artifacts`.
+
 Run the warmup:
 
 ```
-python chapters/ch03/tool_description_loop.py
+python chapters/ch03/travel_tool_optimization.py
 ```
 
-The script builds an agent whose `retrieve` tool's description lives in
-the archive. An `OfflineImprover` targets the tool description and runs
-three rounds with SPO. The reader sees that everything they learned in
-Ch 2 §2.4 carries over: the same Improver, the same Signal, the same
-Archive — just a different artifact id.
+The script targets `prompt.tool.search_flights.description` with framework
+SPO and GEPA, judged by `TravelTaskJudge`. Everything from Ch 2 §2.4 carries
+over: the same Improver, Archive, and promotion gate. What changed is the
+agent (multi-tool, so the description matters) and the signal (ground truth,
+so GEPA has something deterministic to climb).
 
 ---
 
@@ -127,21 +153,23 @@ mutation with Pareto selection*. Three distinctive ideas:
 Run:
 
 ```
-python chapters/ch03/minimal_gepa.py
+python chapters/ch03/gepa_travel_from_scratch.py
 ```
 
-The script:
+The script (nothing imported from `helix.search.gepa`):
 
-- Defines a `Population` as a list of 4 candidate prompts. (~10 lines.)
-- Defines `reflective_mutate(parent, trajectory)`: one LLM call where
-  the system prompt is "critique what went wrong on this trajectory
-  and propose an edit." (~20 lines.)
-- Defines a two-objective scoring step: `LiveTrajectoryJudge` for
-  quality, `MetricSignal(metric="tokens")` for cost. (~10 lines.)
-- Defines `pareto_front(population, objectives)`: keep non-dominated
-  candidates. (~15 lines.)
-- Runs three generations and prints the Pareto front each time.
-  (~25 lines.)
+- Starts a population from the genesis `search_flights` description plus
+  reflective variants of it. (~10 lines.)
+- Defines `_reflective_mutate(parent, feedback)`: one LLM call that reads
+  which scenarios failed and what the agent booked, then rewrites the
+  description to pass the missed constraints. (~20 lines.)
+- Scores each candidate with `TaskSuccessSignal` (ground-truth task
+  success) on one objective and description length, a stand-in for prompt
+  cost, on the other. (~10 lines.)
+- Defines `_pareto_front(scored)`: keep candidates not dominated on
+  (task-success up, cost down). (~15 lines.)
+- Runs three generations and prints the Pareto front each time. (~25
+  lines.)
 
 The reader watches the two-objective tradeoff in action: in generation 1
 the population has one high-quality / high-cost candidate and one
