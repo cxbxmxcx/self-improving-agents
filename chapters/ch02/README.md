@@ -158,6 +158,13 @@ champion*:
   via `archive.promote()`. On first run, no promotion has happened, so
   this falls back to the genesis prompt.
 
+The round summary the script prints includes a `promoted` flag, which is
+a third distinct thing. It is True when the candidate beat the reference
+and also cleared the policy's `promote_threshold_win_rate`, marking the
+candidate as promotable. That is still not the same as being live: a
+promotable candidate sits in the archive until `archive.promote()` runs,
+which is the deploy-gate act a human (or the dashboard button) performs.
+
 Visualize what happened:
 
 ```
