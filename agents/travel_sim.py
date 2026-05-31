@@ -162,16 +162,18 @@ class TripState:
 
 
 # ---------------------------------------------------------------------------
-# Tool implementations (plain Python, bound to a TripState)
+# Tool implementations (plain Python, stateless)
 # ---------------------------------------------------------------------------
 
-def make_tool_callables(trip: TripState) -> dict[str, Any]:
-    """Return the seven raw async tool callables bound to one TripState.
+def make_tool_callables() -> dict[str, Any]:
+    """Return the six raw async tool callables.
 
-    The search tools read the dataset; the book/add tools mutate `trip`. Each
-    is a normal async function with type hints, so TextDescriptionTool can
-    derive its argument schema. The descriptions are supplied separately as
-    artifacts (genesis_descriptions), which is what the chapter searches over.
+    The tools are stateless: search tools read the dataset, and the book/add
+    tools just confirm the booking. The itinerary is not held in a shared
+    object; it is the trajectory itself, which `reconstruct_trip` reads back.
+    This keeps the agent clonable by the framework's `with_artifacts` without
+    leaking booking state across eval runs. Each is a typed async function so
+    TextDescriptionTool can derive its argument schema.
     """
 
     async def search_flights(
@@ -196,7 +198,6 @@ def make_tool_callables(trip: TripState) -> dict[str, Any]:
         f = _FLIGHTS_BY_ID.get(flight_id)
         if f is None:
             return {"ok": False, "error": f"no flight {flight_id}"}
-        trip.flight = f
         return {"ok": True, "booked": f.as_dict()}
 
     async def search_hotels(
@@ -216,8 +217,6 @@ def make_tool_callables(trip: TripState) -> dict[str, Any]:
         h = _HOTELS_BY_ID.get(hotel_id)
         if h is None:
             return {"ok": False, "error": f"no hotel {hotel_id}"}
-        trip.hotel = h
-        trip.hotel_nights = nights
         return {"ok": True, "booked": h.as_dict(), "nights": nights}
 
     async def search_activities(city: str, category: str = "") -> list[dict]:
@@ -231,12 +230,7 @@ def make_tool_callables(trip: TripState) -> dict[str, Any]:
         a = _ACTIVITIES_BY_ID.get(activity_id)
         if a is None:
             return {"ok": False, "error": f"no activity {activity_id}"}
-        if a.id not in {x.id for x in trip.activities}:
-            trip.activities.append(a)
         return {"ok": True, "added": a.as_dict()}
-
-    async def view_itinerary() -> dict:
-        return trip.summary()
 
     return {
         "search_flights": search_flights,
@@ -245,8 +239,50 @@ def make_tool_callables(trip: TripState) -> dict[str, Any]:
         "book_hotel": book_hotel,
         "search_activities": search_activities,
         "add_activity": add_activity,
-        "view_itinerary": view_itinerary,
     }
+
+
+# ---------------------------------------------------------------------------
+# Reconstruct the booked trip from a trajectory (the itinerary is the run)
+# ---------------------------------------------------------------------------
+
+def reconstruct_trip(trajectory: Any) -> TripState:
+    """Rebuild the TripState a run booked by reading its trajectory.
+
+    Pairs each TOOL_CALL with the TOOL_RESULT that follows it and applies the
+    successful book_flight / book_hotel / add_activity calls. This is how the
+    ground-truth signals grade what the agent actually did, independent of any
+    in-process state, which is what makes the task agent compose with the
+    framework's clone-per-run eval.
+    """
+    trip = TripState()
+    pending_name: str | None = None
+    pending_args: dict[str, Any] = {}
+    for step in getattr(trajectory, "steps", []):
+        kind = getattr(getattr(step, "kind", None), "value", getattr(step, "kind", None))
+        payload = getattr(step, "payload", {}) or {}
+        if kind == "tool_call":
+            pending_name = payload.get("name")
+            pending_args = payload.get("arguments", {}) or {}
+        elif kind == "tool_result" and pending_name is not None:
+            result = payload.get("result", {})
+            ok = isinstance(result, dict) and result.get("ok")
+            if ok and pending_name == "book_flight":
+                f = _FLIGHTS_BY_ID.get(pending_args.get("flight_id"))
+                if f is not None:
+                    trip.flight = f
+            elif ok and pending_name == "book_hotel":
+                h = _HOTELS_BY_ID.get(pending_args.get("hotel_id"))
+                if h is not None:
+                    trip.hotel = h
+                    trip.hotel_nights = int(pending_args.get("nights", 0) or 0)
+            elif ok and pending_name == "add_activity":
+                a = _ACTIVITIES_BY_ID.get(pending_args.get("activity_id"))
+                if a is not None and a.id not in {x.id for x in trip.activities}:
+                    trip.activities.append(a)
+            pending_name = None
+            pending_args = {}
+    return trip
 
 
 # ---------------------------------------------------------------------------
@@ -268,7 +304,6 @@ FIXED_DESCRIPTIONS: dict[str, str] = {
     "book_flight": "Book a flight by its id. Call after search_flights.",
     "book_hotel": "Book a hotel by its id for a number of nights.",
     "add_activity": "Add an activity to the itinerary by its id.",
-    "view_itinerary": "Show the flight, hotel, and activities booked so far.",
 }
 
 # Maps the searchable tool name to its description-artifact id.
