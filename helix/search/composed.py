@@ -110,9 +110,9 @@ class ComposedSearch:
         candidates: list[Variant],
         signal: Signal,
         archive: Any,
-    ) -> Artifact | None:
+    ) -> Artifact:
         if not candidates:
-            return None
+            raise ValueError("ComposedSearch.select: no candidates")
         scored = [
             c for c in candidates
             if c.measurement is not None and c.measurement.score is not None

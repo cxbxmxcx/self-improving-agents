@@ -85,9 +85,10 @@ class ImplicitFeedbackSignal:
 
     @property
     def kind(self) -> SignalKind:
-        # Closest match in the existing taxonomy; the implicit feedback
-        # signal is a real instance of "environment-derived reward."
-        return SignalKind.GROUND_TRUTH
+        # Implicit feedback is environment-derived reward, not ground truth.
+        # Mislabeling it GROUND_TRUTH inflated its verifiability ceiling in the
+        # eval stack composition (SPEC §3.4); ENVIRONMENT_REWARD is accurate.
+        return SignalKind.ENVIRONMENT_REWARD
 
     @property
     def cost_estimate(self) -> Cost:

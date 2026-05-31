@@ -229,15 +229,40 @@ class SQLiteArchive:
         )
         return True
 
-    def _latest_measurement(self, artifact_id: str, version: int) -> GapMeasurement | None:
+    def _latest_measurement(
+        self,
+        artifact_id: str,
+        version: int,
+        signal_id: str | None = None,
+        signal_version: int | None = None,
+    ) -> GapMeasurement | None:
+        """The most recent measurement for an artifact, optionally restricted to
+        a signal. Passing signal_id is what lets best(signal_id=...) attach the
+        measurement taken under that signal rather than a signal-agnostic latest
+        (fix #6, SPEC §5.2.1)."""
+        clauses = ["artifact_id = ?", "version = ?"]
+        params: list[Any] = [artifact_id, version]
+        if signal_id is not None:
+            clauses.append("signal_id = ?")
+            params.append(signal_id)
+        if signal_version is not None:
+            clauses.append("signal_version = ?")
+            params.append(signal_version)
         row = self._conn.execute(
-            """
-            SELECT * FROM measurements
-            WHERE artifact_id = ? AND version = ?
-            ORDER BY rowid DESC LIMIT 1
-            """,
-            (artifact_id, version),
+            f"SELECT * FROM measurements WHERE {' AND '.join(clauses)} "
+            f"ORDER BY rowid DESC LIMIT 1",
+            params,
         ).fetchone()
+        return self._measurement_from_row(row)
+
+    def _measurement_by_rowid(self, rowid: int) -> GapMeasurement | None:
+        """The exact measurement at a given measurements.rowid."""
+        row = self._conn.execute(
+            "SELECT * FROM measurements WHERE rowid = ?", (rowid,)
+        ).fetchone()
+        return self._measurement_from_row(row)
+
+    def _measurement_from_row(self, row: sqlite3.Row | None) -> GapMeasurement | None:
         if row is None:
             return None
         from helix.signal import Cost, Preference
@@ -395,7 +420,7 @@ class SQLiteArchive:
             params,
         ).fetchall()
 
-        return [self._row_to_variant(row) for row in rows]
+        return [self._row_to_variant(row, signal_id=signal_id) for row in rows]
 
     async def measurements_for_signal(
         self,
@@ -430,15 +455,20 @@ class SQLiteArchive:
         ).fetchall()
         results: list[tuple[Variant, GapMeasurement]] = []
         for row in rows:
-            variant = self._row_to_variant(row)
-            measurement = self._latest_measurement(
-                variant.artifact.id, variant.artifact.version
-            )
-            if measurement is not None:
-                results.append((variant, measurement))
+            # Reconstruct the exact measurement at this joined row, not a
+            # signal-agnostic latest (fix #6).
+            variant = self._row_to_variant(row, measurement_rowid=row["m_rowid"])
+            if variant.measurement is not None:
+                results.append((variant, variant.measurement))
         return results
 
-    def _row_to_variant(self, row: sqlite3.Row) -> Variant:
+    def _row_to_variant(
+        self,
+        row: sqlite3.Row,
+        signal_id: str | None = None,
+        signal_version: int | None = None,
+        measurement_rowid: int | None = None,
+    ) -> Variant:
         art = self._row_to_artifact(row)
         parent = art  # placeholder; could fetch parent artifact too
         if art.parent_id:
@@ -448,7 +478,15 @@ class SQLiteArchive:
             ).fetchone()
             if parent_row:
                 parent = self._row_to_artifact(parent_row)
-        measurement = self._latest_measurement(art.id, art.version)
+        # Attach the measurement the caller actually asked about: an exact row
+        # when given, else the latest under a named signal, else the latest
+        # overall (fix #6).
+        if measurement_rowid is not None:
+            measurement = self._measurement_by_rowid(measurement_rowid)
+        else:
+            measurement = self._latest_measurement(
+                art.id, art.version, signal_id=signal_id, signal_version=signal_version
+            )
         return Variant(
             artifact=art,
             parent=parent,
