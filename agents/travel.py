@@ -59,13 +59,12 @@ all constraints, and confirm the full itinerary at the end."""
 TOOL_SCHEMAS: dict[str, str] = {
     "search_flights": (
         "origin (str, e.g. SFO), destination (str), date (str YYYY-MM-DD), "
-        "nonstop (bool, default false), max_price (int USD, 0 = no cap). "
+        "nonstop (bool), max_price (int USD, 0 = no cap), cabin (str). "
         "Returns matching flights sorted cheapest first."
     ),
     "search_hotels": (
         "city (str), max_price_per_night (int USD, 0 = no cap), "
-        "min_rating (float stars 1.0-5.0, 0 = no floor). "
-        "Returns matching hotels, highest-rated first."
+        "min_rating (float, 0 = no floor). Returns matching hotels."
     ),
     "search_activities": (
         "city (str), category (str, one of food|museum|outdoor|nightlife|"
@@ -152,71 +151,101 @@ class TravelScenario:
     constraints: dict[str, Any]
 
     def score(self, trip: TripState) -> float:
-        """Fraction of the scenario's constraints the booked trip satisfies.
+        return self.score_with_reasons(trip)[0]
 
-        Each specified group (flight/hotel/activities) contributes equally, and
-        within a group each checked field contributes equally, so the score is a
-        smooth [0, 1] gradient the search can climb rather than all-or-nothing.
+    def score_with_reasons(self, trip: TripState) -> tuple[float, list[str]]:
+        """Fraction of constraints satisfied, plus a reason for each failure.
+
+        Each group (flight/hotel/activities) contributes equally; within a group
+        each field contributes equally, so the score is a smooth gradient. The
+        reasons feed the reflective search so it can discover the gotchas (the
+        cabin multiplier, the 1-10 rating scale, the exact category values).
         """
         groups: list[float] = []
+        reasons: list[str] = []
         if "flight" in self.constraints:
-            groups.append(_score_flight(trip.flight, self.constraints["flight"]))
+            f, r = _score_flight(trip, self.constraints["flight"])
+            groups.append(f); reasons += r
         if "hotel" in self.constraints:
-            groups.append(_score_hotel(trip.hotel, trip.hotel_nights, self.constraints["hotel"]))
+            f, r = _score_hotel(trip, self.constraints["hotel"])
+            groups.append(f); reasons += r
         if "activities" in self.constraints:
-            groups.append(_score_activities(trip.activities, self.constraints["activities"]))
-        return sum(groups) / len(groups) if groups else 0.0
+            f, r = _score_activities(trip, self.constraints["activities"])
+            groups.append(f); reasons += r
+        return (sum(groups) / len(groups) if groups else 0.0), reasons
 
 
 def _frac(checks: list[bool]) -> float:
     return sum(1 for c in checks if c) / len(checks) if checks else 1.0
 
 
-def _score_flight(flight, c: dict) -> float:
-    if flight is None:
-        return 0.0
+def _score_flight(trip: TripState, c: dict) -> tuple[float, list[str]]:
+    f = trip.flight
+    if f is None:
+        return 0.0, ["no flight booked"]
+    price = trip.flight_price()
     checks: list[bool] = []
+    reasons: list[str] = []
+
+    def chk(ok: bool, msg: str) -> None:
+        checks.append(ok)
+        if not ok:
+            reasons.append(msg)
+
     if "origin" in c:
-        checks.append(flight.origin == c["origin"])
+        chk(f.origin == c["origin"], f"flight origin {f.origin} != {c['origin']}")
     if "destination" in c:
-        checks.append(flight.destination == c["destination"])
+        chk(f.destination == c["destination"], f"flight destination {f.destination} != {c['destination']}")
     if "date" in c:
-        checks.append(flight.date == c["date"])
+        chk(f.date == c["date"], f"flight date {f.date} != {c['date']}")
     if "nonstop" in c:
-        checks.append((flight.stops == 0) == bool(c["nonstop"]))
+        chk((f.stops == 0) == bool(c["nonstop"]),
+            "flight is not nonstop" if c["nonstop"] else "flight should allow stops")
     if "max_price" in c:
-        checks.append(flight.price <= c["max_price"])
-    if "airline" in c:
-        checks.append(flight.airline == c["airline"])
-    return _frac(checks)
+        chk(price <= c["max_price"],
+            f"flight fare ${price} in {trip.flight_cabin} cabin exceeds budget ${c['max_price']}")
+    return _frac(checks), reasons
 
 
-def _score_hotel(hotel, nights: int, c: dict) -> float:
-    if hotel is None:
-        return 0.0
+def _score_hotel(trip: TripState, c: dict) -> tuple[float, list[str]]:
+    h = trip.hotel
+    if h is None:
+        return 0.0, ["no hotel booked"]
     checks: list[bool] = []
+    reasons: list[str] = []
+
+    def chk(ok: bool, msg: str) -> None:
+        checks.append(ok)
+        if not ok:
+            reasons.append(msg)
+
     if "city" in c:
-        checks.append(hotel.city == c["city"])
+        chk(h.city == c["city"], f"hotel city {h.city} != {c['city']}")
     if "max_price_per_night" in c:
-        checks.append(hotel.price_per_night <= c["max_price_per_night"])
+        chk(h.price_per_night <= c["max_price_per_night"],
+            f"hotel ${h.price_per_night}/night exceeds ${c['max_price_per_night']}")
     if "min_rating" in c:
-        checks.append(hotel.rating >= c["min_rating"])
+        chk(h.rating >= c["min_rating"],
+            f"hotel rating {h.rating}/10 is below required {c['min_rating']}")
     if "nights" in c:
-        checks.append(nights == c["nights"])
+        chk(trip.hotel_nights == c["nights"], f"booked {trip.hotel_nights} nights, wanted {c['nights']}")
     if "amenities" in c:
-        checks.append(all(a in hotel.amenities for a in c["amenities"]))
-    return _frac(checks)
+        chk(all(a in h.amenities for a in c["amenities"]), "hotel missing a requested amenity")
+    return _frac(checks), reasons
 
 
-def _score_activities(activities: list, c: dict) -> float:
+def _score_activities(trip: TripState, c: dict) -> tuple[float, list[str]]:
     city = c.get("city")
     category = c.get("category")
     count = int(c.get("count", 1))
     matching = [
-        a for a in activities
+        a for a in trip.activities
         if (city is None or a.city == city) and (category is None or a.category == category)
     ]
-    return 1.0 if len(matching) >= count else len(matching) / count
+    frac = 1.0 if len(matching) >= count else len(matching) / count
+    reasons = ([] if frac >= 1.0
+               else [f"only {len(matching)}/{count} {category or 'activities'} in {city} added"])
+    return frac, reasons
 
 
 def load_travel_scenarios(path: str | Path) -> list[TravelScenario]:
@@ -245,8 +274,10 @@ def make_score_scenario(
         agent = build_travel_agent(descriptions, system_prompt=system_prompt, model=model)
         answer, trajectory = await agent.run(scenario.request)
         trip = reconstruct_trip(trajectory)
-        return scenario.score(trip), {
+        score, reasons = scenario.score_with_reasons(trip)
+        return score, {
             "booked": trip.summary(),
+            "reasons": reasons,
             "answer_excerpt": (answer or "")[:160],
         }
 
@@ -315,7 +346,10 @@ class TravelTaskJudge:
         scenario = TravelScenario("_", "", constraints)
         cand_traj = gt.get("candidate_trajectory") or trajectory
         ref_traj = gt.get("reference_trajectory")
-        cand = scenario.score(reconstruct_trip(cand_traj)) if cand_traj is not None else 0.0
+        cand, cand_reasons = (
+            scenario.score_with_reasons(reconstruct_trip(cand_traj))
+            if cand_traj is not None else (0.0, ["no candidate run"])
+        )
         ref = scenario.score(reconstruct_trip(ref_traj)) if ref_traj is not None else 0.0
         if cand > ref:
             pref = Preference.LEFT
@@ -323,11 +357,14 @@ class TravelTaskJudge:
             pref = Preference.RIGHT
         else:
             pref = Preference.TIE
+        # The failure reasons are what let a reflective mutator discover the
+        # gotchas (cabin multiplier, 1-10 ratings, exact categories).
+        why = ("; ".join(cand_reasons))[:240] or "all constraints satisfied"
         return GapMeasurement(
             score=cand,
             preference=pref,
             confidence=abs(cand - ref),
-            feedback=f"task success: candidate {cand:.2f} vs reference {ref:.2f}",
+            feedback=f"task success {cand:.2f} (vs ref {ref:.2f}). Candidate misses: {why}",
             signal_id=self.signal_id,
             signal_version=self.signal_version,
             cost=Cost(),
