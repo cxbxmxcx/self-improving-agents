@@ -288,10 +288,10 @@ class EpisodicMemory:
             clauses.append("score < ?")
             params.append(policy.min_score)
 
-        before = self._conn.execute(
-            f"SELECT COUNT(*) AS n FROM episodic_entries{' WHERE ' + ' AND '.join(clauses) if clauses else ''}",
-            params,
-        ).fetchone()["n"]
+        # Count the whole table before and after so the return reflects every
+        # eviction, whether it came from the clause delete or the max_entries
+        # cap (a filtered before-count miscounts both paths).
+        before = self._conn.execute("SELECT COUNT(*) AS n FROM episodic_entries").fetchone()["n"]
 
         if clauses:
             self._conn.execute(
@@ -314,7 +314,7 @@ class EpisodicMemory:
 
         self._conn.commit()
         after = self._conn.execute("SELECT COUNT(*) AS n FROM episodic_entries").fetchone()["n"]
-        return max(0, before - after) if clauses else 0
+        return before - after
 
     async def consolidate(self) -> ConsolidationReport:
         """Summarize older episodic entries to compress the store.

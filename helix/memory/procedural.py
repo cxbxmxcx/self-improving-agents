@@ -267,17 +267,28 @@ class ProceduralMemory:
         if policy.min_score is not None:
             clauses.append("usage_count < ?")
             params.append(int(policy.min_score * 20))  # rough inverse of score
-        before = self._conn.execute(
-            f"SELECT COUNT(*) AS n FROM procedural_skills{' WHERE ' + ' AND '.join(clauses) if clauses else ''}",
-            params,
-        ).fetchone()["n"]
+        before = self._conn.execute("SELECT COUNT(*) AS n FROM procedural_skills").fetchone()["n"]
         if clauses:
             self._conn.execute(
                 f"DELETE FROM procedural_skills WHERE {' AND '.join(clauses)}",
                 params,
             )
-            self._conn.commit()
-        return before if clauses else 0
+        if policy.max_entries is not None:
+            # Keep the newest max_entries; drop the rest (uniform memory
+            # contract, SPEC §7.1).
+            self._conn.execute(
+                """
+                DELETE FROM procedural_skills
+                WHERE id NOT IN (
+                    SELECT id FROM procedural_skills
+                    ORDER BY created_at DESC LIMIT ?
+                )
+                """,
+                (policy.max_entries,),
+            )
+        self._conn.commit()
+        after = self._conn.execute("SELECT COUNT(*) AS n FROM procedural_skills").fetchone()["n"]
+        return before - after
 
     async def consolidate(self) -> ConsolidationReport:
         n = self._conn.execute("SELECT COUNT(*) AS n FROM procedural_skills").fetchone()["n"]

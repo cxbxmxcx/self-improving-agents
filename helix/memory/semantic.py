@@ -244,17 +244,28 @@ class SemanticMemory:
             clauses.append("score < ?")
             params.append(policy.min_score)
 
-        before = self._conn.execute(
-            f"SELECT COUNT(*) AS n FROM semantic_facts{' WHERE ' + ' AND '.join(clauses) if clauses else ''}",
-            params,
-        ).fetchone()["n"]
+        before = self._conn.execute("SELECT COUNT(*) AS n FROM semantic_facts").fetchone()["n"]
         if clauses:
             self._conn.execute(
                 f"DELETE FROM semantic_facts WHERE {' AND '.join(clauses)}",
                 params,
             )
-            self._conn.commit()
-        return before if clauses else 0
+        if policy.max_entries is not None:
+            # Keep the newest max_entries; drop the rest (uniform memory
+            # contract, SPEC §7.1).
+            self._conn.execute(
+                """
+                DELETE FROM semantic_facts
+                WHERE id NOT IN (
+                    SELECT id FROM semantic_facts
+                    ORDER BY created_at DESC LIMIT ?
+                )
+                """,
+                (policy.max_entries,),
+            )
+        self._conn.commit()
+        after = self._conn.execute("SELECT COUNT(*) AS n FROM semantic_facts").fetchone()["n"]
+        return before - after
 
     async def consolidate(self) -> ConsolidationReport:
         n = self._conn.execute("SELECT COUNT(*) AS n FROM semantic_facts").fetchone()["n"]
