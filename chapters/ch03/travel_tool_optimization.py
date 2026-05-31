@@ -3,14 +3,15 @@
 The travel task agent has several tools, so the natural-language description of
 `search_flights` is what tells the model to pass `nonstop` and `max_price`. The
 genesis description ("Search for flights.") omits them, so the agent misses
-constraints and books the wrong flight. Here the framework's SPO and GEPA evolve
-that description, graded by TravelTaskJudge: a deterministic ground-truth signal
-that reconstructs the booked trip from each trajectory and prefers the one that
-better satisfies the scenario constraints.
+constraints and books the wrong flight. Here the framework's SPO, GEPA, and DGM
+evolve that description, graded by TravelTaskJudge: a deterministic ground-truth
+signal that reconstructs the booked trip from each trajectory and prefers the one
+that better satisfies the scenario constraints.
 
 This is the §3.4 multi-improver pattern on the task agent. Each OfflineImprover
 clones the same agent via with_artifacts to test its candidate description; the
-shared archive arbitrates by score. DGM composes identically (see dual_improver).
+shared archive arbitrates by score regardless of which method produced the
+winner.
 
 Run:
     python chapters/ch03/travel_tool_optimization.py
@@ -32,6 +33,7 @@ from helix.env import load_env
 from helix.eval import FixedEvalSet
 from helix.improvement import ImproverPolicy, OfflineImprover, Schedule
 from helix.observability import attach_console_renderer
+from helix.search.dgm import BlindLLMMutator, DGMSearch
 from helix.search.gepa import GEPA
 from helix.search.spo import SPO
 from helix.signals.reflection import Reflection
@@ -129,17 +131,29 @@ async def main_async() -> None:
         seed_fallback=descriptions[TARGET_DESCRIPTION_ID],
         improver_id="imp-travel-gepa",
     )
+    dgm_improver = OfflineImprover(
+        agent=agent,
+        target_artifact_id=TARGET_DESCRIPTION_ID,
+        signal=signal,
+        search=DGMSearch(mutator=BlindLLMMutator(model=PROPOSER_MODEL), rounds=1),
+        archive=archive,
+        eval_source=eval_source,
+        policy=policy,
+        seed_fallback=descriptions[TARGET_DESCRIPTION_ID],
+        improver_id="imp-travel-dgm",
+    )
 
-    for imp in (spo_improver, gepa_improver):
+    improvers = (spo_improver, gepa_improver, dgm_improver)
+    for imp in improvers:
         agent.attach_improver(imp)
         await imp.start()
 
     try:
         for _ in range(ROUNDS_TO_DRIVE):
-            for imp in (spo_improver, gepa_improver):
+            for imp in improvers:
                 await imp.trigger_round()
     finally:
-        for imp in (spo_improver, gepa_improver):
+        for imp in improvers:
             await imp.stop()
 
     print()
