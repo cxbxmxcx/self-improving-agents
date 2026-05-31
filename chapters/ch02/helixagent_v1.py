@@ -82,8 +82,7 @@ async def get_or_create_seed(archive: SQLiteArchive) -> Artifact:
         content=SYSTEM_PROMPT_V0,
         created_by="human",
     )
-    archive._store_artifact(seed)  # type: ignore[attr-defined]
-    archive._conn.commit()  # type: ignore[attr-defined]
+    await archive.put_artifact(seed)
     return seed
 
 

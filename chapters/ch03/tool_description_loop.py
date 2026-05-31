@@ -47,7 +47,7 @@ from chapter_appendices.getting_started.helixagent_v0 import (
     build_retrieve_description_artifact,
     build_retrieve_tool_with_artifact_description,
 )
-from helix.artifact import ArtifactKind, genesis
+from helix.artifact import genesis
 
 load_env()
 
@@ -77,8 +77,7 @@ async def get_or_create_description(archive: SQLiteArchive) -> Artifact:
     if existing is not None:
         return existing.artifact
     seed = build_retrieve_description_artifact()
-    archive._store_artifact(seed)  # type: ignore[attr-defined]
-    archive._conn.commit()  # type: ignore[attr-defined]
+    await archive.put_artifact(seed)
     return seed
 
 

@@ -82,8 +82,7 @@ async def get_or_create_description(archive: SQLiteArchive) -> Artifact:
     if existing is not None:
         return existing.artifact
     seed = build_retrieve_description_artifact()
-    archive._store_artifact(seed)  # type: ignore[attr-defined]
-    archive._conn.commit()  # type: ignore[attr-defined]
+    await archive.put_artifact(seed)
     return seed
 
 
