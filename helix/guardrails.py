@@ -31,6 +31,38 @@ from helix.artifact import Artifact, ArtifactKind, ParentRef
 from helix.hooks import HookPoint, Refusal
 
 
+def _last_user_text(messages: Any) -> str:
+    """The content of the most recent user message in a messages array.
+
+    Input guardrails evaluate this (the text the model is about to see) rather
+    than the original task, so they react to any prior PRE_MODEL patch (fix #8).
+    """
+    for m in reversed(messages or []):
+        if isinstance(m, dict) and m.get("role") == "user":
+            content = m.get("content")
+            if isinstance(content, str):
+                return content
+    return ""
+
+
+def _sources_from_trajectory(trajectory: Any) -> list[dict[str, Any]]:
+    """The structured tool/retrieval results the agent used this run.
+
+    Output guardrails inspect or redact these as `sources` (fix #8). Tool
+    results that are lists of dicts (retrieval hits) are collected; other tool
+    outputs are ignored.
+    """
+    sources: list[dict[str, Any]] = []
+    for step in getattr(trajectory, "steps", []):
+        kind = getattr(step, "kind", None)
+        if getattr(kind, "value", kind) != "tool_result":
+            continue
+        result = (getattr(step, "payload", {}) or {}).get("result")
+        if isinstance(result, list):
+            sources.extend(r for r in result if isinstance(r, dict))
+    return sources
+
+
 # ---------------------------------------------------------------------------
 # Pydantic payload contracts. SPEC §16.2.1.
 # ---------------------------------------------------------------------------
@@ -210,7 +242,7 @@ class Guardrail:
                     step_index = len(getattr(trajectory, "steps", []))
                     trajectory.record_artifact(step_index, guardrail.artifact.ref)
                 payload = InputGuardrailPayload(
-                    question=getattr(trajectory, "task", "") or "",
+                    question=_last_user_text(messages) or (getattr(trajectory, "task", "") or ""),
                     context=dict(getattr(trajectory, "metadata", {}) or {}),
                 )
                 verdict = await guardrail.evaluate(payload)
@@ -237,7 +269,7 @@ class Guardrail:
                 trajectory.record_artifact(step_index, guardrail.artifact.ref)
             payload = OutputGuardrailPayload(
                 answer=response if isinstance(response, str) else str(response or ""),
-                sources=[],
+                sources=_sources_from_trajectory(trajectory),
                 trajectory_metadata=dict(getattr(trajectory, "metadata", {}) or {}),
             )
             verdict = await guardrail.evaluate(payload)

@@ -586,6 +586,7 @@ Every artifact mutation, every signal measurement, every search step, every hook
 
 ```
 ArtifactCreated(artifact, parent, search_method)
+ArtifactDuplicate(artifact, canonical_version, search_method)
 ArtifactMeasured(artifact, signal, measurement, cost)
 SearchStarted(search, seed, budget)
 SearchCompleted(search, winner, candidates_evaluated, cost)

@@ -137,6 +137,7 @@ class OnlineImprover:
         self._candidates_promoted = 0
         self._last_error: str | None = None
         self._stopped = True
+        self._subscribed = False  # SESSION_END hook registered (idempotent)
         self._candidate_in_flight: Variant | None = None
         self._shadow_buffer: list[tuple[list[float], list[float]]] = []
         # Reference to the live champion the improver is currently comparing
@@ -154,18 +155,31 @@ class OnlineImprover:
 
     # ---------------- lifecycle ----------------
 
-    async def start(self) -> None:
-        """Subscribe to the agent's SESSION_END hook. Idempotent."""
-        if not self._stopped:
+    def _ensure_subscribed(self) -> None:
+        """Register the SESSION_END handler exactly once. Subscription is kept
+        separate from running state so attach (the wiring step) and start/stop
+        compose without double-registering on a stop/start cycle."""
+        if self._subscribed:
             return
         self.agent.hooks.register(HookPoint.SESSION_END, self._on_session_end)
+        self._subscribed = True
+
+    def on_attached(self) -> None:
+        """The wiring step (SPEC §17.1): agent.attach_improver calls this to
+        subscribe the improver to the agent's SESSION_END hook."""
+        self._ensure_subscribed()
+
+    async def start(self) -> None:
+        """Activate the improver, subscribing if attach did not already. The
+        SESSION_END handler no-ops while stopped, so this just flips it live."""
+        self._ensure_subscribed()
         self._stopped = False
-        _log.info("OnlineImprover %s subscribed to %s SESSION_END",
+        _log.info("OnlineImprover %s active on %s SESSION_END",
                   self.improver_id, type(self.agent).__name__)
 
     async def stop(self) -> None:
-        """Mark the improver stopped. Registered hook stays in place but
-        no-ops because of the _stopped flag (HookRegistry has no remove API)."""
+        """Mark the improver stopped. The SESSION_END handler stays registered
+        but no-ops via the _stopped flag (HookRegistry has no remove API)."""
         self._stopped = True
 
     @property

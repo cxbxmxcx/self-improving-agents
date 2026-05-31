@@ -270,6 +270,12 @@ class Agent:
             if existing.improver_id == improver.improver_id:
                 return
         self.improvers.append(improver)
+        # The wiring step (SPEC §17.1): online improvers subscribe to the
+        # agent's SESSION_END hook here. Offline improvers have no on_attached
+        # and are unaffected (attach is a display-only convenience for them).
+        on_attached = getattr(improver, "on_attached", None)
+        if callable(on_attached):
+            on_attached()
 
     def detach_improver(self, improver_id_or_target: str) -> None:
         """Detach by improver_id (preferred) or target_artifact_id (legacy)."""
