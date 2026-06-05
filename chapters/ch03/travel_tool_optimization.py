@@ -177,9 +177,12 @@ async def main_async() -> None:
             await imp.stop()
 
     # Best description per tool, re-measured absolutely on its isolated set.
+    # Rank by raw score across every recorded version (the score field already
+    # holds each candidate's absolute task-success fraction); for each tool the
+    # first match is its highest-scoring version, the genesis seed included.
     print()
     print("=" * 70)
-    ranked = await archive.best(k=50, signal_id=signal.signal_id)
+    ranked = await archive.best(k=200)
     best_desc = dict(descriptions)
     for _, desc_id, _ in improvers:
         for v in ranked:
