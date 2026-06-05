@@ -41,19 +41,34 @@ async def test_max_price_hides_affordable_fares_under_default_cabin(tools):
 
 
 @pytest.mark.asyncio
-async def test_search_hotels_rating_is_on_a_ten_point_scale(tools):
-    # Gotcha: a "4-star" request as min_rating=4 returns everything (all >= 6.4);
-    # the real floor for 4 stars is min_rating=8.
-    loose = await tools["search_hotels"]("JFK", max_price_per_night=300, min_rating=4.0)
-    strict = await tools["search_hotels"]("JFK", max_price_per_night=300, min_rating=8.0)
-    assert {h["id"] for h in strict} == {"HT203", "HT204"}  # 8.8, 8.2
-    assert len(loose) > len(strict)
+async def test_search_hotels_default_rate_plan_is_flexible_and_pricier(tools):
+    # Gotcha: the nightly rate is multiplied by the rate plan, default flexible
+    # (1.5x). Under a $260 cap, no four-star hotel fits on the default plan, but
+    # the advance (1x) plan brings HT204 ($246) within budget.
+    none_flexible = await tools["search_hotels"]("JFK", max_price_per_night=260, min_rating=8.0)
+    some_advance = await tools["search_hotels"]("JFK", max_price_per_night=260, min_rating=8.0, rate_plan="advance")
+    assert none_flexible == []
+    assert "HT204" in {h["id"] for h in some_advance}
+    assert some_advance[0]["rate_plan"] == "advance"
 
 
 @pytest.mark.asyncio
-async def test_search_activities_exact_category_required(tools):
+async def test_search_activities_city_must_be_the_airport_code(tools):
+    # Gotcha: activities are keyed by airport code, so the city name returns [].
+    assert await tools["search_activities"]("New York", category="food") == []
     assert {a["id"] for a in await tools["search_activities"]("JFK", category="food")} == {"AC301", "AC302"}
     assert await tools["search_activities"]("JFK", category="dining") == []  # synonym matches nothing
+
+
+@pytest.mark.asyncio
+async def test_reconstruct_trip_captures_hotel_rate_plan(tools):
+    bh = await tools["book_hotel"]("HT204", nights=2, rate_plan="advance")
+    trip = reconstruct_trip(_traj(("book_hotel", {"hotel_id": "HT204", "nights": 2, "rate_plan": "advance"}, bh)))
+    assert trip.hotel.id == "HT204" and trip.hotel_rate_plan == "advance"
+    assert trip.hotel_price_per_night() == 246  # advance = base
+    bh_flex = await tools["book_hotel"]("HT204", nights=2)  # default flexible
+    trip2 = reconstruct_trip(_traj(("book_hotel", {"hotel_id": "HT204", "nights": 2}, bh_flex)))
+    assert trip2.hotel_rate_plan == "flexible" and trip2.hotel_price_per_night() == round(246 * 1.5)
 
 
 @pytest.mark.asyncio

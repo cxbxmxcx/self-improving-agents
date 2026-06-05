@@ -3,16 +3,31 @@
 Three tool descriptions improve at once: one GEPA improver per searchable tool
 (search_flights, search_hotels, search_activities), the §16.1 multi-improver
 pattern. The tools are independent, so each improver targets its own
-TOOL_DESCRIPTION artifact while sharing the agent and the archive.
+TOOL_DESCRIPTION artifact while sharing the archive.
 
-Two things make the search actually move the score:
+Each tool hides one NON-INFERABLE gotcha: information a capable agent cannot get
+from the request or the search results, only from the description.
+  - search_flights: the fare is multiplied by `cabin`, which defaults to first
+    class (3x). A budget request fails unless the description says to pass
+    cabin='economy'.
+  - search_hotels: the nightly rate is multiplied by `rate_plan`, which defaults
+    to flexible (1.5x). A four-star hotel never fits a tight nightly budget
+    unless the description says to pass rate_plan='advance'.
+  - search_activities: `city` is the destination airport code, so "New York"
+    returns nothing unless the description reveals the code (JFK).
+
+Three things make the lift attributable and visible:
   - The mutator is grounded in each tool's real parameter schema
-    (grounded_mutation_prompt), so it stops inventing parameters that do not
-    exist and starts naming the ones that do (nonstop, max_price, min_rating).
-  - The signal is TravelTaskJudge, deterministic ground truth.
+    (grounded_mutation_prompt), so it names the parameters that exist.
+  - Each improver is evaluated on ISOLATED scenarios that exercise only its tool,
+    so a flight-description candidate is scored purely on flight tasks. This
+    removes the conjunction across tools and the variance of judging whole trips.
+  - The signal is TravelTaskJudge over deterministic ground truth, and the
+    before/after is reported per tool as an absolute task-success fraction.
 
-The script prints whole-agent task success before and after so the lift from
-better descriptions is visible.
+The agent is a capable model that completes the bookings; because the gotchas are
+non-inferable it still fails with the vague genesis descriptions, so the search
+has real headroom to recover by making each gotcha explicit.
 
 Run:
     python chapters/ch03/travel_tool_optimization.py
@@ -42,15 +57,18 @@ from agents.travel import (
     build_travel_agent,
     genesis_descriptions,
     grounded_mutation_prompt,
-    load_travel_eval_set,
-    load_travel_scenarios,
+    isolated_eval_set,
+    load_isolated_scenarios,
 )
 from agents.travel_sim import SEARCHABLE_TOOL_DESCRIPTION_IDS, reconstruct_trip
 
 load_env()
 
 # Configuration -----------------------------------------------------------
-AGENT_MODEL = "claude-haiku-4-5"
+# The agent must be capable enough to complete multi-step bookings; a weaker
+# model stops after searching, which masks any description effect. The gotchas
+# are non-inferable, so a capable agent still fails without a good description.
+AGENT_MODEL = "claude-sonnet-4-6"
 PROPOSER_MODEL = "claude-sonnet-4-6"
 ROUNDS_TO_DRIVE = 2
 GEPA_POPULATION = 3
@@ -58,7 +76,7 @@ GEPA_GENERATIONS = 2
 QUESTIONS_PER_ROUND: int | None = None  # None = all scenarios
 
 ARCHIVE_PATH = Path(__file__).parent / "runs" / "travel_archive.sqlite"
-SCENARIOS_PATH = Path(__file__).parent / "travel_scenarios.json"
+SCENARIOS_PATH = Path(__file__).parent / "travel_scenarios_isolated.json"
 
 
 def open_archive(path: Path = ARCHIVE_PATH) -> SQLiteArchive:
@@ -82,8 +100,14 @@ async def get_or_create_descriptions(archive: SQLiteArchive) -> dict[str, Artifa
     return out
 
 
-async def whole_agent_success(descriptions, scenarios, model) -> float:
-    """Average task success of the agent built with this description set."""
+async def tool_success(descriptions, scenarios, model) -> float:
+    """Absolute task success on one tool's isolated scenarios.
+
+    The agent is built with `descriptions` (one tool overridden, the rest at
+    genesis) and run on that tool's scenarios; each booked trip is scored
+    deterministically against its constraints. Because the scenarios touch only
+    one tool, the number is attributable to that tool's description alone.
+    """
     agent = build_travel_agent(descriptions, model=model)
     total = 0.0
     for sc in scenarios:
@@ -97,22 +121,28 @@ async def main_async() -> None:
 
     archive = open_archive()
     descriptions = await get_or_create_descriptions(archive)
-    scenarios = load_travel_scenarios(SCENARIOS_PATH)
-
-    baseline = await whole_agent_success(descriptions, scenarios, AGENT_MODEL)
-    print(f"\nBASELINE whole-agent task success (genesis descriptions): {baseline:.3f}\n")
+    isolated = load_isolated_scenarios(SCENARIOS_PATH)  # {tool_name: [scenario, ...]}
 
     signal = TravelTaskJudge()
-    eval_source = FixedEvalSet(load_travel_eval_set(SCENARIOS_PATH))
     policy = ImproverPolicy(
         schedule=Schedule.MANUAL,
         questions_per_round=QUESTIONS_PER_ROUND,
         promote_threshold_win_rate=0.5,
     )
 
-    # One grounded GEPA improver per searchable tool description.
+    # Per-tool baseline: each tool description scored on its own scenarios only.
+    baselines: dict[str, float] = {}
+    for tool_name, desc_id in SEARCHABLE_TOOL_DESCRIPTION_IDS.items():
+        baselines[tool_name] = await tool_success(descriptions, isolated[tool_name], AGENT_MODEL)
+    print("\nBASELINE per-tool task success (genesis descriptions):")
+    for tool_name in SEARCHABLE_TOOL_DESCRIPTION_IDS:
+        print(f"  {tool_name:<18} {baselines[tool_name]:.3f}")
+    print()
+
+    # One grounded GEPA improver per searchable tool, each on its isolated set.
     improvers = []
     for tool_name, desc_id in SEARCHABLE_TOOL_DESCRIPTION_IDS.items():
+        eval_source = FixedEvalSet(isolated_eval_set(isolated[tool_name]))
         gepa = GEPA(
             proposer_model=PROPOSER_MODEL,
             reflector=Reflection(model=PROPOSER_MODEL),
@@ -146,7 +176,7 @@ async def main_async() -> None:
         for _, _, imp in improvers:
             await imp.stop()
 
-    # Assemble the best description per tool and re-measure the whole agent.
+    # Best description per tool, re-measured absolutely on its isolated set.
     print()
     print("=" * 70)
     ranked = await archive.best(k=50, signal_id=signal.signal_id)
@@ -157,14 +187,19 @@ async def main_async() -> None:
                 best_desc[desc_id] = v.artifact
                 break
 
-    after = await whole_agent_success(best_desc, scenarios, AGENT_MODEL)
-    print(f"AFTER  whole-agent task success (best descriptions): {after:.3f}")
-    print(f"BEFORE whole-agent task success (genesis):           {baseline:.3f}")
+    print("PER-TOOL task success  (isolated, deterministic, absolute)")
+    print(f"  {'tool':<18} {'BEFORE':>8} {'AFTER':>8}")
+    for tool_name, desc_id, _ in improvers:
+        # Score the winner against this tool's scenarios with only its description swapped.
+        one_swap = dict(descriptions)
+        one_swap[desc_id] = best_desc[desc_id]
+        after = await tool_success(one_swap, isolated[tool_name], AGENT_MODEL)
+        print(f"  {tool_name:<18} {baselines[tool_name]:>8.3f} {after:>8.3f}")
     print("-" * 70)
     for tool_name, desc_id, _ in improvers:
         a = best_desc[desc_id]
         print(f"\n{tool_name}  v{a.version} ({a.created_by}):")
-        print(f"  {a.content[:160]}")
+        print(f"  {a.content[:200]}")
     print(f"\narchive: {ARCHIVE_PATH}")
 
 

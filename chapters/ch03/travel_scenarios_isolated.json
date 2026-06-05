@@ -1,0 +1,61 @@
+{
+  "description": "Isolated per-tool scenarios for Chapter 3 tool-description optimization. Each scenario exercises exactly ONE tool so improvement is attributable to that tool's description and is scored by the deterministic absolute check (no pairwise judge, no conjunction across tools). Each request is built around one NON-INFERABLE gotcha that a capable agent cannot get from the request or the search results, only from the description: flights default to first class at 3x price (budgets bust unless cabin='economy'); hotel nightly rates default to the flexible plan at 1.5x (a four-star hotel never fits a tight nightly budget unless rate_plan='advance'); and search_activities is keyed by airport code, so a city name like 'New York' returns nothing unless the agent passes the code (JFK).",
+  "tools": {
+    "search_flights": [
+      {
+        "id": "F1-sfo-jfk",
+        "request": "Book me the single cheapest nonstop flight from SFO to JFK on 2026-06-15. It must cost no more than $500 total.",
+        "constraints": {"flight": {"origin": "SFO", "destination": "JFK", "date": "2026-06-15", "nonstop": true, "max_price": 500}}
+      },
+      {
+        "id": "F2-sea-jfk",
+        "request": "Book the cheapest nonstop flight from SEA to JFK on 2026-06-15, keeping the fare at or under $450.",
+        "constraints": {"flight": {"origin": "SEA", "destination": "JFK", "date": "2026-06-15", "nonstop": true, "max_price": 450}}
+      },
+      {
+        "id": "F3-sfo-ord",
+        "request": "Find me the cheapest nonstop flight from SFO to ORD on 2026-06-15 for no more than $300.",
+        "constraints": {"flight": {"origin": "SFO", "destination": "ORD", "date": "2026-06-15", "nonstop": true, "max_price": 300}}
+      },
+      {
+        "id": "F4-lax-jfk",
+        "request": "Book the cheapest nonstop LAX to JFK flight on 2026-06-15, under a $400 budget.",
+        "constraints": {"flight": {"origin": "LAX", "destination": "JFK", "date": "2026-06-15", "nonstop": true, "max_price": 400}}
+      }
+    ],
+    "search_hotels": [
+      {
+        "id": "H1-jfk-260",
+        "request": "Book the cheapest four-star-or-better hotel in New York (city code JFK), with a nightly rate at or under $260.",
+        "constraints": {"hotel": {"city": "JFK", "min_rating": 8.0, "max_price_per_night": 260}}
+      },
+      {
+        "id": "H2-jfk-300",
+        "request": "Book a four-star-or-better hotel in New York (city code JFK), keeping the nightly rate at or under $300.",
+        "constraints": {"hotel": {"city": "JFK", "min_rating": 8.0, "max_price_per_night": 300}}
+      },
+      {
+        "id": "H3-ord-250",
+        "request": "Book the cheapest four-star-or-better hotel in Chicago (city code ORD), with a nightly rate no higher than $250.",
+        "constraints": {"hotel": {"city": "ORD", "min_rating": 8.0, "max_price_per_night": 250}}
+      }
+    ],
+    "search_activities": [
+      {
+        "id": "A1-newyork-food",
+        "request": "Add two food activities in New York to my itinerary.",
+        "constraints": {"activities": {"city": "JFK", "category": "food", "count": 2}}
+      },
+      {
+        "id": "A2-newyork-nightlife",
+        "request": "Add one nightlife activity in New York to my itinerary.",
+        "constraints": {"activities": {"city": "JFK", "category": "nightlife", "count": 1}}
+      },
+      {
+        "id": "A3-la-museum",
+        "request": "Add one museum activity in Los Angeles to my itinerary.",
+        "constraints": {"activities": {"city": "LAX", "category": "museum", "count": 1}}
+      }
+    ]
+  }
+}

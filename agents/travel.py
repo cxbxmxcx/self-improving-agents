@@ -47,11 +47,16 @@ SYSTEM_PROMPT_ID = "prompt.travel.system"
 DEFAULT_SYSTEM_PROMPT = """\
 You are a travel assistant. Plan and book a trip that satisfies the user's
 request using the available tools. A request may have several components: a
-flight, a hotel, and one or more activities. Book every component the user asks
-for before you finish; do not stop after the flight. Search before you book,
-pass every stated constraint to the search tools (route, date, nonstop, budget,
-rating, activity type and count), prefer the cheapest option that still meets
-all constraints, and confirm the full itinerary at the end."""
+flight, a hotel, and one or more activities.
+
+Searching is not booking. You have NOT completed the task until you have called
+the matching booking tool for every component the user asked for and it returned
+ok: book_flight for a flight, book_hotel for a hotel, add_activity for each
+activity. Never finish after only searching. The workflow for each component is:
+search to find candidates, choose the cheapest option that meets all stated
+constraints, then call the booking tool with its id. Pass every stated constraint
+to the search tools (route, date, nonstop, budget, rating, activity type and
+count). Confirm the full itinerary only after all bookings have returned ok."""
 
 
 # Real tool signatures, used to ground the description-mutation prompt so the
@@ -64,7 +69,7 @@ TOOL_SCHEMAS: dict[str, str] = {
     ),
     "search_hotels": (
         "city (str), max_price_per_night (int USD, 0 = no cap), "
-        "min_rating (float, 0 = no floor). Returns matching hotels."
+        "min_rating (float, 0 = no floor), rate_plan (str). Returns matching hotels."
     ),
     "search_activities": (
         "city (str), category (str, one of food|museum|outdoor|nightlife|"
@@ -203,7 +208,9 @@ def _score_flight(trip: TripState, c: dict) -> tuple[float, list[str]]:
             "flight is not nonstop" if c["nonstop"] else "flight should allow stops")
     if "max_price" in c:
         chk(price <= c["max_price"],
-            f"flight fare ${price} in {trip.flight_cabin} cabin exceeds budget ${c['max_price']}")
+            f"flight fare ${price} in {trip.flight_cabin} cabin exceeds budget ${c['max_price']}: "
+            f"the cabin parameter defaults to first class, which costs 3x economy, so pass "
+            f"cabin='economy' for budget-constrained trips")
     return _frac(checks), reasons
 
 
@@ -219,14 +226,18 @@ def _score_hotel(trip: TripState, c: dict) -> tuple[float, list[str]]:
         if not ok:
             reasons.append(msg)
 
+    nightly = trip.hotel_price_per_night()
     if "city" in c:
         chk(h.city == c["city"], f"hotel city {h.city} != {c['city']}")
     if "max_price_per_night" in c:
-        chk(h.price_per_night <= c["max_price_per_night"],
-            f"hotel ${h.price_per_night}/night exceeds ${c['max_price_per_night']}")
+        chk(nightly <= c["max_price_per_night"],
+            f"hotel nightly rate ${nightly} on the {trip.hotel_rate_plan} plan exceeds "
+            f"${c['max_price_per_night']}: the rate plan defaults to flexible (1.5x), so pass "
+            f"rate_plan='advance' to get the prepaid rate that fits a tight nightly budget")
     if "min_rating" in c:
         chk(h.rating >= c["min_rating"],
-            f"hotel rating {h.rating}/10 is below required {c['min_rating']}")
+            f"hotel rating {h.rating}/10 is below required {c['min_rating']}: ratings are on a "
+            f"1-10 scale, so a 4-star request maps to min_rating 8, not 4")
     if "nights" in c:
         chk(trip.hotel_nights == c["nights"], f"booked {trip.hotel_nights} nights, wanted {c['nights']}")
     if "amenities" in c:
@@ -244,7 +255,9 @@ def _score_activities(trip: TripState, c: dict) -> tuple[float, list[str]]:
     ]
     frac = 1.0 if len(matching) >= count else len(matching) / count
     reasons = ([] if frac >= 1.0
-               else [f"only {len(matching)}/{count} {category or 'activities'} in {city} added"])
+               else [f"only {len(matching)}/{count} {category or 'activities'} in {city} added: "
+                     f"search_activities is keyed by airport code, so pass the code (e.g. JFK for "
+                     f"New York, LAX for Los Angeles), not the city name, or it returns nothing"])
     return frac, reasons
 
 
@@ -300,6 +313,30 @@ def load_travel_eval_set(path: str | Path) -> EvalSet:
         for s in load_travel_scenarios(path)
     ]
     return EvalSet(questions=questions, description="travel task scenarios")
+
+
+def load_isolated_scenarios(path: str | Path) -> dict[str, list[TravelScenario]]:
+    """Per-tool isolated scenarios, keyed by tool name.
+
+    Each scenario exercises exactly one tool, so a tool description can be scored
+    by the deterministic absolute check on tasks that only its tool touches. This
+    removes the conjunction across tools and the variance of a pairwise judge, so
+    improvement is attributable to the one description under search.
+    """
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    return {
+        tool: [TravelScenario(id=s["id"], request=s["request"], constraints=s["constraints"]) for s in scenarios]
+        for tool, scenarios in data["tools"].items()
+    }
+
+
+def isolated_eval_set(scenarios: list[TravelScenario]) -> EvalSet:
+    """An EvalSet from one tool's isolated scenarios for the improver loop."""
+    questions = [
+        EvalQuestion(id=s.id, band=3, question=s.request, reference_answer=json.dumps(s.constraints))
+        for s in scenarios
+    ]
+    return EvalSet(questions=questions, description="isolated single-tool scenarios")
 
 
 class TravelTaskJudge:
