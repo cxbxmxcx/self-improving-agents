@@ -69,7 +69,8 @@ TOOL_SCHEMAS: dict[str, str] = {
     ),
     "search_hotels": (
         "city (str), max_price_per_night (int USD, 0 = no cap), "
-        "min_rating (float, 0 = no floor), rate_plan (str). Returns matching hotels."
+        "min_rating (float, 0 = no floor), rate_plan (str, one of advance|flexible). "
+        "Returns matching hotels."
     ),
     "search_activities": (
         "city (str), category (str, one of food|museum|outdoor|nightlife|"
