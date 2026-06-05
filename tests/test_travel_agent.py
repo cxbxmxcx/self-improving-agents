@@ -12,6 +12,8 @@ from agents.travel import (
     TravelTaskJudge,
     build_travel_agent,
     genesis_descriptions,
+    isolated_eval_set,
+    load_isolated_scenarios,
     load_travel_eval_set,
     load_travel_scenarios,
 )
@@ -128,3 +130,38 @@ def test_scenarios_use_the_gotcha_scales():
     hotels = [s.constraints["hotel"] for s in scenarios if "hotel" in s.constraints]
     assert all(f.get("max_price", 500) >= 500 for f in flights if "max_price" in f)
     assert all(h["min_rating"] >= 8.0 for h in hotels if "min_rating" in h)
+
+
+# ---------------- isolated per-tool scenarios ----------------
+
+ISOLATED = SCENARIOS.parent / "travel_scenarios_isolated.json"
+
+
+def test_isolated_scenarios_touch_exactly_one_tool_each():
+    iso = load_isolated_scenarios(ISOLATED)
+    assert set(iso) == {"search_flights", "search_hotels", "search_activities"}
+    expected = {"search_flights": "flight", "search_hotels": "hotel", "search_activities": "activities"}
+    for tool, scenarios in iso.items():
+        for s in scenarios:
+            assert set(s.constraints) == {expected[tool]}  # no constraint leaks across tools
+
+
+@pytest.mark.asyncio
+async def test_isolated_flight_scenarios_make_the_cabin_gotcha_bite():
+    # On every flight scenario, the default-first booking busts the budget the
+    # economy booking meets, so the gotcha has headroom on isolated tasks.
+    iso = load_isolated_scenarios(ISOLATED)
+    for s in iso["search_flights"]:
+        fid = "FL101" if s.constraints["flight"]["origin"] == "SFO" and s.constraints["flight"]["destination"] == "JFK" else None
+        if fid is None:
+            continue
+        eco = await _trip(("book_flight", {"flight_id": fid, "cabin": "economy"}))
+        first = await _trip(("book_flight", {"flight_id": fid}))
+        assert s.score(eco) > s.score(first)
+
+
+def test_isolated_eval_set_carries_requests_and_constraints():
+    iso = load_isolated_scenarios(ISOLATED)
+    es = isolated_eval_set(iso["search_hotels"])
+    assert len(es) == len(iso["search_hotels"])
+    assert json.loads(es.questions[0].reference_answer)["hotel"]["min_rating"] == 8.0
