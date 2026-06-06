@@ -1,4 +1,4 @@
-"""Travel task agent: deterministic scoring, the pairwise judge, agent build."""
+"""Travel task agent: gotcha headroom, scoring, the pairwise judge, agent build."""
 
 from __future__ import annotations
 
@@ -12,6 +12,8 @@ from agents.travel import (
     TravelTaskJudge,
     build_travel_agent,
     genesis_descriptions,
+    isolated_eval_set,
+    load_isolated_scenarios,
     load_travel_eval_set,
     load_travel_scenarios,
 )
@@ -23,14 +25,11 @@ from helix.trajectory import StepKind, Trajectory
 
 SCENARIOS = Path(__file__).resolve().parent.parent / "chapters" / "ch03" / "travel_scenarios.json"
 
-_TS1 = TravelScenario(
-    "t1", "r",
-    {"flight": {"origin": "SFO", "destination": "JFK", "date": "2026-06-15", "nonstop": True, "max_price": 450}},
-)
+_FLIGHT = {"origin": "SFO", "destination": "JFK", "date": "2026-06-15", "nonstop": True, "max_price": 500}
+_TS_FLIGHT = TravelScenario("tf", "r", {"flight": _FLIGHT})
 
 
 async def _traj(*bookings) -> Trajectory:
-    """A trajectory of (tool_name, args_dict) bookings, with real tool results."""
     tools = make_tool_callables()
     t = Trajectory(task="plan a trip")
     for name, args in bookings:
@@ -44,53 +43,61 @@ async def _trip(*bookings) -> TripState:
     return reconstruct_trip(await _traj(*bookings))
 
 
-@pytest.mark.asyncio
-async def test_score_is_one_when_all_constraints_met():
-    trip = await _trip(("book_flight", {"flight_id": "FL101"}))  # nonstop SFO->JFK, $412
-    assert _TS1.score(trip) == 1.0
-
+# ---------------- the flight cabin gotcha ----------------
 
 @pytest.mark.asyncio
-async def test_score_is_partial_when_a_constraint_is_missed():
-    trip = await _trip(("book_flight", {"flight_id": "FL102"}))  # connecting
-    assert abs(_TS1.score(trip) - 0.8) < 1e-9  # 4 of 5 fields
+async def test_economy_booking_meets_budget_but_first_class_does_not():
+    eco = await _trip(("book_flight", {"flight_id": "FL101", "cabin": "economy"}))
+    assert _TS_FLIGHT.score(eco) == 1.0                       # $412 <= $500
+
+    first = await _trip(("book_flight", {"flight_id": "FL101"}))  # default first, $1236
+    score, reasons = _TS_FLIGHT.score_with_reasons(first)
+    assert score == 0.8                                       # 4 of 5 fields; budget fails
+    assert any("exceeds budget" in r for r in reasons)
+
+
+# ---------------- the hotel rating-scale gotcha ----------------
+
+@pytest.mark.asyncio
+async def test_hotel_rating_scale_gotcha():
+    sc = TravelScenario("th", "r", {"hotel": {"city": "JFK", "min_rating": 8.0}})
+    naive = await _trip(("book_hotel", {"hotel_id": "HT202", "nights": 2}))   # 7.8/10
+    score, reasons = sc.score_with_reasons(naive)
+    assert score == 0.5 and any("below required 8" in r for r in reasons)     # city ok, rating not
+    good = await _trip(("book_hotel", {"hotel_id": "HT204", "nights": 2}))    # 8.2/10
+    assert sc.score(good) == 1.0
+
+
+# ---------------- the activity category gotcha ----------------
+
+@pytest.mark.asyncio
+async def test_activity_category_gotcha():
+    sc = TravelScenario("ta", "r", {"activities": {"city": "JFK", "category": "food", "count": 2}})
+    wrong = await _trip(("add_activity", {"activity_id": "AC303"}))  # a museum
+    assert sc.score(wrong) == 0.0
+    right = await _trip(
+        ("add_activity", {"activity_id": "AC301"}),
+        ("add_activity", {"activity_id": "AC302"}),
+    )
+    assert sc.score(right) == 1.0
 
 
 @pytest.mark.asyncio
 async def test_no_booking_scores_zero():
-    assert _TS1.score(TripState()) == 0.0
+    assert _TS_FLIGHT.score(TripState()) == 0.0
 
 
-@pytest.mark.asyncio
-async def test_activity_count_gives_partial_credit():
-    sc = TravelScenario("a", "r", {"activities": {"city": "JFK", "category": "food", "count": 2}})
-    assert (await _trip(("add_activity", {"activity_id": "AC301"})) and
-            sc.score(await _trip(("add_activity", {"activity_id": "AC301"}))) == 0.5)
-    full = await _trip(
-        ("add_activity", {"activity_id": "AC301"}),
-        ("add_activity", {"activity_id": "AC302"}),
-    )
-    assert sc.score(full) == 1.0
-
+# ---------------- the pairwise judge ----------------
 
 @pytest.mark.asyncio
-async def test_multi_group_scenario_averages_groups():
-    sc = load_travel_scenarios(SCENARIOS)[1]  # TS2: flight + hotel
-    trip = await _trip(("book_flight", {"flight_id": "FL101"}))  # flight only
-    assert sc.score(trip) == 0.5  # flight 1.0, hotel 0.0
-
-
-@pytest.mark.asyncio
-async def test_travel_task_judge_prefers_the_better_trip():
-    constraints = _TS1.constraints
-    cand = await _traj(("book_flight", {"flight_id": "FL101"}))   # nonstop, satisfies
-    ref = await _traj(("book_flight", {"flight_id": "FL102"}))    # connecting, weaker
+async def test_travel_task_judge_prefers_the_economy_booking():
+    cand = await _traj(("book_flight", {"flight_id": "FL101", "cabin": "economy"}))  # in budget
+    ref = await _traj(("book_flight", {"flight_id": "FL101"}))                       # first, over budget
     art = genesis("prompt.tool.search_flights.description", Subtype.TOOL_DESCRIPTION, "x")
-
     m = await TravelTaskJudge().measure(
         candidate=art,
         ground_truth={
-            "reference_answer": json.dumps(constraints),
+            "reference_answer": json.dumps(_TS_FLIGHT.constraints),
             "candidate_trajectory": cand,
             "reference_trajectory": ref,
         },
@@ -98,13 +105,15 @@ async def test_travel_task_judge_prefers_the_better_trip():
     assert m.preference == Preference.LEFT
     assert m.score == 1.0
     assert TravelTaskJudge().kind == SignalKind.GROUND_TRUTH
+    assert "exceeds budget" not in m.feedback or "task success 1.00" in m.feedback
 
+
+# ---------------- agent construction / loaders ----------------
 
 def test_build_travel_agent_wires_searchable_tools_as_artifacts():
     agent = build_travel_agent(genesis_descriptions())
     by_name = {t.name: t for t in agent.tools.values()}
     assert {"search_flights", "search_hotels", "search_activities"} <= set(by_name)
-    assert {"book_flight", "book_hotel", "add_activity"} <= set(by_name)
     for name in ("search_flights", "search_hotels", "search_activities"):
         assert isinstance(by_name[name], TextDescriptionTool)
 
@@ -112,5 +121,47 @@ def test_build_travel_agent_wires_searchable_tools_as_artifacts():
 def test_load_travel_eval_set_carries_constraints_in_reference_answer():
     es = load_travel_eval_set(SCENARIOS)
     assert len(es) == 5
-    q = es.questions[0]
-    assert q.question and json.loads(q.reference_answer)  # constraints round-trip
+    assert json.loads(es.questions[0].reference_answer)  # constraints round-trip
+
+
+def test_scenarios_use_the_gotcha_scales():
+    scenarios = load_travel_scenarios(SCENARIOS)
+    flights = [s.constraints["flight"] for s in scenarios if "flight" in s.constraints]
+    hotels = [s.constraints["hotel"] for s in scenarios if "hotel" in s.constraints]
+    assert all(f.get("max_price", 500) >= 500 for f in flights if "max_price" in f)
+    assert all(h["min_rating"] >= 8.0 for h in hotels if "min_rating" in h)
+
+
+# ---------------- isolated per-tool scenarios ----------------
+
+ISOLATED = SCENARIOS.parent / "travel_scenarios_isolated.json"
+
+
+def test_isolated_scenarios_touch_exactly_one_tool_each():
+    iso = load_isolated_scenarios(ISOLATED)
+    assert set(iso) == {"search_flights", "search_hotels", "search_activities"}
+    expected = {"search_flights": "flight", "search_hotels": "hotel", "search_activities": "activities"}
+    for tool, scenarios in iso.items():
+        for s in scenarios:
+            assert set(s.constraints) == {expected[tool]}  # no constraint leaks across tools
+
+
+@pytest.mark.asyncio
+async def test_isolated_flight_scenarios_make_the_cabin_gotcha_bite():
+    # On every flight scenario, the default-first booking busts the budget the
+    # economy booking meets, so the gotcha has headroom on isolated tasks.
+    iso = load_isolated_scenarios(ISOLATED)
+    for s in iso["search_flights"]:
+        fid = "FL101" if s.constraints["flight"]["origin"] == "SFO" and s.constraints["flight"]["destination"] == "JFK" else None
+        if fid is None:
+            continue
+        eco = await _trip(("book_flight", {"flight_id": fid, "cabin": "economy"}))
+        first = await _trip(("book_flight", {"flight_id": fid}))
+        assert s.score(eco) > s.score(first)
+
+
+def test_isolated_eval_set_carries_requests_and_constraints():
+    iso = load_isolated_scenarios(ISOLATED)
+    es = isolated_eval_set(iso["search_hotels"])
+    assert len(es) == len(iso["search_hotels"])
+    assert json.loads(es.questions[0].reference_answer)["hotel"]["min_rating"] == 8.0

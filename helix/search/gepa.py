@@ -540,6 +540,7 @@ Produce a single offspring combining A's strengths and B's strengths."""
             feedback="\n".join(feedback_bits[:5]),
             confidence=win_rate,
             cost=Cost(tokens=total_tokens),
+            signal_id=getattr(signal, "signal_id", None),
             metadata={
                 "role": "candidate",
                 "n_questions": n,
