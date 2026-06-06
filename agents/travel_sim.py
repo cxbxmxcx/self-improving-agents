@@ -135,13 +135,15 @@ _ACTIVITIES_BY_ID = {a.id: a for a in ACTIVITIES}
 CABIN_MULTIPLIER: dict[str, float] = {"economy": 1.0, "business": 2.0, "first": 3.0}
 DEFAULT_CABIN = "first"
 
-# Gotcha: the nightly rate shown is multiplied by the rate plan. The default
-# plan is "flexible" (1.5x, fully refundable); "advance" is the 1x prepaid rate.
-# An agent that does not pass rate_plan="advance" sees only inflated nightly
-# rates, so a four-star hotel never fits a tight nightly budget. Only the
-# description reveals that the cheaper advance rate exists and is not the default.
-RATE_PLAN_MULTIPLIER: dict[str, float] = {"advance": 1.0, "flexible": 1.5}
-DEFAULT_RATE_PLAN = "flexible"
+# Gotcha: the nightly rate shown is multiplied by the rate code. The codes are
+# opaque on purpose ("Q" is the 1x rate, "B" is the 1.5x default) so the
+# improver's proposer has no real-world meaning to lean on, unlike the airline
+# "advance vs flexible" framing that carries a refundability tradeoff. An agent
+# that does not pass rate_code="Q" sees only inflated nightly rates, so a
+# four-star hotel never fits a tight budget. Only the description reveals that
+# the cheaper Q code exists and that the default B is not it.
+RATE_CODE_MULTIPLIER: dict[str, float] = {"Q": 1.0, "B": 1.5}
+DEFAULT_RATE_CODE = "B"
 
 # Gotcha: the city parameter is the destination airport code, not the city name.
 # search_activities("New York", ...) silently returns [] because activities are
@@ -163,8 +165,8 @@ def cabin_price(base: int, cabin: str) -> int:
     return round(base * CABIN_MULTIPLIER.get(cabin, CABIN_MULTIPLIER[DEFAULT_CABIN]))
 
 
-def hotel_price(base: int, rate_plan: str) -> int:
-    return round(base * RATE_PLAN_MULTIPLIER.get(rate_plan, RATE_PLAN_MULTIPLIER[DEFAULT_RATE_PLAN]))
+def hotel_price(base: int, rate_code: str) -> int:
+    return round(base * RATE_CODE_MULTIPLIER.get(rate_code, RATE_CODE_MULTIPLIER[DEFAULT_RATE_CODE]))
 
 
 # ---------------------------------------------------------------------------
@@ -180,7 +182,7 @@ class TripState:
     flight_cabin: str = DEFAULT_CABIN
     hotel: Hotel | None = None
     hotel_nights: int = 0
-    hotel_rate_plan: str = DEFAULT_RATE_PLAN
+    hotel_rate_code: str = DEFAULT_RATE_CODE
     activities: list[Activity] = field(default_factory=list)
 
     def flight_price(self) -> int:
@@ -189,7 +191,7 @@ class TripState:
 
     def hotel_price_per_night(self) -> int:
         """The nightly rate actually booked, after the rate-plan multiplier."""
-        return hotel_price(self.hotel.price_per_night, self.hotel_rate_plan) if self.hotel else 0
+        return hotel_price(self.hotel.price_per_night, self.hotel_rate_code) if self.hotel else 0
 
     def summary(self) -> dict[str, Any]:
         return {
@@ -198,7 +200,7 @@ class TripState:
             "flight_price": self.flight_price(),
             "hotel": self.hotel.as_dict() if self.hotel else None,
             "hotel_nights": self.hotel_nights,
-            "hotel_rate_plan": self.hotel_rate_plan if self.hotel else None,
+            "hotel_rate_code": self.hotel_rate_code if self.hotel else None,
             "hotel_price_per_night": self.hotel_price_per_night(),
             "activities": [a.as_dict() for a in self.activities],
             "total_cost": self.total_cost(),
@@ -263,29 +265,29 @@ def make_tool_callables() -> dict[str, Any]:
         city: str,
         max_price_per_night: int = 0,
         min_rating: float = 0.0,
-        rate_plan: str = DEFAULT_RATE_PLAN,
+        rate_code: str = DEFAULT_RATE_CODE,
     ) -> list[dict]:
         # Hotels accept the city name or its code, so the only hotel gotcha is the
-        # rate plan; the airport-code vocabulary is left for search_activities.
+        # rate code; the airport-code vocabulary is left for search_activities.
         code = CITY_CODES.get(city.strip().lower(), city)
         out = [h for h in HOTELS if h.city == code]
         if min_rating:
             out = [h for h in out if h.rating >= min_rating]
-        # The nightly rate shown is the rate-plan-adjusted price (default plan is
-        # flexible, 1.5x), and max_price_per_night filters on that, so the
-        # default plan can hide every hotel that fits a tight nightly budget.
-        priced = [(h, hotel_price(h.price_per_night, rate_plan)) for h in out]
+        # The nightly rate shown is the rate-code-adjusted price (default code is
+        # B, 1.5x), and max_price_per_night filters on that, so the default code
+        # can hide every hotel that fits a tight nightly budget.
+        priced = [(h, hotel_price(h.price_per_night, rate_code)) for h in out]
         if max_price_per_night:
             priced = [(h, p) for h, p in priced if p <= max_price_per_night]
         priced.sort(key=lambda hp: (-hp[0].rating, hp[1]))
-        return [{**h.as_dict(), "price_per_night": p, "rate_plan": rate_plan} for h, p in priced]
+        return [{**h.as_dict(), "price_per_night": p, "rate_code": rate_code} for h, p in priced]
 
-    async def book_hotel(hotel_id: str, nights: int = 1, rate_plan: str = DEFAULT_RATE_PLAN) -> dict:
+    async def book_hotel(hotel_id: str, nights: int = 1, rate_code: str = DEFAULT_RATE_CODE) -> dict:
         h = _HOTELS_BY_ID.get(hotel_id)
         if h is None:
             return {"ok": False, "error": f"no hotel {hotel_id}"}
-        return {"ok": True, "booked": h.as_dict(), "nights": nights, "rate_plan": rate_plan,
-                "price_per_night": hotel_price(h.price_per_night, rate_plan)}
+        return {"ok": True, "booked": h.as_dict(), "nights": nights, "rate_code": rate_code,
+                "price_per_night": hotel_price(h.price_per_night, rate_code)}
 
     async def search_activities(city: str, category: str = "") -> list[dict]:
         # Gotcha: city must be the destination airport code (e.g. "JFK"), not the
@@ -348,7 +350,7 @@ def reconstruct_trip(trajectory: Any) -> TripState:
                 if h is not None:
                     trip.hotel = h
                     trip.hotel_nights = int(pending_args.get("nights", 0) or 0)
-                    trip.hotel_rate_plan = pending_args.get("rate_plan", DEFAULT_RATE_PLAN)
+                    trip.hotel_rate_code = pending_args.get("rate_code", DEFAULT_RATE_CODE)
             elif ok and pending_name == "add_activity":
                 a = _ACTIVITIES_BY_ID.get(pending_args.get("activity_id"))
                 if a is not None and a.id not in {x.id for x in trip.activities}:
