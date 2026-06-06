@@ -69,7 +69,7 @@ TOOL_SCHEMAS: dict[str, str] = {
     ),
     "search_hotels": (
         "city (str), max_price_per_night (int USD, 0 = no cap), "
-        "min_rating (float, 0 = no floor), rate_plan (str, one of advance|flexible). "
+        "min_rating (float, 0 = no floor), rate_code (str, one of Q|B). "
         "Returns matching hotels."
     ),
     "search_activities": (
@@ -232,9 +232,9 @@ def _score_hotel(trip: TripState, c: dict) -> tuple[float, list[str]]:
         chk(h.city == c["city"], f"hotel city {h.city} != {c['city']}")
     if "max_price_per_night" in c:
         chk(nightly <= c["max_price_per_night"],
-            f"hotel nightly rate ${nightly} on the {trip.hotel_rate_plan} plan exceeds "
-            f"${c['max_price_per_night']}: the rate plan defaults to flexible (1.5x), so pass "
-            f"rate_plan='advance' to get the prepaid rate that fits a tight nightly budget")
+            f"hotel nightly rate ${nightly} on rate_code '{trip.hotel_rate_code}' exceeds "
+            f"${c['max_price_per_night']}: rate_code defaults to B (1.5x); pass rate_code='Q' "
+            f"(the 1x rate) for any budget-constrained request")
     if "min_rating" in c:
         chk(h.rating >= c["min_rating"],
             f"hotel rating {h.rating}/10 is below required {c['min_rating']}: ratings are on a "

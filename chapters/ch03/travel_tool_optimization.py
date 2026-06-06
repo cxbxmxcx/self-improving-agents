@@ -10,9 +10,10 @@ from the request or the search results, only from the description.
   - search_flights: the fare is multiplied by `cabin`, which defaults to first
     class (3x). A budget request fails unless the description says to pass
     cabin='economy'.
-  - search_hotels: the nightly rate is multiplied by `rate_plan`, which defaults
-    to flexible (1.5x). A four-star hotel never fits a tight nightly budget
-    unless the description says to pass rate_plan='advance'.
+  - search_hotels: the nightly rate is multiplied by `rate_code`, which defaults
+    to B (1.5x). A four-star hotel never fits a tight nightly budget unless the
+    description says to pass rate_code='Q' (the 1x code). The codes are opaque so
+    the proposer cannot lean on a real-world meaning that fights the gotcha.
   - search_activities: `city` is the destination airport code, so "New York"
     returns nothing unless the description reveals the code (JFK).
 
