@@ -71,9 +71,12 @@ load_env()
 # are non-inferable, so a capable agent still fails without a good description.
 AGENT_MODEL = "claude-sonnet-4-6"
 PROPOSER_MODEL = "claude-sonnet-4-6"
-ROUNDS_TO_DRIVE = 2
+ROUNDS_TO_DRIVE = 1
 GEPA_POPULATION = 3
-GEPA_GENERATIONS = 2
+# Three generations: generation 0 mutates the seed blind, and the reflective
+# loop (which consumes the failure reasons) runs in generations 1 and 2. The
+# hotel gotcha in particular needs the extra reflective round to converge.
+GEPA_GENERATIONS = 3
 QUESTIONS_PER_ROUND: int | None = None  # None = all scenarios
 
 ARCHIVE_PATH = Path(__file__).parent / "runs" / "travel_archive.sqlite"
