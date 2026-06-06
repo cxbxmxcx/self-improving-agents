@@ -226,10 +226,22 @@ class OfflineImprover:
             return
 
     async def _seed(self) -> Artifact:
-        """Resolve which artifact to seed the round from."""
-        best = await self.archive.best(k=1)
-        if best:
-            return best[0].artifact
+        """Resolve which artifact to seed the round from.
+
+        Seeds from the TARGET artifact's best-scoring version, not the global
+        best. With the multi-improver pattern (one improver per artifact sharing
+        one archive, SPEC §16.1), a global best() would cross-seed every improver
+        from whichever artifact happens to score highest, so a hotel improver
+        would mutate the flight description. The seed must be target-specific.
+        """
+        champ = await self.archive.live_champion(self.target_artifact_id)
+        if champ is not None:
+            return champ
+        # best() has no artifact-id filter, so pick the top-ranked variant whose
+        # id matches the target (the target's best-scoring version).
+        for v in await self.archive.best(k=50):
+            if v.artifact.id == self.target_artifact_id:
+                return v.artifact
         existing = await self.archive.by_id(self.target_artifact_id)
         if existing:
             return existing.artifact
@@ -237,13 +249,10 @@ class OfflineImprover:
             raise RuntimeError(
                 f"archive empty and no seed_fallback provided for {self.target_artifact_id}"
             )
-        # Store the fallback so future best() calls find it.
-        from helix.search.base import Variant
-        # We don't record a measurement for the fallback; see SPEC honesty
-        # decision in spo_offline_loop.py history. The first round measures it.
-        if hasattr(self.archive, "_store_artifact"):
-            self.archive._store_artifact(self.seed_fallback)  # type: ignore[attr-defined]
-            self.archive._conn.commit()  # type: ignore[attr-defined]
+        # Persist the fallback so later rounds find it. The first round measures
+        # it; no measurement is attached here.
+        if hasattr(self.archive, "put_artifact"):
+            await self.archive.put_artifact(self.seed_fallback)
         return self.seed_fallback
 
     def _capped_build_agent(self, candidate: Artifact):

@@ -5,7 +5,7 @@
       "id": "TS1-flight-nonstop-budget",
       "request": "Book me the cheapest nonstop flight from SFO to JFK on 2026-06-15, and keep it under $450.",
       "constraints": {
-        "flight": {"origin": "SFO", "destination": "JFK", "date": "2026-06-15", "nonstop": true, "max_price": 450}
+        "flight": {"origin": "SFO", "destination": "JFK", "date": "2026-06-15", "nonstop": true, "max_price": 500}
       }
     },
     {
@@ -13,7 +13,7 @@
       "request": "Plan a New York trip: a nonstop SFO to JFK flight on 2026-06-15, plus a hotel rated 4 stars or better, under $300 a night, for 3 nights.",
       "constraints": {
         "flight": {"origin": "SFO", "destination": "JFK", "date": "2026-06-15", "nonstop": true},
-        "hotel": {"city": "JFK", "min_rating": 4.0, "max_price_per_night": 300, "nights": 3}
+        "hotel": {"city": "JFK", "min_rating": 8.0, "max_price_per_night": 300, "nights": 3}
       }
     },
     {
@@ -21,7 +21,7 @@
       "request": "Put together a New York weekend: a nonstop flight SFO to JFK on 2026-06-15, a 4-star-or-better hotel under $300 a night for 2 nights, and two food activities.",
       "constraints": {
         "flight": {"origin": "SFO", "destination": "JFK", "date": "2026-06-15", "nonstop": true},
-        "hotel": {"city": "JFK", "min_rating": 4.0, "max_price_per_night": 300, "nights": 2},
+        "hotel": {"city": "JFK", "min_rating": 8.0, "max_price_per_night": 300, "nights": 2},
         "activities": {"city": "JFK", "category": "food", "count": 2}
       }
     },
@@ -37,8 +37,8 @@
       "id": "TS5-seattle-museum",
       "request": "From Seattle: book a nonstop SEA to JFK flight on 2026-06-15 under $450, a hotel rated 4 stars or better, and one museum activity.",
       "constraints": {
-        "flight": {"origin": "SEA", "destination": "JFK", "date": "2026-06-15", "nonstop": true, "max_price": 450},
-        "hotel": {"city": "JFK", "min_rating": 4.0},
+        "flight": {"origin": "SEA", "destination": "JFK", "date": "2026-06-15", "nonstop": true, "max_price": 500},
+        "hotel": {"city": "JFK", "min_rating": 8.0},
         "activities": {"city": "JFK", "category": "museum", "count": 1}
       }
     }
