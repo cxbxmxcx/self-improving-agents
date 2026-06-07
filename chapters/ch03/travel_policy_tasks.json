@@ -1,0 +1,71 @@
+{
+  "description": "Whole-trip planning tasks for the Chapter 3 policy-optimization example. Each task has one total budget that must cover a flight, a hotel for N nights, and at least the required activities. The objective (agents.travel.score_policy_task) is budget_factor x quality: staying within budget while maximizing nonstop/rating/activity quality. The tools carry good (gotcha-aware) descriptions, so pricing is honest and the only lever is the agent's allocation strategy: a greedy or premium policy either under-delivers quality or busts the budget, while a plan-then-allocate policy fits high quality inside the budget. Tasks span a comfortable control (P3), tight allocation (P1, P5), keep-nonstop-economize-hotel (P2), budget-bust temptation (P4), and an expensive-preference tradeoff (P6).",
+  "tasks": [
+    {
+      "id": "P1-nyc-3n-1250",
+      "request": "Plan a 3-night New York trip from SFO on 2026-06-15 with a total budget of $1250. I want a nonstop flight, a four-star-or-better hotel, and at least two activities.",
+      "budget": 1250,
+      "required": {
+        "flight": {"origin": "SFO", "destination": "JFK", "date": "2026-06-15"},
+        "hotel": {"city": "JFK", "nights": 3},
+        "activities": {"city": "JFK", "min_count": 2}
+      },
+      "preferences": {"nonstop": true, "hotel_min_rating": 8}
+    },
+    {
+      "id": "P2-nyc-2n-750",
+      "request": "Plan a 2-night New York trip from SFO on 2026-06-15 with a total budget of $750. I'd like a nonstop flight, a good hotel, and at least two activities.",
+      "budget": 750,
+      "required": {
+        "flight": {"origin": "SFO", "destination": "JFK", "date": "2026-06-15"},
+        "hotel": {"city": "JFK", "nights": 2},
+        "activities": {"city": "JFK", "min_count": 2}
+      },
+      "preferences": {"nonstop": true, "hotel_min_rating": 8}
+    },
+    {
+      "id": "P3-la-2n-900",
+      "request": "Plan a 2-night Los Angeles trip from SFO on 2026-06-15 with a total budget of $900. I want a nonstop flight, a four-star-or-better hotel, and at least two activities.",
+      "budget": 900,
+      "required": {
+        "flight": {"origin": "SFO", "destination": "LAX", "date": "2026-06-15"},
+        "hotel": {"city": "LAX", "nights": 2},
+        "activities": {"city": "LAX", "min_count": 2}
+      },
+      "preferences": {"nonstop": true, "hotel_min_rating": 8}
+    },
+    {
+      "id": "P4-chicago-2n-700",
+      "request": "Plan a 2-night Chicago trip from SFO on 2026-06-15 with a total budget of $700. I'd like a nonstop flight, a good hotel, and at least two activities.",
+      "budget": 700,
+      "required": {
+        "flight": {"origin": "SFO", "destination": "ORD", "date": "2026-06-15"},
+        "hotel": {"city": "ORD", "nights": 2},
+        "activities": {"city": "ORD", "min_count": 2}
+      },
+      "preferences": {"nonstop": true, "hotel_min_rating": 8}
+    },
+    {
+      "id": "P5-nyc-4n-1600",
+      "request": "Plan a 4-night New York trip from SFO on 2026-06-15 with a total budget of $1600. I want a nonstop flight, a four-star-or-better hotel, and at least two activities.",
+      "budget": 1600,
+      "required": {
+        "flight": {"origin": "SFO", "destination": "JFK", "date": "2026-06-15"},
+        "hotel": {"city": "JFK", "nights": 4},
+        "activities": {"city": "JFK", "min_count": 2}
+      },
+      "preferences": {"nonstop": true, "hotel_min_rating": 8}
+    },
+    {
+      "id": "P6-nyc-3n-1100-food",
+      "request": "Plan a 3-night New York trip from SFO on 2026-06-15 with a total budget of $1100. I want a nonstop flight, a good hotel, and two food activities.",
+      "budget": 1100,
+      "required": {
+        "flight": {"origin": "SFO", "destination": "JFK", "date": "2026-06-15"},
+        "hotel": {"city": "JFK", "nights": 3},
+        "activities": {"city": "JFK", "min_count": 2}
+      },
+      "preferences": {"nonstop": true, "hotel_min_rating": 8, "activity_category": "food"}
+    }
+  ]
+}
