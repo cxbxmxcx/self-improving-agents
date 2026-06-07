@@ -90,12 +90,17 @@ holds at or above its train score, the signature of a policy that generalizes. T
 advantage of the elaborate method shows up as generalization, not as a higher
 training number, which is the honest and teachable form of it.
 
-What does **not** replicate is any DGM advantage. Run 1 looked like DGM climbing
-over the hill to 0.67, but run 2 it collapsed to 0.12, the worst of the four. DGM is
-high variance at this budget, not reliably better than GEPA, so the full SPO worse
-than GEPA worse than DGM ladder is not established on this evidence and should not be
-printed. Characterizing DGM would need more runs and a less noisy per-candidate
-evaluation (average several samples instead of one).
+The DGM comparison above is flawed and is being redone. DGM is an
+archive-evolutionary method: the archive persists and accumulates, never
+discarding a variant, so its best is a ratchet that holds or improves as it keeps
+running. The two runs above each started DGM from a fresh, deleted archive, which
+strips out that mechanism and makes its defining property look like noise; the
+0.67-then-0.12 swing is an artifact of restarting, not DGM's behavior (with a
+persistent archive the 0.67 policy would still be present, so the best could not
+fall to 0.12). The correct evaluation runs DGM as one continuous process whose
+archive carries across runs, against GEPA whose population is fresh each run and so
+is an i.i.d. draw; DGM should ratchet up where GEPA oscillates. That run is pending;
+until then, only the GEPA-over-SPO result is established here.
 
 For contrast, the same experiment on the weak haiku agent put GEPA and DGM together
 at 0.44 (both at the low ceiling) and SPO at 0.06: enough to show the population and
