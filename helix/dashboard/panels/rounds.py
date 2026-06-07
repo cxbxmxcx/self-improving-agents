@@ -26,7 +26,7 @@ def render_rounds(archive_path: str, focus: str | None = None) -> None:
         caption += f" Archive timeline filtered to `{focus}`."
     st.caption(caption)
 
-    # If we have a JSONL round log (from spo_offline_loop.py), use it; otherwise
+    # If we have a JSONL round log (from 05_spo_offline_loop.py), use it; otherwise
     # synthesize a timeline from the archive's measurement history.
     if rounds:
         _render_from_round_log(rounds)
