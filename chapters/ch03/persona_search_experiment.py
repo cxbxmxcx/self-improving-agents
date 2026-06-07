@@ -126,14 +126,11 @@ async def run_offline(name: str, search, rounds: int) -> tuple[float, float]:
 
 
 async def run_gepa() -> tuple[float, float]:
-    archive = open_fresh("gepa")
-    seed = build_persona_policy(POLICY_GENESIS_PERSONA)
-    await archive.put_artifact(seed)
     gepa = GEPA(proposer_model=PROPOSER_MODEL, reflector=Reflection(model=PROPOSER_MODEL),
                 agent=agent(POLICY_GENESIS_PERSONA), eval_source=FixedEvalSet(persona_eval_set(TRAIN)),
                 population_size=GEPA_POP, generations=GEPA_GEN)
-    imp, _, _ = make_improver("gepa", gepa)
-    imp.archive = archive  # use the seeded archive
+    imp, archive, seed = make_improver("gepa", gepa)
+    await archive.put_artifact(seed)
     await imp.start()
     try:
         await imp.trigger_round()
