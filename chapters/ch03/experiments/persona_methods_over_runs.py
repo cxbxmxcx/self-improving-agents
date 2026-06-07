@@ -44,6 +44,10 @@ PROPOSER_MODEL = "claude-sonnet-4-6"
 RUNS_N = 2
 ROUNDS = 8
 GEPA_POP, GEPA_GEN = 4, 2
+SAMPLES = 4        # rollouts averaged per candidate per task to denoise selection/scoring
+TOPK = 4           # finalists from the single-sample first pass that get multi-sampled
+CONCURRENCY = 4    # bounded parallel rollouts during re-measurement (search stays sequential)
+SEM = asyncio.Semaphore(CONCURRENCY)
 TOOL_DEFAULTS = {"default_cabin": "economy", "default_rate_code": "Q"}
 DESCS = persona_descriptions()
 TASKS = Path(__file__).parent.parent / "travel_persona_tasks.json"
@@ -61,24 +65,48 @@ def agent(policy):
                               model=AGENT_MODEL, tool_defaults=TOOL_DEFAULTS)
 
 
-async def absolute(policy, tasks):
-    a = agent(policy); total = 0.0
-    for t in tasks:
-        _, traj = await a.run(t.request)
-        total += score_persona(reconstruct_trip(traj), PERSONAS[t.persona], t.required)[0]
-    return total / len(tasks)
+async def _rollout(policy, task):
+    """One agent rollout on one task, returning its persona rating. Bounded by the
+    semaphore so multi-sampling parallelizes without overrunning rate limits."""
+    async with SEM:
+        _, traj = await agent(policy).run(task.request)
+    return score_persona(reconstruct_trip(traj), PERSONAS[task.persona], task.required)[0]
+
+
+async def absolute(policy, tasks, samples=1):
+    """Mean persona rating, averaging `samples` rollouts per task to denoise. Each
+    task's samples are averaged first, then averaged across tasks (equal task weight)."""
+    coros, idxs = [], []
+    for i, t in enumerate(tasks):
+        for _ in range(samples):
+            coros.append(_rollout(policy, t)); idxs.append(i)
+    results = await asyncio.gather(*coros)
+    by_task = {}
+    for score, i in zip(results, idxs):
+        by_task.setdefault(i, []).append(score)
+    means = [sum(v) / len(v) for v in by_task.values()]
+    return sum(means) / len(means)
 
 
 async def best_by_absolute(path):
+    """Two-stage denoised selection. Stage 1 ranks every unique candidate on a single
+    cheap rollout; stage 2 multi-samples only the TOPK finalists, so the wobbly
+    single-sample best becomes a stable estimate without re-measuring all at depth."""
     conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
     contents = [r[0] for r in conn.execute("SELECT content FROM artifacts WHERE artifact_id=?", (SYSTEM_PROMPT_ID,))]
     seen, uniq = set(), []
     for c in contents:
         if c.strip() not in seen:
             seen.add(c.strip()); uniq.append(c)
-    scored = [(c, await absolute(c, TRAIN)) for c in uniq]
+    if len(uniq) > TOPK:
+        first = [(c, await absolute(c, TRAIN, 1)) for c in uniq]
+        first.sort(key=lambda x: x[1], reverse=True)
+        finalists = [c for c, _ in first[:TOPK]]
+    else:
+        finalists = uniq
+    scored = [(c, await absolute(c, TRAIN, SAMPLES)) for c in finalists]
     best, btr = max(scored, key=lambda x: x[1])
-    return btr, await absolute(best, TEST)
+    return btr, await absolute(best, TEST, SAMPLES)
 
 
 def reset(path):
@@ -155,6 +183,7 @@ async def main_async():
         await dgm_imp.stop()
 
     out(f"\n=== SPO vs GEPA vs DGM over {RUNS_N} runs ({AGENT_MODEL}, held-out test) ===")
+    out(f"  selection denoised: top-{TOPK} finalists re-measured at {SAMPLES} rollouts/candidate.")
     out("  SPO/GEPA start fresh each run; DGM keeps a persistent, accumulating archive.\n")
     out(f"  {'method':<22}" + "".join(f"{'run'+str(r)+' tr/te':>14}" for r in range(1, RUNS_N + 1)))
     for idx, label in ((1, "SPO (fresh)"), (2, "GEPA (fresh)"), (3, "DGM (persistent)")):
