@@ -39,13 +39,17 @@ from helix.observability import attach_console_renderer
 from helix.search.spo import SPO
 from helix.signals.pairwise_judge import PairwiseJudge, SwapAndAgree
 
-from chapters.ch02.helixagent_v1 import (
-    ARCHIVE_PATH,
-    PROMPT_ARTIFACT_ID,
-    get_or_create_seed,
-    open_archive,
-)
-from chapter_appendices.getting_started.helixagent_v0 import build_retrieve_tool
+# Listing 02's module name starts with a digit, so the v1 archive helpers are
+# loaded with importlib rather than a plain `import`.
+import importlib
+
+_v1 = importlib.import_module("chapters.ch02.02_helixagent_v1")
+ARCHIVE_PATH = _v1.ARCHIVE_PATH
+PROMPT_ARTIFACT_ID = _v1.PROMPT_ARTIFACT_ID
+get_or_create_seed = _v1.get_or_create_seed
+open_archive = _v1.open_archive
+
+from chapters.ch02.agent_v0 import build_retrieve_tool
 
 load_env()
 

@@ -6,20 +6,24 @@ the end, the reader can mutate a system prompt offline, score the
 mutations against an eval set, and promote a winning version into
 production.
 
-Four sections, four runnable scripts:
+Five runnable scripts, numbered in reading order:
 
 | § | Concept | Script |
 |---|---------|--------|
-| 2.1 | The artifact under improvement | `helixagent_v1.py` |
-| 2.2 | Measuring with an LLM-as-judge | `minimal_judge.py` |
-| 2.3 | Searching with SPO | `minimal_spo.py` |
-| 2.4 | The offline improvement loop | `spo_offline_loop.py` |
+| 2.0 | The baseline agent (the "before") | `01_helixagent_v0.py` |
+| 2.1 | The artifact under improvement | `02_helixagent_v1.py` |
+| 2.2 | Measuring with an LLM-as-judge | `03_minimal_judge.py` |
+| 2.3 | Searching with SPO | `04_minimal_spo.py` |
+| 2.4 | The offline improvement loop | `05_spo_offline_loop.py` |
 
-The chapter assumes the reader has built an agent before. The pre-MEAP
-baseline agent (one-shot RAG agent with a fixed prompt) lives in
-`chapter_appendices/getting_started/` for readers who want a refresher;
-this chapter starts from "you have an agent and you want it to get
-better."
+The chapter assumes the reader has built an agent before, so §2.0 is a
+starting line rather than a build tutorial. `01_helixagent_v0.py` runs a
+basic RAG plus ReAct agent with a fixed prompt so the reader has a
+concrete "before" to improve on. The shared v0 building blocks (genesis
+prompt, retrieve tool, agent factory) live in `agent_v0.py`, which every
+chapter listing imports. The fully annotated build, including the Ch 3
+tool-description scaffolding, lives in
+`chapter_appendices/getting_started/`.
 
 Online improvement (auto-promotion, no labeled eval set, rolling
 spot-checks) is a Ch 8 topic — it composes with HITL and feedback in a
@@ -34,6 +38,32 @@ strategy chains, tool-description improvement) is Ch 3.
    ```
 2. Set an LLM provider key. LiteLLM picks up the env var for whichever
    model you choose (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, etc.).
+
+---
+
+## §2.0 The baseline agent
+
+Before improving anything, run the agent you are about to improve. v0 is a
+RAG plus ReAct agent with a fixed system prompt, one retrieve tool, and
+working memory; there is no archive, signal, or search yet. This is the
+"before" that gives the rest of the chapter stakes.
+
+Run:
+```
+python chapters/ch02/01_helixagent_v0.py
+```
+
+For the measured baseline across all 20 eval questions, run the harness
+with no judge:
+```
+python chapters/ch02/eval_harness.py
+```
+
+Watch the band-4 trap questions: their answers are not in the corpus, and
+v0 tends to guess rather than abstain. §2.4 produces a candidate prompt
+that beats this baseline, and the diff against `02_helixagent_v1.py` is
+the chapter's thesis: v1 is the same agent, the only change is that v1
+reads its system prompt from the archive.
 
 ---
 
@@ -53,7 +83,7 @@ treated as an `Artifact`. Three properties matter:
 
 Run:
 ```
-python chapters/ch02/helixagent_v1.py
+python chapters/ch02/02_helixagent_v1.py
 ```
 
 On first run the archive is seeded with the genesis prompt. The agent
@@ -75,7 +105,7 @@ a feedback string. This section builds one from scratch.
 
 Run:
 ```
-python chapters/ch02/minimal_judge.py
+python chapters/ch02/03_minimal_judge.py
 ```
 
 The script:
@@ -103,7 +133,7 @@ SPO produces the second version.
 
 Run:
 ```
-python chapters/ch02/minimal_spo.py
+python chapters/ch02/04_minimal_spo.py
 ```
 
 The script:
@@ -131,7 +161,7 @@ Signal + Search + Archive + EvalSource together.
 
 Run:
 ```
-python chapters/ch02/spo_offline_loop.py
+python chapters/ch02/05_spo_offline_loop.py
 ```
 
 One invocation drives three rounds:
@@ -146,7 +176,7 @@ One invocation drives three rounds:
 
 After three rounds, the archive contains three candidates with
 measurements. **None of them are live.** The agent (run
-`helixagent_v1.py` again) still serves the genesis prompt. This is the
+`02_helixagent_v1.py` again) still serves the genesis prompt. This is the
 **deploy gate**: offline improvement records candidates; promotion to
 live is a separate, deliberate act.
 
@@ -173,7 +203,7 @@ streamlit run helix/dashboard/app.py
 
 The dashboard shows v1 as live, v2/v3/v4 as scored candidates, and a
 "Promote v{N} → live" button on the best candidate. Click it (or call
-`archive.promote()` from a notebook) and the next `helixagent_v1.py` run
+`archive.promote()` from a notebook) and the next `02_helixagent_v1.py` run
 serves the new version. That's the full self-improvement cycle.
 
 ---

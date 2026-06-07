@@ -6,7 +6,7 @@ adds Pydantic-validated output, prompt caching, observability spans, and
 cost accounting. The algorithm is identical.
 
 Run:
-    python chapters/ch02/minimal_judge.py
+    python chapters/ch02/03_minimal_judge.py
 
 What you'll see:
   1. A pairwise verdict on two sample answers.
