@@ -52,7 +52,7 @@ GENESIS_PROMPT = (
     "and cite sources when possible."
 )
 
-# A tiny eval slice, same shape as Ch 2's minimal_spo. Hardcoded here so the
+# A tiny eval slice, same shape as Ch 2's 04_minimal_spo. Hardcoded here so the
 # script is self-contained.
 EVAL = [
     {

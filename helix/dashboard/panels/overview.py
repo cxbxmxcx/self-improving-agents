@@ -24,7 +24,7 @@ def render_overview(archive_path: str, focus: str | None = None) -> None:
     rounds = list_round_log(archive_path)
 
     if not all_variants:
-        st.info("Archive is empty. Run a chapter script (e.g. `python chapters/ch02/spo_offline_loop.py`) to populate it.")
+        st.info("Archive is empty. Run a chapter script (e.g. `python chapters/ch02/05_spo_offline_loop.py`) to populate it.")
         return
 
     # ---------------- top metrics across the whole archive ----------------
