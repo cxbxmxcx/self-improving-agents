@@ -69,30 +69,39 @@ design is in `PERSONA_EXPERIMENT_DESIGN.md`.
 
 ## The headline result
 
-Agent Sonnet 4.5 (the intermediate model: genesis 0.35, oracle ceiling 0.73),
+Agent Sonnet 4.5 (the intermediate model: genesis ~0.3, oracle ceiling ~0.73),
 Sonnet 4.6 proposer, modest budget (SPO 8 rounds, GEPA population 4 by 2
 generations, DGM 8 rounds), selection by absolute rating, optimize on New York,
-evaluate on held-out Los Angeles.
+evaluate on held-out Los Angeles. Two independent runs, because single runs at
+this agent tier are noisy:
 
-| method | train | test (held-out) |
-| --- | --- | --- |
-| genesis | 0.35 | 0.35 |
-| SPO | 0.47 | 0.12 |
-| GEPA | 0.31 | 0.30 |
-| DGM | 0.60 | 0.67 |
+| method | run 1 train | run 1 test | run 2 train | run 2 test |
+| --- | --- | --- | --- | --- |
+| genesis | 0.35 | 0.35 | 0.33 | 0.28 |
+| SPO | 0.47 | 0.12 | 0.51 | 0.24 |
+| GEPA | 0.31 | 0.30 | 0.23 | 0.39 |
+| DGM | 0.60 | 0.67 | 0.28 | 0.12 |
 
-The ladder is the whole story. SPO has the highest training score and the worst
-generalization, 0.12, because the single line overfits the training personas. GEPA
-holds near genesis, robust but not improving much this run, 0.30. DGM climbs and
-generalizes to 0.67, just under the 0.73 ceiling, because the archive keeps diverse
-variants and can fork from a branch the fixed population dropped. The advantage of
-the more elaborate methods shows up as generalization, not as a higher training
-number, which is the honest and teachable form of it.
+The robust, replicated finding is **GEPA over SPO, by generalization**. SPO has the
+highest training score in both runs and the worst-or-near-worst held-out test,
+because the single line overfits the training personas. GEPA beats SPO on the
+held-out city in both runs (0.30 vs 0.12, then 0.39 vs 0.24) and its test score
+holds at or above its train score, the signature of a policy that generalizes. The
+advantage of the elaborate method shows up as generalization, not as a higher
+training number, which is the honest and teachable form of it.
+
+What does **not** replicate is any DGM advantage. Run 1 looked like DGM climbing
+over the hill to 0.67, but run 2 it collapsed to 0.12, the worst of the four. DGM is
+high variance at this budget, not reliably better than GEPA, so the full SPO worse
+than GEPA worse than DGM ladder is not established on this evidence and should not be
+printed. Characterizing DGM would need more runs and a less noisy per-candidate
+evaluation (average several samples instead of one).
 
 For contrast, the same experiment on the weak haiku agent put GEPA and DGM together
-at 0.44 (both at the low ceiling) and SPO at 0.06: enough to show the methods beat
-SPO, but not enough to separate the archive from the population. The intermediate
-agent is what reveals the GEPA-versus-DGM gap.
+at 0.44 (both at the low ceiling) and SPO at 0.06: enough to show the population and
+archive methods beat the single line, but the low ceiling hides any GEPA-versus-DGM
+distinction. The intermediate agent gives the methods room, but the run-to-run noise
+means the GEPA-over-SPO result is the one that survives replication.
 
 ## What does not help
 
@@ -119,13 +128,14 @@ generalization for training fit.
 
 ## Caveats
 
-The headline table is a single run, and sonnet-tier sampling is noisy, so GEPA's
-flat 0.30 may be an unlucky draw and DGM's 0.67 a fortunate one. The direction
-matches the theory (archive beats population beats single line, via
-generalization), but to state SPO worse than GEPA worse than DGM in print, repeat
-the run two or three times and report the spread. The absolute ceiling is also
-bounded by Sonnet 4.5's competence, not by the search; a stronger agent with a
-harder task would raise it.
+Run-to-run variance at this agent tier is large, which is exactly why two runs were
+needed and why DGM's run-1 0.67 did not survive replication. The per-candidate
+re-measurement is a single noisy sample, so both the search (which finds different
+policies each run) and the selection (best-by-noisy-train) add variance; averaging
+several samples per candidate would tighten it. What survives is GEPA over SPO; a
+claim about DGM needs more runs and multi-sample evaluation before it is printable.
+The absolute ceiling is also bounded by Sonnet 4.5's competence, not the search; a
+stronger agent on a harder task would raise it.
 
 ## Reproducing
 
