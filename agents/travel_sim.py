@@ -94,6 +94,10 @@ FLIGHTS: list[Flight] = [
     Flight("FL110", "SFO", "ORD", "2026-06-15", "06:00", "12:20", 0, 211, "United"),
     Flight("FL111", "SFO", "ORD", "2026-06-15", "14:30", "22:40", 1, 178, "American"),
     Flight("FL112", "SEA", "LAX", "2026-06-15", "09:00", "11:35", 0, 124, "Alaska"),
+    # A daytime, non-JetBlue alternative on LAX-JFK, so the company-policy
+    # conflict (prefer JetBlue vs no red-eyes) is a real choice: FL107 is the
+    # JetBlue red-eye, FL113 the Delta daytime flight.
+    Flight("FL113", "LAX", "JFK", "2026-06-15", "08:00", "16:30", 0, 310, "Delta"),
 ]
 
 # Gotcha: ratings are on a 1-10 scale, not the 1-5 a user means by "stars".
@@ -220,7 +224,10 @@ class TripState:
 # Tool implementations (plain Python, stateless)
 # ---------------------------------------------------------------------------
 
-def make_tool_callables() -> dict[str, Any]:
+def make_tool_callables(
+    default_cabin: str = DEFAULT_CABIN,
+    default_rate_code: str = DEFAULT_RATE_CODE,
+) -> dict[str, Any]:
     """Return the six raw async tool callables.
 
     The tools are stateless: search tools read the dataset, and the book/add
@@ -229,6 +236,11 @@ def make_tool_callables() -> dict[str, Any]:
     This keeps the agent clonable by the framework's `with_artifacts` without
     leaking booking state across eval runs. Each is a typed async function so
     TextDescriptionTool can derive its argument schema.
+
+    `default_cabin` / `default_rate_code` set what an omitted cabin or rate code
+    falls back to. They default to the gotcha values (first class, refundable);
+    an experiment that wants honest pricing passes economy and Q so an omitted
+    argument is the cheap option, not a hidden 3x/1.5x surcharge.
     """
 
     async def search_flights(
@@ -237,7 +249,7 @@ def make_tool_callables() -> dict[str, Any]:
         date: str,
         nonstop: bool = False,
         max_price: int = 0,
-        cabin: str = DEFAULT_CABIN,
+        cabin: str = default_cabin,
     ) -> list[dict]:
         out = [
             f for f in FLIGHTS
@@ -254,7 +266,7 @@ def make_tool_callables() -> dict[str, Any]:
         priced.sort(key=lambda fp: fp[1])
         return [{**f.as_dict(), "price": p, "cabin": cabin} for f, p in priced]
 
-    async def book_flight(flight_id: str, cabin: str = DEFAULT_CABIN) -> dict:
+    async def book_flight(flight_id: str, cabin: str = default_cabin) -> dict:
         f = _FLIGHTS_BY_ID.get(flight_id)
         if f is None:
             return {"ok": False, "error": f"no flight {flight_id}"}
@@ -265,7 +277,7 @@ def make_tool_callables() -> dict[str, Any]:
         city: str,
         max_price_per_night: int = 0,
         min_rating: float = 0.0,
-        rate_code: str = DEFAULT_RATE_CODE,
+        rate_code: str = default_rate_code,
     ) -> list[dict]:
         # Hotels accept the city name or its code, so the only hotel gotcha is the
         # rate code; the airport-code vocabulary is left for search_activities.
@@ -282,7 +294,7 @@ def make_tool_callables() -> dict[str, Any]:
         priced.sort(key=lambda hp: (-hp[0].rating, hp[1]))
         return [{**h.as_dict(), "price_per_night": p, "rate_code": rate_code} for h, p in priced]
 
-    async def book_hotel(hotel_id: str, nights: int = 1, rate_code: str = DEFAULT_RATE_CODE) -> dict:
+    async def book_hotel(hotel_id: str, nights: int = 1, rate_code: str = default_rate_code) -> dict:
         h = _HOTELS_BY_ID.get(hotel_id)
         if h is None:
             return {"ok": False, "error": f"no hotel {hotel_id}"}
@@ -344,13 +356,15 @@ def reconstruct_trip(trajectory: Any) -> TripState:
                 f = _FLIGHTS_BY_ID.get(pending_args.get("flight_id"))
                 if f is not None:
                     trip.flight = f
-                    trip.flight_cabin = pending_args.get("cabin", DEFAULT_CABIN)
+                    # Read the cabin the tool actually used (from the result), so a
+                    # tool configured with a different default is reflected faithfully.
+                    trip.flight_cabin = result.get("cabin", pending_args.get("cabin", DEFAULT_CABIN))
             elif ok and pending_name == "book_hotel":
                 h = _HOTELS_BY_ID.get(pending_args.get("hotel_id"))
                 if h is not None:
                     trip.hotel = h
                     trip.hotel_nights = int(pending_args.get("nights", 0) or 0)
-                    trip.hotel_rate_code = pending_args.get("rate_code", DEFAULT_RATE_CODE)
+                    trip.hotel_rate_code = result.get("rate_code", pending_args.get("rate_code", DEFAULT_RATE_CODE))
             elif ok and pending_name == "add_activity":
                 a = _ACTIVITIES_BY_ID.get(pending_args.get("activity_id"))
                 if a is not None and a.id not in {x.id for x in trip.activities}:

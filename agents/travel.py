@@ -119,6 +119,8 @@ def build_travel_agent(
     *,
     system_prompt: Artifact | None = None,
     model: str = DEFAULT_MODEL,
+    tool_defaults: dict[str, str] | None = None,
+    extra_tools: list[Any] | None = None,
 ) -> Agent:
     """Build the travel agent with stateless tools.
 
@@ -126,8 +128,13 @@ def build_travel_agent(
     descriptions from `descriptions`; the book/add tools keep fixed strings. The
     tools hold no state, so the agent clones cleanly under `with_artifacts`; the
     booked itinerary is read back from the trajectory via reconstruct_trip.
+
+    `tool_defaults` overrides the cabin / rate-code an omitted argument falls back
+    to (keys 'default_cabin', 'default_rate_code'); the persona experiment passes
+    economy and Q so pricing is honest and not skewed by the gotcha defaults.
+    `extra_tools` are appended as-is (the Tier 2 persona experiment adds ask_user).
     """
-    callables = make_tool_callables()
+    callables = make_tool_callables(**(tool_defaults or {}))
     tools: list[Any] = []
     for tool_name, desc_id in SEARCHABLE_TOOL_DESCRIPTION_IDS.items():
         tools.append(
@@ -139,6 +146,7 @@ def build_travel_agent(
         )
     for tool_name, desc in FIXED_DESCRIPTIONS.items():
         tools.append(tool(description=desc)(callables[tool_name]))
+    tools.extend(extra_tools or [])
     return Agent(
         system_prompt=system_prompt or build_genesis_prompt(),
         tools=tools,
@@ -403,6 +411,253 @@ class TravelTaskJudge:
             preference=pref,
             confidence=abs(cand - ref),
             feedback=f"task success {cand:.2f} (vs ref {ref:.2f}). Candidate misses: {why}",
+            signal_id=self.signal_id,
+            signal_version=self.signal_version,
+            cost=Cost(),
+        )
+
+
+# ---------------------------------------------------------------------------
+# Policy optimization (Chapter 3 lead example)
+#
+# Here the artifact under improvement is the agent's POLICY (its system prompt),
+# not a tool description. The tools keep their good, gotcha-aware descriptions so
+# pricing is honest (the agent already passes economy fares and the Q rate code),
+# and the only lever left is strategy: how to allocate one total budget across
+# flight, hotel, and activities, and when to relax a preference instead of
+# busting the budget or skipping a component.
+# ---------------------------------------------------------------------------
+
+# Good (gotcha-aware) tool descriptions, so the policy example has honest pricing
+# and the leverage is purely strategic. These are what the sidebar's description
+# search converges toward; the policy example fixes them and optimizes on top.
+GOOD_DESCRIPTIONS: dict[str, str] = {
+    "prompt.tool.search_flights.description": (
+        "Search for available flights. Pass origin, destination, date (YYYY-MM-DD), nonstop (bool), "
+        "max_price (int USD, 0 = no cap), and cabin. The fare is multiplied by the cabin class, which "
+        "defaults to first class (3x economy), so pass cabin='economy' to see and book affordable fares."
+    ),
+    "prompt.tool.search_hotels.description": (
+        "Search for hotels. Pass city, max_price_per_night (int USD, 0 = no cap), min_rating (float on a "
+        "1-10 scale, so a four-star request means 8), and rate_code. The nightly rate is multiplied by the "
+        "rate_code, which defaults to B (1.5x), so pass rate_code='Q' to get the 1x rate."
+    ),
+    "prompt.tool.search_activities.description": (
+        "Search for activities. Pass city as the destination airport code (JFK for New York, LAX for Los "
+        "Angeles, ORD for Chicago), not the city name, and an optional category (one of food, museum, "
+        "outdoor, nightlife, landmark). Then add_activity(activity_id) for each one to add."
+    ),
+}
+
+
+def good_descriptions() -> dict[str, Artifact]:
+    """Gotcha-aware TOOL_DESCRIPTION artifacts, fixed during policy optimization."""
+    return {
+        desc_id: genesis(id=desc_id, kind=Subtype.TOOL_DESCRIPTION, content=content)
+        for desc_id, content in GOOD_DESCRIPTIONS.items()
+    }
+
+
+# The genesis policy is deliberately strategy-free: it names the goal but gives no
+# guidance on budget allocation, ordering, quality, or recovery. That is the
+# headroom GEPA and DGM search to fill.
+POLICY_GENESIS = (
+    "You are a travel assistant. Use the available tools to book the flight, hotel, and "
+    "activities the user requests."
+)
+
+# A completion-floor policy: it makes a weak model finish the task (book every
+# component) but gives no allocation strategy, so the agent completes the trip yet
+# allocates greedily. Comparing this to the oracle isolates the allocation lift
+# from the learn-to-complete lift.
+POLICY_COMPLETION_FLOOR = (
+    "You are a travel assistant. The user wants a complete trip: a flight, a hotel for the "
+    "stated number of nights, and the requested activities. Searching is not booking; you have "
+    "not finished until you have booked every component. For each one, search, choose an option, "
+    "and call its booking tool: book_flight for the flight, book_hotel for the hotel (pass the "
+    "number of nights), and add_activity once per activity. Confirm the itinerary at the end."
+)
+
+# A strong hand-written policy, used only to validate that the headroom exists
+# (the oracle A/B) before spending on a search. It is the kind of strategy the
+# search is expected to discover, not a value hidden from the agent.
+POLICY_ORACLE = (
+    "You are a travel-planning agent working against a fixed total budget. Before booking "
+    "anything, search every component the request needs (flight, hotel, activities) and note "
+    "each option's price and quality. Then plan the whole trip to fit the budget: reserve the "
+    "hotel cost first (nightly rate times the number of nights), then spend what remains to "
+    "maximize quality, preferring a nonstop flight and the highest-rated hotel you can still "
+    "afford, and choosing inexpensive activities so they do not crowd out the hotel. If you "
+    "cannot satisfy every preference within budget, give up the lowest-value preference (accept "
+    "one stop, or a slightly lower hotel rating) rather than exceed the budget or skip a "
+    "required component. Book only once your full plan fits the budget, then confirm the itinerary."
+)
+
+
+def build_policy_prompt(content: str) -> Artifact:
+    """A PROMPT-subtype system-prompt artifact (the policy artifact under search)."""
+    return genesis(id=SYSTEM_PROMPT_ID, kind=Subtype.PROMPT, content=content, created_by="human")
+
+
+@dataclass
+class PolicyTask:
+    """A whole-trip planning task with a total budget, required components, and
+    weighted soft preferences. Scored by the graded objective in score_policy_task."""
+
+    id: str
+    request: str
+    budget: int
+    required: dict[str, Any]
+    preferences: dict[str, Any]
+
+
+def load_policy_tasks(path: str | Path) -> list[PolicyTask]:
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    return [
+        PolicyTask(
+            id=t["id"], request=t["request"], budget=int(t["budget"]),
+            required=t["required"], preferences=t.get("preferences", {}),
+        )
+        for t in data["tasks"]
+    ]
+
+
+def policy_eval_set(tasks: list[PolicyTask]) -> EvalSet:
+    questions = [
+        EvalQuestion(
+            id=t.id, band=3, question=t.request,
+            reference_answer=json.dumps({"budget": t.budget, "required": t.required, "preferences": t.preferences}),
+        )
+        for t in tasks
+    ]
+    return EvalSet(questions=questions, description="whole-trip policy tasks")
+
+
+def _budget_factor(total: int, budget: int) -> float:
+    """1.0 within budget, falling linearly to 0.0 at 1.5x budget."""
+    if total <= budget:
+        return 1.0
+    if total >= 1.5 * budget:
+        return 0.0
+    return 1.0 - (total - budget) / (0.5 * budget)
+
+
+def score_policy_task(trip: TripState, task: dict) -> tuple[float, list[str]]:
+    """Graded objective: score = budget_factor x quality, in [0, 1].
+
+    Quality averages the applicable component terms (flight, hotel, activities),
+    each of which is zero if the required component is missing or wrong, so a
+    greedy policy that busts the budget or under-delivers quality scores low while
+    a strategy that fits high quality inside the budget scores high.
+    """
+    req = task.get("required", {})
+    pref = task.get("preferences", {})
+    budget = int(task.get("budget", 0)) or 1
+    reasons: list[str] = []
+    q_terms: list[float] = []
+
+    if "flight" in req:
+        fr = req["flight"]
+        f = trip.flight
+        ok = f is not None and f.origin == fr["origin"] and f.destination == fr["destination"] and f.date == fr["date"]
+        if not ok:
+            q_terms.append(0.0); reasons.append("flight missing or wrong route/date")
+        elif pref.get("nonstop") and f.stops != 0:
+            q_terms.append(0.5); reasons.append("flight has a stop; nonstop preferred")
+        else:
+            q_terms.append(1.0)
+
+    if "hotel" in req:
+        hr = req["hotel"]
+        h = trip.hotel
+        ok = h is not None and h.city == hr["city"] and trip.hotel_nights == hr["nights"]
+        if not ok:
+            q_terms.append(0.0); reasons.append("hotel missing or wrong city/nights")
+        else:
+            q_terms.append(h.rating / 10.0)
+            if h.rating < pref.get("hotel_min_rating", 0):
+                reasons.append(f"hotel rating {h.rating}/10 below preferred {pref['hotel_min_rating']}")
+
+    if "activities" in req:
+        ar = req["activities"]
+        city = ar.get("city")
+        cat = pref.get("activity_category")
+        need = int(ar.get("min_count", 1))
+        matched = [
+            a for a in trip.activities
+            if (city is None or a.city == city) and (cat is None or a.category == cat)
+        ]
+        q_terms.append(min(len(matched), need) / need)
+        if len(matched) < need:
+            reasons.append(f"only {len(matched)}/{need} matching activities booked")
+
+    quality = sum(q_terms) / len(q_terms) if q_terms else 0.0
+    total = trip.total_cost()
+    bf = _budget_factor(total, budget)
+    if bf < 1.0:
+        reasons.append(f"trip total ${total} over budget ${budget}")
+    return bf * quality, reasons
+
+
+class TripPlanJudge:
+    """Pairwise ground-truth signal over the graded policy objective.
+
+    Mirrors TravelTaskJudge: it reconstructs candidate and reference trips, scores
+    both with score_policy_task against the task (passed as reference_answer JSON),
+    and prefers the higher score while exposing the candidate's absolute score and
+    the failure reasons that a reflective search can act on.
+    """
+
+    def __init__(self, version: int = 1) -> None:
+        self._version = version
+
+    @property
+    def kind(self) -> SignalKind:
+        return SignalKind.GROUND_TRUTH
+
+    @property
+    def cost_estimate(self) -> Cost:
+        return Cost()
+
+    @property
+    def signal_id(self) -> str:
+        return derive_signal_id("TripPlanJudge", {"version": self._version})
+
+    @property
+    def signal_version(self) -> int:
+        return self._version
+
+    async def measure(
+        self,
+        candidate: Artifact,
+        trajectory: Trajectory | None = None,
+        reference: Artifact | None = None,
+        ground_truth: Any | None = None,
+    ) -> GapMeasurement:
+        gt = ground_truth or {}
+        try:
+            task = json.loads(gt.get("reference_answer") or "{}")
+        except (TypeError, ValueError):
+            task = {}
+        cand_traj = gt.get("candidate_trajectory") or trajectory
+        ref_traj = gt.get("reference_trajectory")
+        cand, cand_reasons = (
+            score_policy_task(reconstruct_trip(cand_traj), task)
+            if cand_traj is not None else (0.0, ["no candidate run"])
+        )
+        ref = score_policy_task(reconstruct_trip(ref_traj), task)[0] if ref_traj is not None else 0.0
+        if cand > ref:
+            pref = Preference.LEFT
+        elif cand < ref:
+            pref = Preference.RIGHT
+        else:
+            pref = Preference.TIE
+        why = ("; ".join(cand_reasons))[:240] or "all objectives met"
+        return GapMeasurement(
+            score=cand,
+            preference=pref,
+            confidence=abs(cand - ref),
+            feedback=f"trip score {cand:.2f} (vs ref {ref:.2f}). Weaknesses: {why}",
             signal_id=self.signal_id,
             signal_version=self.signal_version,
             cost=Cost(),
