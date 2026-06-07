@@ -6,7 +6,7 @@ bookkeeping, observability, and budget enforcement. The algorithm is the
 same three steps you'll see below: mutate, score, accept.
 
 Run:
-    python chapters/ch02/minimal_spo.py
+    python chapters/ch02/04_minimal_spo.py
 
 What you'll see, for three rounds:
   - The current prompt's answer on a small eval slice.
@@ -36,9 +36,14 @@ if str(REPO_ROOT) not in sys.path:
 
 from helix.env import load_env
 
-# Reuse the swap-and-agree judge from §2.2. This is the only `helix`
-# import; the rest of the SPO algorithm is written out below.
-from chapters.ch02.minimal_judge import judge_with_swap_and_agree
+# Reuse the swap-and-agree judge from §2.2 (listing 03). The sibling module
+# name starts with a digit, so it is loaded with importlib rather than a plain
+# `import`; the rest of the SPO algorithm is written out below.
+import importlib
+
+judge_with_swap_and_agree = importlib.import_module(
+    "chapters.ch02.03_minimal_judge"
+).judge_with_swap_and_agree
 
 load_env()
 

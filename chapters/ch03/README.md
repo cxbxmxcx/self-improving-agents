@@ -63,7 +63,7 @@ python ingestion/build_index.py
 ```
 
 You should also have a populated `chapters/ch02/runs/helix_archive.sqlite`
-from running `spo_offline_loop.py` at least once — Ch 3 inherits Ch 2's
+from running `05_spo_offline_loop.py` at least once — Ch 3 inherits Ch 2's
 archive and extends it.
 
 ---
