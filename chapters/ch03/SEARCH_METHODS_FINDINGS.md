@@ -90,17 +90,36 @@ holds at or above its train score, the signature of a policy that generalizes. T
 advantage of the elaborate method shows up as generalization, not as a higher
 training number, which is the honest and teachable form of it.
 
-The DGM comparison above is flawed and is being redone. DGM is an
-archive-evolutionary method: the archive persists and accumulates, never
-discarding a variant, so its best is a ratchet that holds or improves as it keeps
-running. The two runs above each started DGM from a fresh, deleted archive, which
-strips out that mechanism and makes its defining property look like noise; the
-0.67-then-0.12 swing is an artifact of restarting, not DGM's behavior (with a
-persistent archive the 0.67 policy would still be present, so the best could not
-fall to 0.12). The correct evaluation runs DGM as one continuous process whose
-archive carries across runs, against GEPA whose population is fresh each run and so
-is an i.i.d. draw; DGM should ratchet up where GEPA oscillates. That run is pending;
-until then, only the GEPA-over-SPO result is established here.
+The DGM comparison above was flawed: it restarted DGM from a deleted archive each
+run, which strips out the archive mechanism that defines the method. DGM is
+archive-evolutionary: the archive persists and accumulates, never discarding a
+variant, so its best is a ratchet that holds or climbs. The corrected experiment
+(`experiments/persona_methods_over_runs.py`) runs DGM as one continuous process
+whose archive carries across runs, against SPO and GEPA which start fresh each run.
+
+The corrected two-run result, held-out test, on Sonnet 4.5:
+
+| method | run 1 train/test | run 2 train/test |
+| --- | --- | --- |
+| SPO (fresh) | 0.38 / 0.37 | 0.24 / 0.06 |
+| GEPA (fresh) | 0.45 / 0.32 | 0.21 / 0.67 |
+| DGM (persistent) | 0.52 / 0.21 | 0.16 / 0.24 |
+
+On the held-out test DGM held and slightly climbed across runs (0.21 to 0.24), not
+crashing the way the flawed restart design showed, which is the ratchet behaving as
+expected. But the run also exposes the real bottleneck: **single-sample evaluation
+noise now dominates**. DGM's train score fell 0.52 to 0.16, which is impossible for
+a true ratchet (run 2's archive is a superset of run 1's, so the best-by-train can
+only rise); it fell only because each candidate is scored on one noisy rollout, so
+the selected best fluctuates regardless of what the archive holds. The same noise
+muddies the headline: in run 1 SPO (0.37) edged GEPA (0.32), then in run 2 GEPA
+(0.67) crushed SPO (0.06). Averaged, GEPA still beats SPO, but no single run is
+trustworthy, and the differences we want to measure are smaller than the noise.
+
+The fix is to denoise the evaluation: average several rollouts per candidate before
+selecting and scoring, which turns the wobbly single-sample best into a stable
+estimate and would let both the GEPA-over-SPO gap and the DGM ratchet show cleanly.
+The runner takes a SAMPLES knob for this.
 
 For contrast, the same experiment on the weak haiku agent put GEPA and DGM together
 at 0.44 (both at the low ceiling) and SPO at 0.06: enough to show the population and
