@@ -98,6 +98,7 @@ class Agent:
         system_prompt: Artifact,
         tools: list[Tool] | None = None,
         model: str = "gpt-4o-mini",
+        temperature: float | None = None,
         max_iterations: int = 10,
         max_tool_calls: int = 20,
         hooks: HookRegistry | None = None,
@@ -118,6 +119,11 @@ class Agent:
         }
         self.tools: dict[str, Tool] = {t.name: t for t in (tools or [])}
         self.model = model
+        # Sampling temperature passed through to the LLM call; None leaves the
+        # provider default. Set low to make evaluation near-deterministic so a
+        # single rollout is a reliable measurement (the search uses the proposer,
+        # not the agent, for exploration, so a cold agent does not hurt it).
+        self.temperature = temperature
         self.max_iterations = max_iterations
         self.max_tool_calls = max_tool_calls
         self.hooks = hooks or HookRegistry()
@@ -209,6 +215,7 @@ class Agent:
             system_prompt=new_system_prompt,
             tools=new_tools,
             model=self.model,
+            temperature=self.temperature,
             max_iterations=self.max_iterations,
             max_tool_calls=self.max_tool_calls,
             hooks=None,  # fresh HookRegistry; guardrails re-register in __init__
@@ -376,10 +383,14 @@ class Agent:
                     return refusal_msg, trajectory
                 _apply_input_patch(memory, pre_model_results)
 
+                extra: dict[str, Any] = {}
+                if self.temperature is not None:
+                    extra["temperature"] = self.temperature
                 response = await helix_acompletion(
                     model=self.model,
                     messages=memory.messages(),
                     tools=tool_specs,
+                    **extra,
                 )
                 msg = response.choices[0].message
                 assistant_entry: dict[str, Any] = {"role": "assistant", "content": msg.content or ""}
