@@ -119,6 +119,7 @@ def build_travel_agent(
     *,
     system_prompt: Artifact | None = None,
     model: str = DEFAULT_MODEL,
+    temperature: float | None = None,
     tool_defaults: dict[str, str] | None = None,
     extra_tools: list[Any] | None = None,
 ) -> Agent:
@@ -151,6 +152,7 @@ def build_travel_agent(
         system_prompt=system_prompt or build_genesis_prompt(),
         tools=tools,
         model=model,
+        temperature=temperature,
     )
 
 
