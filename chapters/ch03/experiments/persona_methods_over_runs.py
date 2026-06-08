@@ -40,12 +40,13 @@ from agents.travel_sim import reconstruct_trip
 load_env()
 
 AGENT_MODEL = "claude-sonnet-4-5"
-PROPOSER_MODEL = "claude-sonnet-4-6"
+PROPOSER_MODEL = "claude-opus-4-8"  # strongest proposer; tests if candidate quality was the ceiling
+AGENT_TEMPERATURE = 0.0  # near-deterministic eval, so one rollout is a reliable measurement
 RUNS_N = 2
 ROUNDS = 8
 GEPA_POP, GEPA_GEN = 4, 2
-SAMPLES = 4        # rollouts averaged per candidate per task to denoise selection/scoring
-TOPK = 4           # finalists from the single-sample first pass that get multi-sampled
+SAMPLES = 1        # at temperature 0 a single rollout is reliable; no multi-sampling needed
+TOPK = 64          # high enough that every unique candidate is measured once and best is picked
 CONCURRENCY = 4    # bounded parallel rollouts during re-measurement (search stays sequential)
 SEM = asyncio.Semaphore(CONCURRENCY)
 TOOL_DEFAULTS = {"default_cabin": "economy", "default_rate_code": "Q"}
@@ -62,7 +63,8 @@ def out(s):
 
 def agent(policy):
     return build_travel_agent(DESCS, system_prompt=build_persona_policy(policy),
-                              model=AGENT_MODEL, tool_defaults=TOOL_DEFAULTS)
+                              model=AGENT_MODEL, temperature=AGENT_TEMPERATURE,
+                              tool_defaults=TOOL_DEFAULTS)
 
 
 async def _rollout(policy, task):
@@ -182,8 +184,8 @@ async def main_async():
     finally:
         await dgm_imp.stop()
 
-    out(f"\n=== SPO vs GEPA vs DGM over {RUNS_N} runs ({AGENT_MODEL}, held-out test) ===")
-    out(f"  selection denoised: top-{TOPK} finalists re-measured at {SAMPLES} rollouts/candidate.")
+    out(f"\n=== SPO vs GEPA vs DGM over {RUNS_N} runs ({AGENT_MODEL} @ temp {AGENT_TEMPERATURE}, held-out test) ===")
+    out(f"  proposer {PROPOSER_MODEL}; agent at temp {AGENT_TEMPERATURE} so one rollout is a reliable measurement.")
     out("  SPO/GEPA start fresh each run; DGM keeps a persistent, accumulating archive.\n")
     out(f"  {'method':<22}" + "".join(f"{'run'+str(r)+' tr/te':>14}" for r in range(1, RUNS_N + 1)))
     for idx, label in ((1, "SPO (fresh)"), (2, "GEPA (fresh)"), (3, "DGM (persistent)")):
