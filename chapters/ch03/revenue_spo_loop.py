@@ -31,14 +31,14 @@ from helix.signal import Cost, GapMeasurement, Preference
 
 from agents.revenue import (
     POLICY_GENESIS, TASK_REQUEST, build_revenue_agent, build_revenue_policy,
-    reconstruct_answer, score_with_feedback,
+    reconstruct_answer, score_smooth_with_feedback,
 )
 
 load_env()
 
 AGENT_MODEL = "claude-sonnet-4-5"      # runs the task; temperature 0 makes scoring deterministic
-PROPOSER_MODEL = "claude-opus-4-8"     # rewrites the prompt from the scorer's feedback
-ROUNDS = 6
+PROPOSER_MODEL = "claude-sonnet-4-5"   # mid-tier on purpose: it cannot hold all rules at once
+ROUNDS = 10
 ARCHIVE_PATH = Path(__file__).parent / "runs" / "revenue_spo.sqlite"
 
 # SPO's proposer knows the task and sees the scorer's outcome feedback, but NOT the
@@ -63,7 +63,7 @@ async def measure(content: str) -> tuple[float, str]:
     against the ground truth, returning (score, feedback)."""
     agent = build_revenue_agent(content, model=AGENT_MODEL, temperature=0.0)
     _, trajectory = await agent.run(TASK_REQUEST)
-    return score_with_feedback(reconstruct_answer(trajectory))
+    return score_smooth_with_feedback(reconstruct_answer(trajectory))
 
 
 def _fresh_archive() -> SQLiteArchive:
