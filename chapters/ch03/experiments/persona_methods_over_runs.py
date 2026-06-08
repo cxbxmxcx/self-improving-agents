@@ -51,7 +51,9 @@ CONCURRENCY = 4    # bounded parallel rollouts during re-measurement (search sta
 SEM = asyncio.Semaphore(CONCURRENCY)
 TOOL_DEFAULTS = {"default_cabin": "economy", "default_rate_code": "Q"}
 DESCS = persona_descriptions()
-TASKS = Path(__file__).parent.parent / "travel_persona_tasks.json"
+# Persona-city task set: 20 train / 5 held-out test, balanced so the held-out
+# score measures generalization across parallel cities (see gen_persona_city_tasks.py).
+TASKS = Path(__file__).parent.parent / "travel_persona_city_tasks.json"
 TRAIN = load_persona_tasks(TASKS, "train")
 TEST = load_persona_tasks(TASKS, "test")
 RUNS = Path(__file__).parent.parent / "runs"
