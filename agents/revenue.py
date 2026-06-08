@@ -164,6 +164,24 @@ def score_revenue(answer: Any, top_n: int = 3) -> float:
     return hits / len(truth) if truth else 0.0
 
 
+def score_with_feedback(answer: Any, top_n: int = 3) -> tuple[float, str]:
+    """Score plus coarse feedback for the proposer: which leaderboard positions are
+    wrong and in which direction, but NOT the correct numbers, so the search has to
+    discover the rule rather than memorize the answer."""
+    truth = ground_truth(top_n)
+    got = _parse_answer(answer)
+    notes = []
+    for i, (tn, tv) in enumerate(truth):
+        if i >= len(got):
+            notes.append(f"position {i + 1}: no rep reported")
+        elif got[i][0].lower() != tn.lower():
+            notes.append(f"position {i + 1}: wrong rep '{got[i][0]}'")
+        elif abs(got[i][1] - tv) > 0.01:
+            notes.append(f"position {i + 1}: '{tn}' total is " + ("too high" if got[i][1] > tv else "too low"))
+    feedback = "all positions correct" if not notes else "; ".join(notes)
+    return score_revenue(answer, top_n), feedback
+
+
 # ---------------------------------------------------------------------------
 # Per-run query session (a contextvar, so concurrent rollouts auto-isolate)
 # ---------------------------------------------------------------------------
@@ -357,6 +375,22 @@ POLICY_ORACLE = (
     "refund subtracted), sum it by rep_name, take the top 3, and report with "
     "summarize(handle, 'rep_name', 'line_revenue')."
 )
+
+
+def schema_description() -> str:
+    """The database schema, for whoever is improving the agent's prompt. A real
+    prompt engineer would know this; from it plus the scorer's feedback, the search
+    can infer which rules the prompt is missing without being handed the answer."""
+    return (
+        "Database schema:\n"
+        "- orders(order_id, customer_id, rep_id, order_date, status); status is one of "
+        "'ok', 'cancelled', 'returned'.\n"
+        "- line_items(order_id, product_id, qty, unit_price, discount, refund); discount is a "
+        "fraction 0..1, refund is a dollar amount on that line.\n"
+        "- reps(rep_id, rep_name); customers(customer_id, customer_name); products(product_id, product_name).\n"
+        "Tools: load_table, filter_rows, join_tables, compute_column, date_bucket, aggregate, "
+        "sort_top_n, summarize."
+    )
 
 
 def build_revenue_policy(content: str) -> Artifact:
