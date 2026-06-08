@@ -56,17 +56,21 @@ PRODUCTS = [
 # are the status traps; their line totals are small, so including them shifts a
 # top rep's value without reordering the board, keeping partial credit smooth.
 ORDERS = [
-    {"order_id": "O1", "customer_id": "C1", "rep_id": "R1", "order_date": "2026-01-10", "status": "ok"},
-    {"order_id": "O2", "customer_id": "C2", "rep_id": "R2", "order_date": "2026-01-20", "status": "ok"},
-    {"order_id": "O3", "customer_id": "C1", "rep_id": "R3", "order_date": "2026-02-05", "status": "ok"},
-    {"order_id": "O4", "customer_id": "C3", "rep_id": "R4", "order_date": "2026-02-15", "status": "cancelled"},
-    {"order_id": "O5", "customer_id": "C2", "rep_id": "R4", "order_date": "2026-03-01", "status": "ok"},
-    {"order_id": "O6", "customer_id": "C4", "rep_id": "R2", "order_date": "2026-03-10", "status": "ok"},
-    {"order_id": "O7", "customer_id": "C3", "rep_id": "R3", "order_date": "2026-03-20", "status": "ok"},
-    {"order_id": "O8", "customer_id": "C1", "rep_id": "R4", "order_date": "2026-03-25", "status": "ok"},
-    {"order_id": "O12", "customer_id": "C2", "rep_id": "R2", "order_date": "2026-02-20", "status": "returned"},
-    {"order_id": "O9", "customer_id": "C2", "rep_id": "R3", "order_date": "2026-04-05", "status": "ok"},
-    {"order_id": "O11", "customer_id": "C4", "rep_id": "R1", "order_date": "2025-11-15", "status": "ok"},
+    {"order_id": "O1", "customer_id": "C1", "rep_id": "R1", "order_date": "2026-01-10", "status": "ok", "channel": "direct", "payment": "paid"},
+    {"order_id": "O2", "customer_id": "C2", "rep_id": "R2", "order_date": "2026-01-20", "status": "ok", "channel": "direct", "payment": "paid"},
+    {"order_id": "O3", "customer_id": "C1", "rep_id": "R3", "order_date": "2026-02-05", "status": "ok", "channel": "direct", "payment": "paid"},
+    {"order_id": "O4", "customer_id": "C3", "rep_id": "R4", "order_date": "2026-02-15", "status": "cancelled", "channel": "direct", "payment": "paid"},
+    {"order_id": "O5", "customer_id": "C2", "rep_id": "R4", "order_date": "2026-03-01", "status": "ok", "channel": "direct", "payment": "paid"},
+    {"order_id": "O6", "customer_id": "C4", "rep_id": "R2", "order_date": "2026-03-10", "status": "ok", "channel": "direct", "payment": "paid"},
+    {"order_id": "O7", "customer_id": "C3", "rep_id": "R3", "order_date": "2026-03-20", "status": "ok", "channel": "direct", "payment": "paid"},
+    {"order_id": "O8", "customer_id": "C1", "rep_id": "R4", "order_date": "2026-03-25", "status": "ok", "channel": "direct", "payment": "paid"},
+    {"order_id": "O12", "customer_id": "C2", "rep_id": "R2", "order_date": "2026-02-20", "status": "returned", "channel": "direct", "payment": "paid"},
+    # Two more gotchas: an internal-channel order (inter-company transfer, not real
+    # revenue) and an unpaid (pending) order. A naive agent counts both.
+    {"order_id": "O20", "customer_id": "C1", "rep_id": "R3", "order_date": "2026-02-12", "status": "ok", "channel": "internal", "payment": "paid"},
+    {"order_id": "O21", "customer_id": "C4", "rep_id": "R2", "order_date": "2026-03-15", "status": "ok", "channel": "direct", "payment": "pending"},
+    {"order_id": "O9", "customer_id": "C2", "rep_id": "R3", "order_date": "2026-04-05", "status": "ok", "channel": "direct", "payment": "paid"},
+    {"order_id": "O11", "customer_id": "C4", "rep_id": "R1", "order_date": "2025-11-15", "status": "ok", "channel": "direct", "payment": "paid"},
 ]
 # A 'refund' column on line items reduces net revenue; a capable agent applies the
 # discount but ignores refunds unless told. O7 (Cy) carries the refund trap.
@@ -81,6 +85,8 @@ LINE_ITEMS = [
     {"order_id": "O7", "product_id": "P2", "qty": 6, "unit_price": 50, "discount": 0.0, "refund": 50},
     {"order_id": "O8", "product_id": "P3", "qty": 1, "unit_price": 120, "discount": 0.0, "refund": 0},
     {"order_id": "O12", "product_id": "P1", "qty": 1, "unit_price": 50, "discount": 0.0, "refund": 0},
+    {"order_id": "O20", "product_id": "P1", "qty": 3, "unit_price": 50, "discount": 0.0, "refund": 0},
+    {"order_id": "O21", "product_id": "P2", "qty": 2, "unit_price": 50, "discount": 0.0, "refund": 0},
     {"order_id": "O9", "product_id": "P1", "qty": 5, "unit_price": 100, "discount": 0.0, "refund": 0},
     {"order_id": "O11", "product_id": "P1", "qty": 3, "unit_price": 100, "discount": 0.0, "refund": 0},
 ]
@@ -118,7 +124,10 @@ def ground_truth(top_n: int = 3) -> list[tuple[str, float]]:
     rep_of = {
         o["order_id"]: o["rep_id"]
         for o in ORDERS
-        if o["status"] not in excluded and _quarter_of(o["order_date"]) == target
+        if o["status"] not in excluded
+        and o.get("channel", "direct") == "direct"   # exclude internal transfers
+        and o.get("payment", "paid") == "paid"        # exclude unpaid (pending) orders
+        and _quarter_of(o["order_date"]) == target
     }
     net: dict[str, float] = {}
     for li in LINE_ITEMS:
@@ -162,6 +171,39 @@ def score_revenue(answer: Any, top_n: int = 3) -> float:
         if i < len(got) and got[i][0].lower() == tn.lower() and abs(got[i][1] - tv) <= 0.01:
             hits += 1
     return hits / len(truth) if truth else 0.0
+
+
+def score_smooth(answer: Any, top_n: int = 3) -> float:
+    """Smooth score: for each rep that belongs in the true top-N, credit how close
+    its reported revenue is to the truth (1 when exact, decaying with relative
+    error, 0 if the rep is missing). Unlike the exact-match score this gives partial
+    credit for partial rule-application, so improvement shows as a gradient rather
+    than an all-or-nothing jump."""
+    truth = ground_truth(top_n)
+    got = {str(n).strip().lower(): v for n, v in _parse_answer(answer)}
+    credits = []
+    for tn, tv in truth:
+        pv = got.get(tn.lower())
+        if pv is None:
+            credits.append(0.0)
+        else:
+            credits.append(max(0.0, 1.0 - abs(pv - tv) / max(abs(tv), 1.0)))
+    return sum(credits) / len(credits) if credits else 0.0
+
+
+def score_smooth_with_feedback(answer: Any, top_n: int = 3) -> tuple[float, str]:
+    """Smooth score plus per-rep feedback: which reps are off and in which direction,
+    without the correct numbers, so the search must discover the rules."""
+    truth = ground_truth(top_n)
+    got = {str(n).strip().lower(): v for n, v in _parse_answer(answer)}
+    notes = []
+    for tn, tv in truth:
+        pv = got.get(tn.lower())
+        if pv is None:
+            notes.append(f"{tn}: not reported")
+        elif abs(pv - tv) > 0.01:
+            notes.append(f"{tn}: total is " + ("too high" if pv > tv else "too low"))
+    return score_smooth(answer, top_n), ("all reps correct" if not notes else "; ".join(notes))
 
 
 def score_with_feedback(answer: Any, top_n: int = 3) -> tuple[float, str]:
@@ -368,12 +410,15 @@ POLICY_ORACLE = (
     "is in 2026-Q2, so last quarter is 2026-Q1 (January through March 2026). It does "
     "NOT mean the fourth quarter of the year, and NOT the most recent quarter that "
     "happens to have data. Filter to quarter == '2026-Q1'. (3) EXCLUDE orders whose "
-    "status is 'cancelled' OR 'returned'; only count status 'ok'. (4) Group the "
-    "totals by sales rep (rep_name), not by customer or product. So: join orders to "
-    "line_items for revenue and to reps for the rep name, add a quarter column, keep "
-    "only quarter '2026-Q1' and status 'ok', compute net line revenue (with the "
-    "refund subtracted), sum it by rep_name, take the top 3, and report with "
-    "summarize(handle, 'rep_name', 'line_revenue')."
+    "status is 'cancelled' OR 'returned'; only count status 'ok'. (4) EXCLUDE orders "
+    "whose channel is 'internal' (inter-company transfers, not real revenue); keep "
+    "only channel 'direct'. (5) EXCLUDE orders whose payment is 'pending'; only count "
+    "payment 'paid'. (6) Group the totals by sales rep (rep_name), not by customer or "
+    "product. So: join orders to line_items for revenue and to reps for the rep name, "
+    "add a quarter column, keep only quarter '2026-Q1', status 'ok', channel 'direct', "
+    "and payment 'paid', compute net line revenue (with the refund subtracted), sum it "
+    "by rep_name, take the top 3, and report with summarize(handle, 'rep_name', "
+    "'line_revenue')."
 )
 
 
