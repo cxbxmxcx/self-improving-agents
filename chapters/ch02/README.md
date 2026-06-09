@@ -21,9 +21,8 @@ starting line rather than a build tutorial. `01_helixagent_v0.py` runs a
 basic RAG plus ReAct agent with a fixed prompt so the reader has a
 concrete "before" to improve on. The shared v0 building blocks (genesis
 prompt, retrieve tool, agent factory) live in `agent_v0.py`, which every
-chapter listing imports. The fully annotated build, including the Ch 3
-tool-description scaffolding, lives in
-`chapter_appendices/getting_started/`.
+chapter listing imports. The Ch 3 tool-description scaffolding builds on
+the same blocks in `chapter_appendices/getting_started/`.
 
 Online improvement (auto-promotion, no labeled eval set, rolling
 spot-checks) is a Ch 8 topic — it composes with HITL and feedback in a

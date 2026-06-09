@@ -14,9 +14,8 @@ from the archive instead of a hardcoded genesis. The agent loop never changes.
 
 The shared v0 building blocks (genesis prompt, retrieve tool, agent factory)
 live in `agent_v0.py` next to this file; this listing imports them and runs the
-agent where the reader can see it. The fully annotated build, including the Ch 3
-tool-description scaffolding, lives in
-`chapter_appendices/getting_started/helixagent_v0.py`.
+agent where the reader can see it. The Ch 3 tool-description scaffolding builds
+on the same blocks in `chapter_appendices/getting_started/helixagent_v0.py`.
 """
 
 from __future__ import annotations
