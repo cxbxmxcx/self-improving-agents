@@ -240,3 +240,6 @@ chapters/*/runs/
 *.sqlite
 *.sqlite-journal
 
+# Source PDFs are fetched by ingestion/download_corpus.py, not shipped in git
+# (the built index at data/helix_corpus.lance/ ships instead).
+ingestion/pdfs/

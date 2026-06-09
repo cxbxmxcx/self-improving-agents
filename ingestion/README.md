@@ -33,9 +33,11 @@ rebuilds from scratch. Drop in new PDFs, re-run, commit the new
 
 ## What to put in `ingestion/pdfs/`
 
-Anything you want HelixAgent to retrieve from. The book ships a default corpus
-(papers from the agent literature) so chapter scripts work out of the box.
-Readers building their own agents replace the corpus with their own PDFs.
+Anything you want HelixAgent to retrieve from. The PDFs themselves are not
+tracked in git; `python ingestion/download_corpus.py` fetches the book's
+default paper set, and the built index at `data/helix_corpus.lance/` ships in
+the repo so chapter scripts work out of the box without either step. Readers
+building their own agents replace the corpus with their own PDFs.
 
 ## Sizing
 
