@@ -225,8 +225,12 @@ __marimo__/
 
 # Ignore ad-hoc LanceDB databases used for testing, but keep the shipped
 # corpus at data/helix_corpus.lance/ tracked in git so readers get it for free.
+# The bare !dir/ negation is not enough: the nested corpus.lance/ directory
+# re-matches *.lance/, so its contents stay ignored. The /** line wins for
+# every descendant because it appears after the ignore pattern.
 *.lance/
 !data/helix_corpus.lance/
+!data/helix_corpus.lance/**
 
 # Sentence-transformers / Hugging Face caches
 .cache/
