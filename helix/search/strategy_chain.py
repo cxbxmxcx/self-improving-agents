@@ -110,14 +110,20 @@ class StrategyChain:
         async for variant in self.active_strategy.propose(
             seed=seed, signal=signal, archive=archive, budget=budget
         ):
-            # Tag the variant's metadata so the archive records which
-            # strategy in the chain produced it.
-            variant.metadata = {
-                **(variant.metadata or {}),
-                "strategy_chain_kind": self.active_strategy.kind.value,
-                "strategy_chain_idx": self._active_idx,
-            }
-            yield variant
+            # Re-wrap rather than mutate: the inner strategy may keep a
+            # reference to its variant, and the chain tag is this wrapper's
+            # concern. The archive records which strategy produced it.
+            yield Variant(
+                artifact=variant.artifact,
+                parent=variant.parent,
+                search_method=variant.search_method,
+                measurement=variant.measurement,
+                metadata={
+                    **(variant.metadata or {}),
+                    "strategy_chain_kind": self.active_strategy.kind.value,
+                    "strategy_chain_idx": self._active_idx,
+                },
+            )
 
     async def select(
         self,
