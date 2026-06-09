@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git fetch *)",
+      "Bash(git merge *)",
+      "Bash(git stash *)",
+      "Bash(python -m pytest *)",
+      "Bash(.venv/Scripts/python.exe -m pytest *)",
+      "Bash(python -m compileall *)",
+      "Bash(python -m py_compile *)",
+      "Bash(sqlite3 *)",
+      "Bash(rm *)"
+    ]
+  }
+}
