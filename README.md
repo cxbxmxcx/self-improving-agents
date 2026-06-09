@@ -1,4 +1,4 @@
-# Self-Improving Agents — companion repository
+# Self-Improving Agents: companion repository
 
 Reference implementation of the architecture defined in [`SPEC.md`](SPEC.md),
 companion to *Self-Improving Agents* by Micheal Lanham (Manning, in MEAP).
@@ -20,6 +20,7 @@ agents/                 example agents (helpdesk, travel, revenue, ...)
 chapter_appendices/     appendix A (setup), appendix B (RAG), ch3 v0 scaffolding
 ingestion/              PDF -> LanceDB ingestion pipeline
 data/helix_corpus.lance the shipped corpus (built from ingestion/pdfs/)
+docs/architecture/      editable diagram sources (drawio) for the book figures
 tests/                  spec-conformance tests
 SPEC.md                 architectural specification (source of truth)
 DESIGN_NOTES.md         the why behind the spec
@@ -90,7 +91,7 @@ A production-style chat UI. Sidebar picks the agent (from `agents/*.py`),
 sets identity (session_id / user_id / org_id), and points at an archive so
 the agent uses the current champion prompt. Thumbs / regenerate / copy
 buttons under each agent response feed the FeedbackStore. Default agent is
-`agents/helpdesk.py` — a RAG assistant with episodic, semantic, and
+`agents/helpdesk.py`: a RAG assistant with episodic, semantic, and
 procedural memory.
 
 ## Explore a run in the dashboard
@@ -104,12 +105,12 @@ streamlit run helix/dashboard/app.py
 
 The dashboard mines the archive, trajectory cache, and round log to show:
 
-- **Overview** — current champion, score range, by-method breakdown
-- **Lineage** — interactive tree of every artifact, colored by which Search produced it
-- **Compare** — side-by-side prompt diff between any two artifacts, with measurement history
-- **Verdicts** — every per-question judge decision, filterable by version, band, role
-- **Replay** — full trajectory inspection for any cached (artifact, question) pair, with cross-trajectory diff
-- **Rounds** — score progression over rounds, promotion markers, cost timeline
+- **Overview**: current champion, score range, by-method breakdown
+- **Lineage**: interactive tree of every artifact, colored by which Search produced it
+- **Compare**: side-by-side prompt diff between any two artifacts, with measurement history
+- **Verdicts**: every per-question judge decision, filterable by version, band, role
+- **Replay**: full trajectory inspection for any cached (artifact, question) pair, with cross-trajectory diff
+- **Rounds**: score progression over rounds, promotion markers, cost timeline
 
 Point the sidebar at a different archive to compare runs side by side.
 

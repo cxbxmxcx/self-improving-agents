@@ -58,16 +58,16 @@ This positions the book as the serious practitioner-author response to the 2026 
 
 The spec defines ten primitives. They compose into the entire book. No new primitives are introduced after Chapter 1.
 
-1. **Artifact** — anything mutable under search, versioned with parent pointers, content-addressed.
-2. **Trajectory** — structured record of one agent run, replayable, the unit memory/eval/reflection learn from.
-3. **Signal** — anything that returns a GapMeasurement; absorbs ground-truth, LLM-as-Judge, ContrastiveJudge, PRM, reflection, formal proof.
-4. **Search** — proposes-and-selects variants guided by a signal; absorbs hill-climb, SPO, GEPA, MIPROv2, AFlow, DGM, MemRL, HyperAgents.
-5. **Archive** — Pareto-aware store of historical variants with quality-diversity selection.
-6. **Agent Loop + Hooks** — fixed canonical loop with nine hook points; never changes after Chapter 2.
-7. **Memory** — four tiers (working, episodic, semantic, procedural) behind one contract; entries are artifacts.
-8. **Eval** — tournament-capable, drift-aware; rubrics are artifacts that themselves decay.
-9. **HITL** — approval gate, structured proposal with behavior diffs, four-tier ladder.
-10. **Observability Bus** — OpenTelemetry events; drift detection, cost dashboards, runbooks are consumers.
+1. **Artifact**: anything mutable under search, versioned with parent pointers, content-addressed.
+2. **Trajectory**: structured record of one agent run, replayable, the unit memory/eval/reflection learn from.
+3. **Signal**: anything that returns a GapMeasurement; absorbs ground-truth, LLM-as-Judge, ContrastiveJudge, PRM, reflection, formal proof.
+4. **Search**: proposes-and-selects variants guided by a signal; absorbs hill-climb, SPO, GEPA, MIPROv2, AFlow, DGM, MemRL, HyperAgents.
+5. **Archive**: Pareto-aware store of historical variants with quality-diversity selection.
+6. **Agent Loop + Hooks**: fixed canonical loop with nine hook points; never changes after Chapter 2.
+7. **Memory**: four tiers (working, episodic, semantic, procedural) behind one contract; entries are artifacts.
+8. **Eval**: tournament-capable, drift-aware; rubrics are artifacts that themselves decay.
+9. **HITL**: approval gate, structured proposal with behavior diffs, four-tier ladder.
+10. **Observability Bus**: OpenTelemetry events; drift detection, cost dashboards, runbooks are consumers.
 
 ---
 
@@ -75,14 +75,14 @@ The spec defines ten primitives. They compose into the entire book. No new primi
 
 How the primitives compose into each HelixAgent version:
 
-- **v0 (Ch 2)** — Minimal agent: system prompt as Artifact, tools, working memory. Pure agent loop, no improvement.
-- **v1 (Ch 2)** — Add Signal (LLM-as-Judge pairwise) + Search (SPO) aimed at system prompt. First closed self-improvement loop.
-- **v2 (Ch 3)** — Add evolutionary search (GEPA, DGM) and aim it at tool_description artifacts on a multi-tool task agent. Signal becomes deterministic ground-truth task success; multi-improver and StrategyChain share one archive.
-- **v3 (Ch 4)** — Add episodic + semantic memory tiers (PRE_MODEL reads, SESSION_END writes); memory entries are artifacts. Add MemRL aimed at episodic entries with ExpeL operators, GRPO-style group-relative selection, and OnlineImprover auto-promotion on online-safe layers.
-- **v4 (Ch 5)** — Add Planner/Monitor/Reflector/TSM as three coordinated hooks. Reflection is a Signal applied at SESSION_END.
-- **v5 (Ch 6)** — Aim existing searches at skill artifacts (tool descriptions came under search in Ch 3). Add HITL approval gate on archive commit.
-- **(Ch 7)** — Thought experiments: what each frontier system (DGM, AlphaEvolve, HyperAgents) would compose differently. Primitives unchanged.
-- **v6-v8 (Ch 8-11)** — Eval subsystem replaces ad-hoc signals. HITL ladder configured per artifact kind. Multi-agent is composition (sub-agents are tools). Drift detection consumes the bus.
+- **v0 (Ch 2)**: Minimal agent: system prompt as Artifact, tools, working memory. Pure agent loop, no improvement.
+- **v1 (Ch 2)**: Add Signal (LLM-as-Judge pairwise) + Search (SPO) aimed at system prompt. First closed self-improvement loop.
+- **v2 (Ch 3)**: Add evolutionary search (GEPA, DGM) and aim it at tool_description artifacts on a multi-tool task agent. Signal becomes deterministic ground-truth task success; multi-improver and StrategyChain share one archive.
+- **v3 (Ch 4)**: Add episodic + semantic memory tiers (PRE_MODEL reads, SESSION_END writes); memory entries are artifacts. Add MemRL aimed at episodic entries with ExpeL operators, GRPO-style group-relative selection, and OnlineImprover auto-promotion on online-safe layers.
+- **v4 (Ch 5)**: Add Planner/Monitor/Reflector/TSM as three coordinated hooks. Reflection is a Signal applied at SESSION_END.
+- **v5 (Ch 6)**: Aim existing searches at skill artifacts (tool descriptions came under search in Ch 3). Add HITL approval gate on archive commit.
+- **(Ch 7)**: Thought experiments: what each frontier system (DGM, AlphaEvolve, HyperAgents) would compose differently. Primitives unchanged.
+- **v6-v8 (Ch 8-11)**: Eval subsystem replaces ad-hoc signals. HITL ladder configured per artifact kind. Multi-agent is composition (sub-agents are tools). Drift detection consumes the bus.
 
 By Chapter 11 the framework has accumulated hooks, signal implementations, and consumers, all within the ten primitives. The agent loop is the same eight-line skeleton it was in Chapter 2.
 
@@ -182,16 +182,16 @@ Real agents have multiple artifacts under simultaneous improvement: a system pro
 
 **The decision: one improver per artifact, sharing a factory (SPEC §16.1).** Four alternatives were considered:
 
-1. **Parallel per-artifact improvers** — what we now have.
-2. **Single agent-level improver with sub-searches** — one improver mutates all artifacts per round and measures the bundle.
-3. **Layered sequential search** — improve L1 to convergence, then L2, then L4.
-4. **Per-artifact improvers with an agent-level regression checker** — improvers run locally, a separate watcher catches combination drift.
+1. **Parallel per-artifact improvers**: what we now have.
+2. **Single agent-level improver with sub-searches**: one improver mutates all artifacts per round and measures the bundle.
+3. **Layered sequential search**: improve L1 to convergence, then L2, then L4.
+4. **Per-artifact improvers with an agent-level regression checker**: improvers run locally, a separate watcher catches combination drift.
 
 Option 1 won for three reasons. **(a) The per-artifact improver is teachable as a unit.** "One artifact, one improver, one signal, one search" is the primitive readers can hold in their head; collapsing to a coordinator trades clarity for joint optimality, and the book has to introduce concepts in order. **(b) Most artifacts are weakly coupled in practice.** A memory entry's value rarely depends on the exact wording of the system prompt; a prompt's quality rarely depends on tool internals. Joint search is solving a problem that mostly is not there. **(c) When local-good-global-bad does happen, the next round catches it.** Each improver's signal measures the *whole agent*, not the bare artifact. The score recorded against a prompt candidate is the score of that prompt running with the current live memory and the current live tool code; combination drift surfaces in the next round's measurement, not in a separate guardrail.
 
 **Why Option 4 (AgentRegression) was considered and dropped.** An earlier draft of this design added a separate watcher that re-evaluated the full live combination on every promotion and rolled back regressions. It got dropped because each improver's signal already evaluates the full agent; a separate regression check would double the eval cost without adding new information. The promotion log plus measurement attribution by signal (§5.2.1) gives the same audit trail.
 
-**Why the factory resolves dependencies, not the improver.** When an improver tests a candidate, the factory call needs the full artifact bundle. Two options for where the missing artifacts come from: the improver looks them up before calling the factory, or the factory looks them up internally. The factory won because (a) the factory is the single source of truth for what artifacts compose the agent; putting the dependency list on each improver duplicates that knowledge and the two can drift apart, (b) production deployment calls the same factory, so the same code path serves training and serving, (c) the improver's signature stays minimal — `target_artifact_id` plus the standard pieces, no `dependencies=[...]` parameter.
+**Why the factory resolves dependencies, not the improver.** When an improver tests a candidate, the factory call needs the full artifact bundle. Two options for where the missing artifacts come from: the improver looks them up before calling the factory, or the factory looks them up internally. The factory won because (a) the factory is the single source of truth for what artifacts compose the agent; putting the dependency list on each improver duplicates that knowledge and the two can drift apart, (b) production deployment calls the same factory, so the same code path serves training and serving, (c) the improver's signature stays minimal: `target_artifact_id` plus the standard pieces, no `dependencies=[...]` parameter.
 
 **The eventual-consistency property.** Each improver round measures its candidate against the artifacts that are live at the moment the round runs. If another improver promotes between rounds, subsequent measurements pick up the new live combination automatically. There is no synchronization barrier, no coordinated rollback, no "freeze all improvers while one is running" protocol. The framework trusts the next round to correct any drift; the dashboard surfaces score trends so operators can see if drift is accumulating.
 
@@ -215,13 +215,13 @@ The signal layer had three gaps relative to the chapters that need to come next.
 
 ## 13. Agent-side artifact wrappers: Guardrail and ToolFromArtifact
 
-The framework supports two artifact kinds that bolt onto the agent's lifecycle in structured ways: guardrails (CODE at L4) and tools (CODE at L4 paired with TOOL_DESCRIPTION at L1). Both are wired via convenience wrappers — `Guardrail` and `ToolFromArtifact` — that turn artifacts into typed Agent constructor parameters. Neither is a new primitive.
+The framework supports two artifact kinds that bolt onto the agent's lifecycle in structured ways: guardrails (CODE at L4) and tools (CODE at L4 paired with TOOL_DESCRIPTION at L1). Both are wired via convenience wrappers (`Guardrail` and `ToolFromArtifact`) that turn artifacts into typed Agent constructor parameters. Neither is a new primitive.
 
-**Why guardrails are CODE (L4), not a new artifact kind.** An earlier draft introduced `ArtifactKind.GUARDRAIL` as an L1 kind on the theory that guardrail "rules" were prompt-like. That was wrong: most production guardrails (PII regex, schema validation, length caps, refusal lists) are deterministic Python, not LLM-driven judgment. They are exactly what `ArtifactKind.CODE` already represents. Grounding and critic agents — which *are* LLM-driven and *do* take prompts — are not guardrails; they are agents in their own right, with their own L1 prompt artifacts and their own improvers. The multi-agent chapter demonstrates them as a composition pattern (an answer agent plus a critic agent, each independently improved) without needing a new artifact kind.
+**Why guardrails are CODE (L4), not a new artifact kind.** An earlier draft introduced `ArtifactKind.GUARDRAIL` as an L1 kind on the theory that guardrail "rules" were prompt-like. That was wrong: most production guardrails (PII regex, schema validation, length caps, refusal lists) are deterministic Python, not LLM-driven judgment. They are exactly what `ArtifactKind.CODE` already represents. Grounding and critic agents, which *are* LLM-driven and *do* take prompts, are not guardrails; they are agents in their own right, with their own L1 prompt artifacts and their own improvers. The multi-agent chapter demonstrates them as a composition pattern (an answer agent plus a critic agent, each independently improved) without needing a new artifact kind.
 
-**Why guardrails are typed Agent constructor parameters, not generic hooks.** Hooks already exist (SPEC §6.2) and a guardrail could be implemented as a hook that loads a CODE artifact at construction. Three reasons to elevate guardrails to a typed parameter instead: (a) the typed surface advertises the agent's safety posture — reading the constructor tells you what guardrails are attached, (b) the framework can validate at construction that the artifact's compiled function matches the input/output guardrail contract, (c) production deployment uses the same wrapper, so the lineage of which guardrail version was active for which request is recorded automatically in `Trajectory.artifacts_used`.
+**Why guardrails are typed Agent constructor parameters, not generic hooks.** Hooks already exist (SPEC §6.2) and a guardrail could be implemented as a hook that loads a CODE artifact at construction. Three reasons to elevate guardrails to a typed parameter instead: (a) the typed surface advertises the agent's safety posture: reading the constructor tells you what guardrails are attached, (b) the framework can validate at construction that the artifact's compiled function matches the input/output guardrail contract, (c) production deployment uses the same wrapper, so the lineage of which guardrail version was active for which request is recorded automatically in `Trajectory.artifacts_used`.
 
-**Why refusal is the only short-circuit behavior.** When an output guardrail fails, two patterns exist in the wild: refuse, or loop back and have the agent retry with the guardrail's feedback as context. The framework supports refusal only. The retry pattern is structurally a critic agent — a second agent that judges and rewrites — and belongs to the multi-agent chapter, not to the guardrail wrapper. Conflating the two would make the guardrail's contract ambiguous (does `allow=False` mean "stop" or "try again"?) and would make signal interpretation hard ("did the original answer score 0.7 because it was 0.7 quality, or because the critic rewrote it to 0.7?"). The clean split: guardrails stop, critics rewrite.
+**Why refusal is the only short-circuit behavior.** When an output guardrail fails, two patterns exist in the wild: refuse, or loop back and have the agent retry with the guardrail's feedback as context. The framework supports refusal only. The retry pattern is structurally a critic agent, a second agent that judges and rewrites, and belongs to the multi-agent chapter, not to the guardrail wrapper. Conflating the two would make the guardrail's contract ambiguous (does `allow=False` mean "stop" or "try again"?) and would make signal interpretation hard ("did the original answer score 0.7 because it was 0.7 quality, or because the critic rewrote it to 0.7?"). The clean split: guardrails stop, critics rewrite.
 
 **Why tools sourced from artifacts need two artifacts, not one.** A tool's implementation is L4 code; its LLM-facing description is L1 text. They have different improvement economics: the implementation needs sandboxed code evolution with a test suite, the description can be mutated by SPO with a single LLM call. Bundling them into one artifact would force the description's improver to wait on the implementation's CI cadence, or force the implementation's improver to also run text mutation. The dual-artifact pattern lets each side improve independently while `ToolFromArtifact` keeps the user-facing wiring as one object.
 
@@ -243,7 +243,7 @@ This is the same trade-off the spec already accepted for Signal: `signal.measure
 
 **Why no `agent_factory=` parameter on Search methods either.** GEPA used to take `agent_factory=` so it could iterate over a population of candidates. The same `Agent.with_artifacts` shape applies: GEPA takes `agent=` and calls `agent.with_artifacts({target_id: candidate})` internally. The user-facing surface across Improver and Search becomes uniform.
 
-**Why OnlineImprover has no eval_source.** OfflineImprover takes an `EvalSource` because it needs questions to test candidates against. OnlineImprover does not, because the agent's live trajectories *are* the source of measurement. Adding an eval_source parameter to OnlineImprover would be confusing — what would it mean? — and would invite a hybrid pattern (online improver tests candidates against a held-out eval set) that is achievable today by writing a small subclass but is not the primary contract.
+**Why OnlineImprover has no eval_source.** OfflineImprover takes an `EvalSource` because it needs questions to test candidates against. OnlineImprover does not, because the agent's live trajectories *are* the source of measurement. Adding an eval_source parameter to OnlineImprover would be confusing (what would it mean?) and would invite a hybrid pattern (online improver tests candidates against a held-out eval set) that is achievable today by writing a small subclass but is not the primary contract.
 
 **Why `agent.attach_improver` is online-only meaningful.** OfflineImprover builds its own agent clones; it does not need the agent to be running or attached. OnlineImprover subscribes to the agent's `SESSION_END` hook, so it only works after attachment. The chapter scripts call `attach_improver` for OfflineImprover too, but that's a teaching convenience (it lets the dashboard show which improvers are watching which agent); the call is structurally a no-op for offline improvement.
 
