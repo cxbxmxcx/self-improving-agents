@@ -129,50 +129,6 @@ ACTIVITIES: list[Activity] = [
     Activity("AC312", "ORD", "Deep Dish Pizza Tour", "food", 55, 2.0),
 ]
 
-# ---------------------------------------------------------------------------
-# Parallel persona-experiment cities (Chapter 3 generalization test)
-# ---------------------------------------------------------------------------
-# Five structurally identical destination cities, so holding out a city tests
-# whether a policy's persona-tailoring strategy generalizes, not whether one
-# city happens to stock what a persona needs. Each city carries the same hotel
-# tiers (a 9+ premium, an 8+ pool option, a budget room), the same five activity
-# categories, and the same SFO fares; only the labels differ. Appended to the
-# shared dataset with non-colliding ids, and invisible to the JFK/LAX/ORD tasks
-# because the search tools filter by city.
-_PERSONA_CITIES: dict[str, str] = {
-    "MIA": "Miami", "DEN": "Denver", "BOS": "Boston", "ATL": "Atlanta", "AUS": "Austin",
-}
-# (name template, rating, base nightly, amenities) - identical tiers per city.
-_PC_HOTEL_TIERS = [
-    ("Grand {c}", 9.3, 380, ("gym", "bar", "pool", "wifi")),     # luxury / business (9+)
-    ("{c} Garden Resort", 8.5, 240, ("pool", "wifi", "gym")),    # family (pool, 8+)
-    ("The {c} Boutique", 8.2, 200, ("wifi", "bar")),             # foodie (8+)
-    ("{c} Budget Inn", 6.5, 110, ("wifi",)),                     # solo (cheap, any rating)
-    ("{c} Central Hotel", 8.0, 170, ("wifi", "gym")),            # mid backup
-]
-# (name template, category, price) - all five categories, two food options.
-_PC_ACTIVITIES = [
-    ("{c} Street Food Crawl", "food", 30),
-    ("{c} Tasting Menu", "food", 200),
-    ("{c} Museum of Art", "museum", 28),
-    ("{c} Riverside Walk", "outdoor", 45),
-    ("{c} Heritage Landmark", "landmark", 25),
-    ("{c} Rooftop Lounge", "nightlife", 30),
-    ("{c} Science Center", "museum", 30),
-]
-# (suffix, stops, base price, airline, depart, arrive) - same fares per city.
-_PC_FLIGHTS = [
-    ("N", 0, 210, "United", "08:00", "16:00"),      # nonstop (family/luxury/foodie/business)
-    ("C", 1, 150, "Southwest", "06:30", "17:30"),   # cheaper one-stop (solo's tight budget)
-]
-for _ci, (_code, _city) in enumerate(_PERSONA_CITIES.items()):
-    for _hi, (_n, _r, _p, _am) in enumerate(_PC_HOTEL_TIERS):
-        HOTELS.append(Hotel(f"HP{_ci}{_hi}", _code, _n.format(c=_city), _p, _r, _city, _am))
-    for _ai, (_n, _cat, _p) in enumerate(_PC_ACTIVITIES):
-        ACTIVITIES.append(Activity(f"AP{_ci}{_ai}", _code, _n.format(c=_city), _cat, _p, 2.0))
-    for (_sfx, _stops, _p, _air, _dep, _arr) in _PC_FLIGHTS:
-        FLIGHTS.append(Flight(f"FP{_ci}{_sfx}", "SFO", _code, "2026-06-15", _dep, _arr, _stops, _p, _air))
-
 _FLIGHTS_BY_ID = {f.id: f for f in FLIGHTS}
 _HOTELS_BY_ID = {h.id: h for h in HOTELS}
 _ACTIVITIES_BY_ID = {a.id: a for a in ACTIVITIES}
