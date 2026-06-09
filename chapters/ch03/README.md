@@ -30,6 +30,28 @@ The simulation, agent, and signal live in `agents/travel_sim.py`,
 `dual_improver.py`, `escalating_improver.py`) remain in the directory as the
 prior, judge-based variants for comparison.
 
+## The search-method cost ladder (revenue task)
+
+The chapter's headline demonstration is the cost ladder: SPO, GEPA, and
+DGM run as the identical improvement loop on one deterministic task,
+swapping only the Search object, and score 0.63 < 0.86 < 1.00. The task is
+a revenue data-investigation agent (`agents/revenue.py`) with hidden
+business rules and plain-Python scoring, so the gap between methods is
+mechanical and inspectable, with no LLM judge in the loop.
+
+| Script | Role |
+|--------|------|
+| `revenue_check.py` | Validates the substrate: genesis misses the gotchas, the oracle scores 1.0, both deterministic |
+| `revenue_spo_loop.py` | SPO plateaus at 0.63 on outcome-only feedback |
+| `revenue_gepa_loop.py` | GEPA's trace reflection reaches 0.86, then the population converges |
+| `revenue_dgm_loop.py` | DGM's quality-diversity archive recovers the last rule and hits 1.00 |
+
+The full findings, including why the configuration matters (mid-tier
+proposer, interfering rules, smooth scoring), are written up in
+[`REVENUE_SEARCH_LADDER.md`](REVENUE_SEARCH_LADDER.md). Read that before
+re-running; the result is conditional on the recipe, not a universal
+ranking of the methods.
+
 This chapter is denser than Ch 2 (~30 pages versus ~22). The pedagogy
 remains "build it twice": each method is hand-written first in 80 lines,
 then bridged to its framework class so the reader sees the algorithm

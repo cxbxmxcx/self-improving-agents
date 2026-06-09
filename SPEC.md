@@ -621,13 +621,13 @@ An Agent is composed of: a system prompt (Artifact kind=text, subtype=prompt), z
 
 The minimal agent plus an Improver (§15) wrapping a Signal (LLM-as-Judge pairwise) and a Search (SPO) aimed at the system prompt artifact. The search produces variants, the signal measures them, the archive records them, and the next run reads the live champion from the archive. In offline mode (the Ch 2 default), a human promotes a candidate to live champion via `archive.promote()`; in online mode, the auto-promotion hook does it. This is the entire self-improvement loop at minimal complexity.
 
-### 11.3 The memory-enabled agent (Chapter 3, HelixAgent v2)
+### 11.3 The evolutionary-search agent (Chapter 3, HelixAgent v2)
 
-Adds episodic and semantic memory tiers behind the memory contract. Adds a PRE_MODEL hook that reads from episodic memory and injects relevant entries. Adds a SESSION_END hook that writes the trajectory to episodic memory. Memory entries are artifacts; the entries written this chapter become the artifacts under search next chapter.
+Widens the Chapter 2 loop along all three axes: the search methods grow to GEPA (population, reflective mutation, Pareto selection) and DGM (persistent archive, quality-diversity sampling), the artifact kinds grow to tool_description, and the signal becomes deterministic ground-truth task success on a checkable multi-tool task. Tool descriptions come under search via `TextDescriptionTool` (§16.2.2): the implementation stays a plain callable while the description artifact is mutated. The multi-improver pattern (§16.1) and the escalating StrategyChain run several searches against one artifact through the same shared archive.
 
-### 11.4 The learning-memory agent (Chapter 4, HelixAgent v3)
+### 11.4 The memory-and-online agent (Chapter 4, HelixAgent v3)
 
-Adds MemRL: a Search whose artifact is the episodic memory entry, whose signal is utility, and whose archive is the episodic memory itself. Adds ExpeL-style insight extraction as a different Search aimed at the semantic memory. Adds the sharp-wave-ripple offline consolidation pass as a scheduled job.
+Adds episodic and semantic memory tiers behind the memory contract, with a PRE_MODEL hook that injects relevant entries and a SESSION_END hook that writes the trajectory back. Memory entries are artifacts, which makes them searchable: MemRL is a Search whose artifact is the episodic memory entry, whose signal is utility, and whose archive is the episodic memory itself, with ExpeL's four operators as the mutations. GRPO-style group-relative selection joins as a sibling Search (§4.2.1), and the OnlineImprover (§17) auto-promotes on the online-safe layers with no human gate.
 
 ### 11.5 The metacognitive agent (Chapter 5, HelixAgent v4)
 
@@ -637,7 +637,7 @@ The scaffold is the framework's first composite artifact: a `composite` with sub
 
 ### 11.6 The self-modifying-skills agent (Chapter 6, HelixAgent v5)
 
-Aims existing searches at skill artifacts and tool_description artifacts. A tool under improvement at this layer has only its description mutated; the implementation is still a plain Python callable. When the implementation also comes under improvement (Ch 11/12), the tool becomes a `ToolFromArtifact` (§16.2.2) backed by a CODE artifact for the implementation and a TOOL_DESCRIPTION artifact for the description, each with its own improver. Adds the HITL approval gate as a PRE_OUTPUT hook on the archive's record path: any skill or tool_description mutation surfaces a Proposal before commit. Behavior diffs in the proposal are computed by replaying recent trajectories against the candidate skill.
+Aims existing searches at skill artifacts; tool_description artifacts came under search in Chapter 3. A tool under improvement at this layer has only its description mutated; the implementation is still a plain Python callable. When the implementation also comes under improvement (Ch 11/12), the tool becomes a `ToolFromArtifact` (§16.2.2) backed by a CODE artifact for the implementation and a TOOL_DESCRIPTION artifact for the description, each with its own improver. Adds the HITL approval gate as a PRE_OUTPUT hook on the archive's record path: any skill or tool_description mutation surfaces a Proposal before commit. Behavior diffs in the proposal are computed by replaying recent trajectories against the candidate skill.
 
 ### 11.7 The frontier survey (Chapter 7, HelixAgent thought experiment)
 

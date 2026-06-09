@@ -13,8 +13,12 @@ Spec version implemented: **0.1**.
 
 ```
 helix/                  framework modules (Artifact, Trajectory, Agent, ...)
-chapters/ch02/          HelixAgent v0 and v1 scripts
-ingestion/              PDF → LanceDB ingestion pipeline
+chapters/ch02/          getting started: HelixAgent v0 and v1, SPO offline loop
+chapters/ch03/          evolutionary search: GEPA, DGM, the cost ladder
+chapters/ch04/          memory and online improvement (planned, README only)
+agents/                 example agents (helpdesk, travel, revenue, ...)
+chapter_appendices/     appendix A (setup), appendix B (RAG), annotated v0
+ingestion/              PDF -> LanceDB ingestion pipeline
 data/helix_corpus.lance the shipped corpus (built from ingestion/pdfs/)
 tests/                  spec-conformance tests
 SPEC.md                 architectural specification (source of truth)
@@ -59,14 +63,14 @@ read from there.
 ## Run the baseline agent
 
 ```
-python chapter_appendices/getting_started/helixagent_v0.py
-python chapter_appendices/getting_started/helixagent_v0.py --question "What is GEPA?"
+python chapters/ch02/01_helixagent_v0.py
 ```
 
-The baseline agent (RAG + ReAct, fixed system prompt, no improvement) lives
-in [`chapter_appendices/getting_started/`](chapter_appendices/getting_started/)
-as a refresher for readers who want to see the pre-improvement agent. Chapter 2
-starts from "you have an agent and you want it to get better"; see
+The baseline agent (RAG + ReAct, fixed system prompt, no improvement) is
+Chapter 2's first listing; edit the `question` variable in `main()` to ask
+your own. The fully annotated build lives in
+[`chapter_appendices/getting_started/`](chapter_appendices/getting_started/),
+and the chapter walkthrough is
 [`chapters/ch02/README.md`](chapters/ch02/README.md).
 
 ## Run the tests

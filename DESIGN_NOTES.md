@@ -77,10 +77,10 @@ How the primitives compose into each HelixAgent version:
 
 - **v0 (Ch 2)** — Minimal agent: system prompt as Artifact, tools, working memory. Pure agent loop, no improvement.
 - **v1 (Ch 2)** — Add Signal (LLM-as-Judge pairwise) + Search (SPO) aimed at system prompt. First closed self-improvement loop.
-- **v2 (Ch 3)** — Add episodic + semantic memory tiers. PRE_MODEL hook reads memory, SESSION_END hook writes trajectory.
-- **v3 (Ch 4)** — Add MemRL as a Search aimed at episodic entries. Add ExpeL insight extraction. Add 3 AM offline consolidation.
+- **v2 (Ch 3)** — Add evolutionary search (GEPA, DGM) and aim it at tool_description artifacts on a multi-tool task agent. Signal becomes deterministic ground-truth task success; multi-improver and StrategyChain share one archive.
+- **v3 (Ch 4)** — Add episodic + semantic memory tiers (PRE_MODEL reads, SESSION_END writes); memory entries are artifacts. Add MemRL aimed at episodic entries with ExpeL operators, GRPO-style group-relative selection, and OnlineImprover auto-promotion on online-safe layers.
 - **v4 (Ch 5)** — Add Planner/Monitor/Reflector/TSM as three coordinated hooks. Reflection is a Signal applied at SESSION_END.
-- **v5 (Ch 6)** — Aim existing searches at skill and tool_description artifacts. Add HITL approval gate on archive commit.
+- **v5 (Ch 6)** — Aim existing searches at skill artifacts (tool descriptions came under search in Ch 3). Add HITL approval gate on archive commit.
 - **(Ch 7)** — Thought experiments: what each frontier system (DGM, AlphaEvolve, HyperAgents) would compose differently. Primitives unchanged.
 - **v6-v8 (Ch 8-11)** — Eval subsystem replaces ad-hoc signals. HITL ladder configured per artifact kind. Multi-agent is composition (sub-agents are tools). Drift detection consumes the bus.
 
