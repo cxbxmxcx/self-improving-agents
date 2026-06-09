@@ -85,7 +85,7 @@ python ingestion/build_index.py
 ```
 
 You should also have a populated `chapters/ch02/runs/helix_archive.sqlite`
-from running `05_spo_offline_loop.py` at least once — Ch 3 inherits Ch 2's
+from running `05_spo_offline_loop.py` at least once; Ch 3 inherits Ch 2's
 archive and extends it.
 
 ---
@@ -93,7 +93,7 @@ archive and extends it.
 ## §3.1 The economics of evolutionary search
 
 Chapter 2's SPO works one candidate at a time and accepts on win.
-Evolutionary search keeps *many* candidates alive — a population (GEPA)
+Evolutionary search keeps *many* candidates alive: a population (GEPA)
 or an archive (DGM). The reasons to do this:
 
 1. **Escape local optima.** SPO's hill climb can converge to a prompt
@@ -165,13 +165,13 @@ mutation with Pareto selection*. Three distinctive ideas:
 1. **A population** of N candidates evolves together. Each generation
    produces offspring; the population is replaced by selection.
 2. **Reflective mutation**: instead of "rewrite this prompt to be
-   better," the proposer reads a *trajectory* — what the agent did with
-   this prompt on a specific question — and proposes an edit targeting
+   better," the proposer reads a *trajectory*, what the agent did with
+   this prompt on a specific question, and proposes an edit targeting
    the failure mode. The LLM critiques what went wrong, then edits.
 3. **Pareto selection**: when scoring uses multiple objectives, keep
    the non-dominated front. A candidate that scores higher on quality
    but uses more tokens isn't dominated by a candidate that's better
-   on both — both survive.
+   on both; both survive.
 
 Run:
 
@@ -224,7 +224,7 @@ DGM (Zhang et al., 2025) is *archive-evolutionary search*. Three
 distinctive ideas:
 
 1. **An archive instead of a population.** Every variant ever produced
-   stays in the archive forever. There is no generational replacement —
+   stays in the archive forever. There is no generational replacement:
    nothing is discarded.
 2. **Quality-diversity sampling.** Selecting the seed for the next
    mutation samples from the *whole archive*, weighting both by score
@@ -253,7 +253,7 @@ The script (nothing imported from `helix.search.dgm`):
 - Scores each candidate with `TaskSuccessSignal` (ground truth) and runs
   ~8 rounds, printing which version the sampler forked from each time.
 
-The reader sees that round 10 didn't fork from round 9's winner — it
+The reader sees that round 10 didn't fork from round 9's winner; it
 forked from round 3, because round 3 was high-scoring and the sampler
 hadn't picked from that branch lately. That's the DGM dynamic: history
 is alive, not just the latest generation.
