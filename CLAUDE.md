@@ -16,9 +16,9 @@ The running project across the book is **HelixAgent**, a general-knowledge agent
 
 Read these before making non-trivial decisions:
 
-- `SPEC.md` — the architectural specification (10 primitives, the agent loop, the hook system, the composition map). Treat as the source of truth.
-- `DESIGN_NOTES.md` — the *why* behind the architecture. Read when a spec section seems arbitrary; the reasoning is there.
-- `BOOK_PROPOSAL.md` (when added by author) — the book's audience, scope, table of contents, and chapter goals.
+- `SPEC.md`: the architectural specification (10 primitives, the agent loop, the hook system, the composition map). Treat as the source of truth.
+- `DESIGN_NOTES.md`: the *why* behind the architecture. Read when a spec section seems arbitrary; the reasoning is there.
+- `BOOK_PROPOSAL.md` (when added by author): the book's audience, scope, table of contents, and chapter goals.
 
 ## Non-negotiables (from the spec)
 

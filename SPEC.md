@@ -216,7 +216,7 @@ Child signals must return scores already normalized to `[0, 1]`. The composite's
 
 The composite aggregates `triggered` flags independently of scores. The rule depends on the aggregator: `conservative_min` triggers if *any* child triggered; weighted aggregators trigger if a weighted majority triggered. The composite's `metadata["component_triggers"]` carries the per-child trigger list so a downstream consumer can see which child fired even when the aggregate did not. This is what lets a multi-objective improver react to "latency triggered even though overall score is fine" without reading the underlying components by hand.
 
-A CompositeSignal's own `signal_id` (§3.2) derives from a hash of `(kind, weights, child_ids)`, so two composites with the same children in the same weighting share an id, and two composites with different weights or different children are distinct signals with distinct ids — and their measurements remain separately attributable in the archive (§5.2.1).
+A CompositeSignal's own `signal_id` (§3.2) derives from a hash of `(kind, weights, child_ids)`, so two composites with the same children in the same weighting share an id, and two composites with different weights or different children are distinct signals with distinct ids; their measurements remain separately attributable in the archive (§5.2.1).
 
 ### 3.6 Thresholds and normalization
 
@@ -695,7 +695,7 @@ Section numbers in this spec are stable identifiers, not just ordering: code com
 
 ## 15. The OfflineImprover
 
-The framework defines two improver classes: `OfflineImprover` (§15) and `OnlineImprover` (§17). They share no base class. Both target one artifact, both compose Signal + Search + Archive, both publish `CandidateWins` for the promotion handler chain — but their lifecycles are different enough that conflating them would obscure the distinction. The term "improver" is a category noun for both; readers picking a concrete class pick by improvement *mode*, not by configuration of a single class.
+The framework defines two improver classes: `OfflineImprover` (§15) and `OnlineImprover` (§17). They share no base class. Both target one artifact, both compose Signal + Search + Archive, both publish `CandidateWins` for the promotion handler chain, but their lifecycles are different enough that conflating them would obscure the distinction. The term "improver" is a category noun for both; readers picking a concrete class pick by improvement *mode*, not by configuration of a single class.
 
 OfflineImprover is a long-running, per-artifact optimization driver. It owns its own loop and tests candidates against a labeled `EvalSource`. The agent it improves does not need to be serving traffic; the agent is a definition the improver clones to test variants.
 
@@ -773,7 +773,7 @@ The schedule does not affect what a round does; it affects when. Scheduling is a
 
 Real agents have multiple artifacts under simultaneous improvement: a system prompt at L1, an episodic memory layout at L2, a tool implementation at L4, a tool description back at L1, possibly a guardrail at L4. Each artifact has different mutation economics, different signal stacks, and different layer-based safety constraints.
 
-The framework's answer is **one improver per artifact, sharing one Agent definition**. There is no coordinator, no joint search, no agent-level regression checker. Each improver picks the concrete class — `OfflineImprover` (§15) or `OnlineImprover` (§17) — that matches the artifact's improvement mode.
+The framework's answer is **one improver per artifact, sharing one Agent definition**. There is no coordinator, no joint search, no agent-level regression checker. Each improver picks the concrete class, `OfflineImprover` (§15) or `OnlineImprover` (§17), that matches the artifact's improvement mode.
 
 #### 16.1.1 The shape
 
@@ -842,7 +842,7 @@ Each per-artifact improver should use an eval source that is at least partially 
 
 ### 16.2 Agent-side artifact wrappers
 
-Most artifacts feed into an agent as configuration. Two artifact kinds — guardrails (CODE at L4) and tools (CODE at L4 paired with TOOL_DESCRIPTION at L1) — bolt onto the agent's lifecycle in structured ways. The framework provides two convenience wrappers that turn artifacts into typed agent inputs: `Guardrail` and `ToolFromArtifact`. Neither is a new primitive; both are agent-side adapters.
+Most artifacts feed into an agent as configuration. Two artifact kinds, guardrails (CODE at L4) and tools (CODE at L4 paired with TOOL_DESCRIPTION at L1), bolt onto the agent's lifecycle in structured ways. The framework provides two convenience wrappers that turn artifacts into typed agent inputs: `Guardrail` and `ToolFromArtifact`. Neither is a new primitive; both are agent-side adapters.
 
 #### 16.2.1 Guardrail
 
