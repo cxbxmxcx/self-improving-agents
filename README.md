@@ -17,7 +17,7 @@ chapters/ch02/          getting started: HelixAgent v0 and v1, SPO offline loop
 chapters/ch03/          evolutionary search: GEPA, DGM, the cost ladder
 chapters/ch04/          memory and online improvement (planned, README only)
 agents/                 example agents (helpdesk, travel, revenue, ...)
-chapter_appendices/     appendix A (setup), appendix B (RAG), annotated v0
+chapter_appendices/     appendix A (setup), appendix B (RAG), ch3 v0 scaffolding
 ingestion/              PDF -> LanceDB ingestion pipeline
 data/helix_corpus.lance the shipped corpus (built from ingestion/pdfs/)
 tests/                  spec-conformance tests
@@ -68,7 +68,8 @@ python chapters/ch02/01_helixagent_v0.py
 
 The baseline agent (RAG + ReAct, fixed system prompt, no improvement) is
 Chapter 2's first listing; edit the `question` variable in `main()` to ask
-your own. The fully annotated build lives in
+your own. Its building blocks live in `chapters/ch02/agent_v0.py`, the Ch 3
+tool-description scaffolding extends them in
 [`chapter_appendices/getting_started/`](chapter_appendices/getting_started/),
 and the chapter walkthrough is
 [`chapters/ch02/README.md`](chapters/ch02/README.md).
