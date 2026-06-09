@@ -4,8 +4,8 @@ Chapters 2 and 3 improved L1 text artifacts (system prompts, tool
 descriptions) offline, with a human gate on promotion. Chapter 4 moves
 down a layer to L2 memory and turns the cadence online. Memory entries
 become searchable artifacts; the agent learns from its own traffic as it
-runs; and two RL-style search methods — MemRL for memory and GRPO-style
-group-relative selection for tool calling — join the evolutionary methods
+runs; and two RL-style search methods (MemRL for memory and GRPO-style
+group-relative selection for tool calling) join the evolutionary methods
 from Ch 3 under one Search abstraction.
 
 The chapter's intellectual claim, locked into the spec at §4.2.1:
@@ -59,8 +59,8 @@ is one archive per agent, not one per artifact type.
 
 ## §4.1 Memory entries as searchable artifacts
 
-A memory entry — an episode the agent recalls, a fact it learned, a
-tool-selection preference — is an `Artifact(kind=MEMORY_ENTRY)`. It has a
+A memory entry (an episode the agent recalls, a fact it learned, a
+tool-selection preference) is an `Artifact(kind=MEMORY_ENTRY)`. It has a
 version, a parent pointer, and content. ExpeL's four operators
 (ADD / UPVOTE / DOWNVOTE / EDIT) are mutations that produce new versions.
 
@@ -88,7 +88,7 @@ artifacts with their lineage.
 #   (PRE_MODEL injection) and write path (SESSION_END) both route through
 #   the archive.
 
-# FUTURE [gap 2]: helix/memory/operators.py — ExpeL's ADD/UPVOTE/DOWNVOTE/
+# FUTURE [gap 2]: helix/memory/operators.py: ExpeL's ADD/UPVOTE/DOWNVOTE/
 #   EDIT as named mutations producing new artifact versions with parent
 #   pointers. UPVOTE/DOWNVOTE adjust a utility score in metadata; EDIT
 #   rewrites content; ADD is genesis; all carry lineage.
@@ -102,7 +102,7 @@ The artifact under search is the episodic memory entry. The signal is
 *utility*: did recalling this entry contribute to a better outcome? The
 search reinforces high-utility entries (UPVOTE, keep) and prunes
 low-utility ones (DOWNVOTE, evict). This is reinforcement learning
-expressed as search — the archive is the memory, the operators are
+expressed as search: the archive is the memory, the operators are
 ExpeL's four, and the selection rule is utility-weighted.
 
 Built from scratch, then bridged to the framework's MemRL search.
@@ -115,18 +115,18 @@ python chapters/ch04/minimal_memrl.py
 The hand-written version (~80 lines): run the agent, attribute the
 outcome reward back to the entries it recalled this turn, upvote the ones
 that helped and downvote the ones that didn't, repeat. Reader watches a
-memory store self-curate over several turns — low-utility entries sink and
+memory store self-curate over several turns: low-utility entries sink and
 get pruned; high-utility entries rise and get recalled more often.
 
 ### Framework gaps surfaced by §4.2
 
 ```
-# FUTURE [gap 3]: helix/signals/utility.py — a UtilitySignal that measures
+# FUTURE [gap 3]: helix/signals/utility.py: a UtilitySignal that measures
 #   whether a recalled memory entry contributed to a good outcome. Requires
 #   reward attribution across the trajectory: the entries recalled at
 #   PRE_MODEL share credit for the final outcome. Returns a per-entry score.
 
-# FUTURE [gap 4]: helix/search/memrl.py — MemRL search. The archive IS the
+# FUTURE [gap 4]: helix/search/memrl.py: MemRL search. The archive IS the
 #   memory. propose() yields candidate mutations of memory entries using
 #   ExpeL operators; select() keeps high-utility entries. Reuses the
 #   archive primitive; the distinctive bit is that the "candidates" are
@@ -148,8 +148,8 @@ relative to the group mean, and reinforces the above-average ones. In the
 paper, "reinforce" means a gradient step on model weights.
 
 This chapter uses GRPO's *selection mechanic* with no weight update. We
-sample a group of N tool-calling variants — each from a different prompt
-or tool-description artifact — score each on a tool-call-quality signal,
+sample a group of N tool-calling variants, each from a different prompt
+or tool-description artifact, score each on a tool-call-quality signal,
 compute each variant's advantage relative to the group mean, and promote
 the above-average variants' artifacts. The reinforcement is artifact
 promotion. The model is never touched.
@@ -175,14 +175,14 @@ group.
 ### Framework gaps surfaced by §4.3
 
 ```
-# FUTURE [gap 5]: helix/improvement/group_round.py — run_group_round(). The
+# FUTURE [gap 5]: helix/improvement/group_round.py: run_group_round(). The
 #   N-wise analogue of run_improvement_round (which is pairwise). Sample N
 #   variants, run all N against the eval slice, score all N with an absolute
 #   signal, compute each variant's advantage relative to the group mean,
 #   select the positive-advantage variants. This is a genuinely new round
-#   shape — the framework's third, after pairwise and archive-evolutionary.
+#   shape: the framework's third, after pairwise and archive-evolutionary.
 
-# FUTURE [gap 6]: helix/search/group_relative.py — GroupRelativeSearch.
+# FUTURE [gap 6]: helix/search/group_relative.py: GroupRelativeSearch.
 #   propose() yields a group of N candidates; select() returns the highest
 #   group-relative advantage. Composes with run_group_round.
 
@@ -208,7 +208,7 @@ trajectory drives two things with no human in the loop:
    a rolling window of recent trajectories.
 
 No human gate, because everything here is L2 (memory) or L1
-(tool-description) — online-safe by the layer rule. This is the
+(tool-description), online-safe by the layer rule. This is the
 foundational `OnlineImprover` demonstration. Chapter 8 builds the
 human-gated variant on top, for changes that need review.
 
@@ -259,10 +259,10 @@ search unification) is reused throughout the production half of the book.
 
 ### Build order (proposed, after review)
 
-1. Gap 1 + 2 (memory-as-artifact + operators) — foundational; §4.1 needs it.
-2. Gap 3 + 4 (UtilitySignal + MemRL) — §4.2.
-3. Gap 5 + 6 + 7 (group round + GroupRelativeSearch + tool signal) — §4.3.
-4. Gap 8 (OnlineImprover integration) — §4.4 ties it together.
+1. Gap 1 + 2 (memory-as-artifact + operators): foundational; §4.1 needs it.
+2. Gap 3 + 4 (UtilitySignal + MemRL): §4.2.
+3. Gap 5 + 6 + 7 (group round + GroupRelativeSearch + tool signal): §4.3.
+4. Gap 8 (OnlineImprover integration): §4.4 ties it together.
 
 Each step gets tests and a passing full-suite run before the next, same
 cadence as Chapters 2 and 3.

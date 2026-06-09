@@ -25,7 +25,7 @@ chapter listing imports. The Ch 3 tool-description scaffolding builds on
 the same blocks in `chapter_appendices/getting_started/`.
 
 Online improvement (auto-promotion, no labeled eval set, rolling
-spot-checks) is a Ch 8 topic — it composes with HITL and feedback in a
+spot-checks) is a Ch 8 topic; it composes with HITL and feedback in a
 way that needs both foundations. Evolutionary search (GEPA, multi-search
 strategy chains, tool-description improvement) is Ch 3.
 
@@ -211,10 +211,10 @@ serves the new version. That's the full self-improvement cycle.
 
 Rough order of magnitude on Haiku + Sonnet:
 
-- Reference pass: 20 agent runs × ~5 model calls each — ~$0.10
-- Candidate pass: same shape — ~$0.10
-- Pairwise judge with `SwapAndAgree`: 20 × 2 judge calls on Sonnet — ~$0.30
-- SPO proposer call: 1 × Sonnet — ~$0.01
+- Reference pass: 20 agent runs × ~5 model calls each, ~$0.10
+- Candidate pass: same shape, ~$0.10
+- Pairwise judge with `SwapAndAgree`: 20 × 2 judge calls on Sonnet, ~$0.30
+- SPO proposer call: 1 × Sonnet, ~$0.01
 
 Total per round: roughly **$0.50**. Three rounds: ~$1.50. Use Haiku for
 the judge or skip `SwapAndAgree` for cheaper iterations during
