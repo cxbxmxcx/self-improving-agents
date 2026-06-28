@@ -13,173 +13,184 @@ You already built one measurement in chapter 2: an LLM-as-judge that
 preferred one prompt's answer to another. That is one member of a whole
 family of signals, and a judge's opinion sits at the noisy, cheap end of it.
 This chapter introduces the family, names the primitive underneath it, and
-shows why no single signal is ever quite enough.
+shows why a single climber on any one signal eventually stalls.
 
-Four runnable scripts:
+Six runnable scripts across four sections:
 
 | § | Concept | Script |
 |---|---------|--------|
 | 3.1 | The proof gate, and why we measure instead | `01_godel_gate.py` (no LLM) |
-| 3.2 | The Gap Function and the family of signals | `02_revenue_check.py` |
-| 3.3 | The signal ceiling: two signals on one run | `03_two_signals.py` |
-| 3.4 | SPO and the plateau | `04_revenue_spo_loop.py` |
+| 3.2 | Ground truth, reflection, and the signal ceiling | `02_revenue_check.py`, `03_two_signals.py` |
+| 3.3 | Hill-climbing and SPO: two single-candidate searches | `04_revenue_hillclimb_loop.py`, `05_revenue_spo_loop.py` |
+| 3.4 | The offline loop and the plateau | `06_revenue_climbers_compare.py` (no LLM) |
 
-The search methods that climb past where SPO stops, GEPA and DGM, are
-chapter 4. This chapter ends on the wall they exist to cross.
+The methods that climb past the plateau, GEPA and DGM, are chapter 4. This
+chapter ends on the wall they exist to cross.
 
 ## Prerequisites
 
 You should have completed chapter 2. The revenue task runs entirely in
 memory (`agents/revenue.py`), so it needs no corpus or index; you only need
-a working LLM provider key in `.env`. The one no-LLM demo (`01_godel_gate.py`)
-runs with no key and no cost at all.
+a working LLM provider key in `.env`. Two scripts run with no key and no cost
+at all: `01_godel_gate.py` and `06_revenue_climbers_compare.py`.
 
 ---
 
-## §3.1 The dream of a self-improving machine
+## §3.1 Measuring the gap
 
-A proof is the strongest signal you can have, because if you can prove a
-change helps, you never have to test it. Remember, though, that we are
-improving a language model wired to eight tools, and nobody can prove a
-useful thing about that. So we give up the proof and keep the spirit: a
-change is worth making only if we can show it helped, and the showing is a
-measurement we can trust.
+You have a rewritten prompt in hand, and before you ship it you need to know
+whether it actually helped. A proof would be the strongest answer there is,
+because if you can prove a change helps you never have to test it. We are
+improving a language model wired to eight tools, though, and nobody can prove a
+useful thing about that, so we give up the proof and keep the spirit: a change
+is worth making only if we can show it helped.
 
-Before we walk away from the proof, it helps to see it once. Run the no-LLM
-demo:
+You can see the trade in ten lines:
 
 ```
 python chapters/ch03/01_godel_gate.py
 ```
 
-A tiny `provably_better` gate accepts a candidate only when it can check the
-whole input space and prove the candidate is correct everywhere and cheaper.
-You can prove that about a sort over twenty-four inputs because the space is
-tiny; you cannot prove it about a tool-wired language model, which is exactly
-why the agent gets a measurement instead of a proof. Next to the proof gate
-sits the `empirically_better` gate we actually use, which judges on a single
-sample and can be fooled by an easy one.
+A `provably_better` gate accepts a candidate only when it can check the whole
+input space and prove it correct everywhere; you can do that for a sort over
+twenty-four inputs because the space is tiny. You cannot do it for a tool-wired
+agent, so the agent gets an `empirically_better` gate that judges on a sample
+and can be fooled by an easy one. That gap, proof you cannot have versus
+evidence you can, is the trade every search in this book makes.
+
+Every signal returns the same shape, a `GapMeasurement`, and that one object is
+the spine the whole book hangs on. A ground-truth check fills its `score`, the
+chapter-2 judge fills its `preference`, and a reflection fills its `feedback`,
+but it is always the same object, so the rest of the loop never cares which
+signal ran (`helix/signal.py`).
 
 ---
 
-## §3.2 The Gap Function and the family of signals
-
-Every signal you will ever build does the same job the chapter-2 judge did,
-just less noisily: it looks at what the agent produced and reports the gap
-between that and good. Because the job is always the same, the framework
-gives every signal the same return shape, a `GapMeasurement`, and that one
-shape is the spine the whole book hangs on. A ground-truth check fills its
-`score`, the chapter-2 judge fills its `preference`, and a reflection fills
-its `feedback`, but it is always the same object, so the rest of the loop
-never has to care which signal ran.
+## §3.2 The family of signals
 
 Think of the family as a spectrum. At one end sits proof, certain but almost
-never available; at the other sits the judge, available everywhere but only
-an opinion; ground truth and reflection live in between. As a general rule,
-you reach for the most trustworthy signal your task can actually give you,
-and most tasks cannot give you proof.
+never available; at the other sits the judge, available everywhere but only an
+opinion; ground truth and reflection live in between. As a general rule, you
+reach for the most trustworthy signal your task can actually give you.
 
 ### Ground truth: precise, and only as good as your checker
 
-On the revenue task we already know the right leaderboard, so instead of
-asking an opinion we can check the agent's answer against the truth. That is
-a ground-truth signal: it runs the agent and scores the result against a
-known-correct value, so the same output always earns the same score. That is
-as close to proof as most tasks get.
-
-The catch is that someone has to build that checker, and a checker is itself
-code that can be wrong. A confidently wrong oracle is worse than an honest
-judge, because it scores a bad answer 1.0 and sends your search marching in
-the wrong direction. Remember, ground truth is the most precise signal you
-can have and the most expensive to get right, so you check the checker first.
+On the revenue task we already know the right leaderboard, so we check the
+answer against the truth instead of asking an opinion. The catch is that a
+checker is itself code that can be wrong, and a confidently wrong oracle is
+worse than an honest judge, because it scores a bad answer 1.0 and sends your
+search the wrong way.
 
 ```
 python chapters/ch03/02_revenue_check.py
 ```
 
-It runs a deliberately weak genesis prompt and a deliberately perfect oracle
-twice each at temperature 0. This is the check-the-checker step: if your
-oracle does not score 1.0 on a known-perfect answer, your ground truth is
-broken before any search begins. The revenue check scores with plain Python
-in `agents/revenue.py`; `helix.signals.task_success.TaskSuccessSignal` is the
-same idea in its general, reusable form.
+It runs a weak genesis prompt and a perfect oracle twice each at temperature 0.
+This is the check-the-checker step: if your oracle does not score 1.0 on a
+known-perfect answer, your ground truth is broken before any search begins. The
+check scores with plain Python in `agents/revenue.py`;
+`helix.signals.task_success.TaskSuccessSignal` is the same idea in general form.
 
 ### Reflection: a critique with no score
 
-A reflection signal does something a score never can: it reads the agent's
-trajectory and says what went wrong in words. It fills the `GapMeasurement`
-`feedback` field and leaves `score` empty, because a critique is not a
-number; it is the difference between "the totals are wrong" and "you never
-filtered the internal channel." This is the second new signal of the chapter,
-and `helix.signals.reflection.Reflection` is the framework version that
-chapter 4's GEPA improves against.
+A reflection signal reads the agent's trajectory and says what went wrong in
+words. It fills the `feedback` field and leaves `score` empty, because a
+critique is not a number; it is the difference between "the totals are wrong"
+and "you never filtered the internal channel." It is also the signal chapter
+4's GEPA improves against (`helix/signals/reflection.py`).
 
----
+### The signal ceiling
 
-## §3.3 The signal ceiling: why one signal is never enough
-
-Here is the uncomfortable truth the family hides: no single signal is
-complete. A ground-truth score tells you how wrong you are but never why, and
-a reflection tells you why but never how wrong. This is the
-generation-verification gap, and it is the real reason a search starved of
-information stalls, not just a quirk of one method.
-
-The way to feel it is to put the two signals on the same run and watch each
-fall short of the other:
+Put both signals on the same run and each falls short of the other:
 
 ```
 python chapters/ch03/03_two_signals.py
 ```
 
-The script runs the revenue agent once on the genesis prompt, then measures
-that one trajectory two ways. Ground truth returns a `GapMeasurement` with
-`score` 0.63 and no diagnosis, the symptom; reflection returns one with
-`feedback` naming the three rules the agent skipped (status, channel,
-payment) and no score, the diagnosis. The score has a number and no why, the
-critique has a why and no number, and neither alone is enough to drive a
-confident fix.
-
-That gap is the whole motivation for the rest of the book. You escape it
-either with a smarter search that squeezes more from the signal you have, or
-with a richer signal that says more, and the next chapter does both at once.
+The script runs the revenue agent once on the genesis prompt and measures that
+trajectory two ways. Ground truth returns `score` 0.63 and no diagnosis, the
+symptom; reflection names the three rules the agent skipped (status, channel,
+payment) and returns no score, the diagnosis. No single signal is complete, and
+that incompleteness is the wall the rest of the book climbs.
 
 ---
 
-## §3.4 SPO and the plateau
+## §3.3 Climbing with what you measured
 
-Now we put it together and run SPO on the revenue task with the Archive and
-the propose-measure-select-record loop you already built in chapter 2.
-Nothing about the loop is new, which is the point; what is new is the task,
-hard enough to push SPO to its limit, and the ground-truth scorer driving it.
-Watching a method fail well is how you learn why the next one exists.
+A measurement is only useful if a search consumes it. This section builds the
+two simplest searches, both single-candidate, each fitting a different signal,
+and runs both on the revenue task.
+
+### Hill-climbing: the empirical Godel ratchet
+
+The simplest search that consumes a measurement is Karpathy autoresearch:
+rewrite the prompt, keep the change only if the measured score went up, repeat.
+It is the Godel gate from 3.1 turned into a loop, with proof relaxed to a
+number, and it is the single-thread ratchet behind Tobi Lutke's reported 19
+percent overnight run. Hill-climbing reads an absolute score, which is exactly
+what the ground-truth signal gives it.
 
 ```
-python chapters/ch03/04_revenue_spo_loop.py
+python chapters/ch03/04_revenue_hillclimb_loop.py
 ```
 
-The script re-implements the chapter-2 loop inline for readability: build the
-agent on the genesis prompt, hand it an SPO search and the ground-truth
-scorer, and drive ten rounds. Each round rewrites the current best prompt,
-scores it, and records the result to the archive with its parent pointer. The
-only real change from chapter 2 is the signal dial, which has turned from a
-judge's preference to a checkable score.
+The genesis prompt scores 0.63, and across ten rounds no rewrite ever beats it,
+so the net gain is zero. A ratchet keeps a change only when the score rises, so
+it can never hold a worse intermediate step, and pinning all six rules at once
+needs exactly that. A ratchet can climb a hill, but it cannot cross a valley.
 
-Here is the wall. The genesis prompt already scores 0.63, and across ten
-rounds SPO cannot push past it; it generates plausible rewrites, but its only
-feedback is the outcome score, which says the totals are wrong without ever
-saying which of six rules it forgot. The reflection from section 3.3 knew the
-answer (status, channel, payment), but SPO never sees a reflection, so it is
-stuck.
+### SPO: climbing without a ground truth
 
-The plateau has two causes, and that is the lesson. SPO is a blind search
-trapped in a local optimum, and it is driven by a signal too thin to localize
-the fix. Chapter 4 turns both dials at once: GEPA is a smarter search, and it
-reads the reflection signal you just met, which is how it climbs to 0.86;
-DGM goes further to 1.00.
+Not every task has a checkable answer, and that is where SPO earns its keep. It
+accepts a rewrite when a pairwise judge prefers it, not when an absolute score
+rises, so it needs no ground truth at all; it is the method for when you cannot
+check the answer directly. You met it in chapter 2; here it runs on the same
+revenue task for contrast.
+
+```
+python chapters/ch03/05_revenue_spo_loop.py
+```
+
+SPO consumes a preference where hill-climbing consumes a score, but it is still
+a single climber, and it stalls at 0.63 too. The signal you have decides which
+search you can run; it does not decide whether a single climber gets stuck.
+
+---
+
+## §3.4 The offline loop and the plateau
+
+Both searches run inside the same loop you built in chapter 2: measure, propose,
+select, record, repeat. The chapter-3 scripts re-implement that loop inline for
+readability, and the framework `OfflineImprover` from chapter 2 is the durable
+version with the deploy gate. Swapping the search is the only change between
+them.
+
+Run the two loops, then one no-LLM script reads both run archives and prints a
+signal-agnostic side by side, so the wall is reproducible rather than asserted:
+
+```
+python chapters/ch03/06_revenue_climbers_compare.py
+```
+
+```
+method      genesis   best    rounds  net gain
+hill-climb  0.63      0.63    10      +0.00
+SPO         0.63      0.63    10      +0.00
+```
+
+Both stall at 0.63, the genesis score neither can beat. Remember, each is a
+single climber trapped in a local optimum, and each is driven by a signal too
+thin to say which rule is missing.
+
+Chapter 4 turns both dials at once, a search that keeps many candidates and the
+reflection signal you met in 3.2, climbing from 0.63 to 0.86 and then to 1.00.
+That last step completes the Godel arc from 3.1: DGM swaps the proof gate for an
+evidence gate, the same relaxation hill-climbing made here, now with an archive
+that never forgets.
 
 | score | method | where it stops |
 |-------|--------|----------------|
-| 0.63 | SPO | this chapter: a blind search on a signal that cannot say why |
+| 0.63 | hill-climb / SPO | this chapter: a single climber on a signal that cannot say why |
 | 0.86 | GEPA | chapter 4 |
 | 1.00 | DGM | chapter 4 |
 
@@ -187,12 +198,13 @@ DGM goes further to 1.00.
 
 ## A note on cost
 
-This chapter is the cheap one. `01_godel_gate.py` is free; `02_revenue_check.py`
-and `03_two_signals.py` are a handful of agent and reflection calls;
-`04_revenue_spo_loop.py` is one agent run plus one proposer call per round,
-around ten rounds. The expensive search, the methods that keep many
-candidates alive at once, lands in chapter 4, where the full cost ladder is
-run and written up in
+This chapter is the cheap one. `01_godel_gate.py` and
+`06_revenue_climbers_compare.py` are free (no LLM), and `02_revenue_check.py`
+and `03_two_signals.py` are a handful of agent and reflection calls. The two
+loops are one agent run plus one proposer call per round, around ten rounds each.
+
+The expensive search, the methods that keep many candidates alive, lands in
+chapter 4, where the full cost ladder is run and written up in
 [`../ch04/REVENUE_SEARCH_LADDER.md`](../ch04/REVENUE_SEARCH_LADDER.md).
 
 The honest framing carries across both chapters: the foundations come from
@@ -203,9 +215,9 @@ dollars. The pattern generalizes even when the benchmark numbers do not.
 
 ## What's next
 
-Chapter 4 picks up exactly where this one stops, at SPO's plateau, and
+Chapter 4 picks up exactly where this one stops, at the 0.63 plateau, and
 introduces the methods that climb past it. GEPA reaches 0.86 by reading the
-reflection signal from section 3.3, and DGM reaches 1.00 with an archive that
-never forgets. It also breaks out the lineage dashboard so you can see the
-whole search as a tree, and the Godel machine returns there when DGM relaxes
-its proof gate to evidence.
+reflection signal from section 3.2, and DGM reaches 1.00 with an archive that
+never forgets. It also breaks out the lineage dashboard so you can see the whole
+search as a tree, and the Godel machine returns there when DGM relaxes its proof
+gate to evidence.

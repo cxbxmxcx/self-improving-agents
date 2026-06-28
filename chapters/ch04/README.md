@@ -7,11 +7,12 @@ chapter borrows that recipe to climb out of the rut where chapter 3 left us,
 because when a single hill-climber gets stuck, a population that varies and
 remembers can find the path it missed.
 
-Recall where SPO stopped, around 0.63 on the revenue task, unable to tell
-which rule it had forgotten. The two methods in this chapter, GEPA and DGM,
-are both evolutionary answers to that exact wall, and they climb it the rest
-of the way to 0.86 and then 1.00. They cost more than SPO, so the real lesson
-is not that bigger search wins, but when the extra spend is worth it.
+Recall where the single-candidate climbers stopped, at 0.63 on the revenue
+task, unable to tell which rule they had forgotten. The two methods in this
+chapter, GEPA and DGM, are both evolutionary answers to that exact wall, and
+they climb it the rest of the way to 0.86 and then 1.00. They cost more than a
+single climber, so the real lesson is not that bigger search wins, but when the
+extra spend is worth it.
 
 The runnable scripts, in two groups. First the no-LLM demos that teach each
 idea for free, then the LLM loops that complete the cost ladder:
