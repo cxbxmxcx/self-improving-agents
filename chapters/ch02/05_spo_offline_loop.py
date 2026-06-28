@@ -1,11 +1,13 @@
 """Chapter 2 §2.4 — the offline improvement loop end to end.
 
-This script runs SPO against a fixed eval set with labeled reference
-answers, using a pairwise LLM-as-judge as the Signal. Candidates are
-written to the archive with measurements, but the running agent does
-not switch to a new prompt automatically: a human (or the dashboard's
-promote button) decides when to call `archive.promote()`. Auto-promotion
-is a Ch 8 topic, paired with HITL and live feedback.
+This script runs SPO against a fixed set of questions, using a rubric-only
+pairwise LLM-as-judge as the Signal. There are no reference answers: the judge
+compares two prompts' outputs against a rubric, the same self-supervised idea
+as section 2.3, now assembled from Helix abstractions. Candidates are written
+to the archive with measurements, but the running agent does not switch to a
+new prompt automatically: a human (or the dashboard's promote button) decides
+when to call `archive.promote()`. Auto-promotion is a Ch 8 topic, paired with
+HITL and live feedback.
 
 Recipe:
 
@@ -25,6 +27,7 @@ from __future__ import annotations
 
 import asyncio
 import sys
+from dataclasses import replace
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -33,7 +36,7 @@ if str(REPO_ROOT) not in sys.path:
 
 from helix.agent import Agent
 from helix.env import load_env
-from helix.eval import FixedEvalSet, load_eval_set
+from helix.eval import EvalSet, FixedEvalSet, load_eval_set
 from helix.improvement import OfflineImprover, ImproverPolicy, Schedule
 from helix.observability import attach_console_renderer
 from helix.search.spo import SPO
@@ -62,6 +65,20 @@ ROUNDS_TO_DRIVE = 3
 
 EVAL_QUESTIONS_PATH = Path(__file__).parent / "eval_questions.json"
 
+# Rubric-only judging, no reference answers: the same self-supervised idea as
+# section 2.3, now with the framework judge. This rubric is the only standard
+# the judge has, so it ignores the (stripped) reference field entirely.
+RUBRIC = """You are judging which of two candidate answers, LEFT or RIGHT, is better.
+
+Score on these criteria, in order of importance:
+1. Accuracy: correct, with no invented or misleading claims.
+2. Grounding: draws on the retrieved sources and cites them, rather than inventing facts.
+3. Completeness and clarity: covers the key points, organized and easy to follow.
+4. Honesty: says the corpus does not contain the answer instead of guessing.
+
+There is no reference answer; ignore that field and judge only on the criteria above.
+If both answers are equally good, reply TIE."""
+
 
 async def main_async() -> None:
     # 1) Console subscriber so we see every step stream to the terminal.
@@ -81,7 +98,7 @@ async def main_async() -> None:
     )
 
     # 4) Compose Signal, Search, EvalSource, Policy.
-    judge = SwapAndAgree(PairwiseJudge(model=JUDGE_MODEL))
+    judge = SwapAndAgree(PairwiseJudge(model=JUDGE_MODEL, rubric=RUBRIC))
     # Cheaper Haiku for the first round (no feedback to incorporate yet);
     # Sonnet from round 2 onward when there's judge feedback to act on.
     search = SPO(
@@ -89,7 +106,14 @@ async def main_async() -> None:
         first_round_model=AGENT_MODEL,  # = Haiku, same as agent
         rounds=1,  # SPO propose called once per OfflineImprover.trigger_round()
     )
-    eval_source = FixedEvalSet(load_eval_set(EVAL_QUESTIONS_PATH))
+    # Strip the reference answers so the judge has only the rubric to go on,
+    # which keeps the offline loop self-supervised like section 2.3.
+    base = load_eval_set(EVAL_QUESTIONS_PATH)
+    eval_source = FixedEvalSet(EvalSet(
+        questions=[replace(q, reference_answer="") for q in base.questions],
+        description=base.description,
+        bands=base.bands,
+    ))
     # OfflineImprover writes candidates to the archive but does not change
     # what the running agent serves. Promotion (live_champion swap) happens
     # separately via `archive.promote()` once a human reviews the candidate.
