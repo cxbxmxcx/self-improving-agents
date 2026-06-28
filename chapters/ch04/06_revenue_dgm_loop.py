@@ -12,7 +12,7 @@ the difference is purely the search structure.
 DGM does more total work (more iterations, a growing archive) than SPO or GEPA, so
 this is the top of the cost ladder. Run:
 
-    python chapters/ch03/revenue_dgm_loop.py
+    python chapters/ch04/06_revenue_dgm_loop.py
 """
 from __future__ import annotations
 
@@ -29,6 +29,8 @@ if str(REPO_ROOT) not in sys.path:
 from helix.archive import SQLiteArchive
 from helix.env import load_env
 from helix.llm_call import acompletion
+from helix.search.base import Variant
+from helix.signal import GapMeasurement
 
 from agents.revenue import (
     POLICY_GENESIS, TASK_REQUEST, build_revenue_agent, build_revenue_policy,
@@ -120,10 +122,14 @@ async def improve_dgm(iters: int):
     random.seed(0)  # reproducible exploration for the book
     store = _fresh_archive()
     seed = build_revenue_policy(POLICY_GENESIS)
-    await store.put_artifact(seed)
 
     s0, _, traj0 = await measure_full(POLICY_GENESIS)
     print(f"genesis: score={s0:.2f}")
+    # Record the genesis with its score so the lineage tree has a ranked root.
+    await store.record(
+        Variant(artifact=seed, parent=seed, search_method="human"),
+        GapMeasurement(score=s0),
+    )
     archive = [{"art": seed, "content": POLICY_GENESIS, "score": s0, "traj": traj0}]
     best = s0
 
@@ -134,7 +140,11 @@ async def improve_dgm(iters: int):
         sc, _, traj = await measure_full(child_content)
         nv = await store.next_version(parent["art"].id) if hasattr(store, "next_version") else parent["art"].version + 1
         child_art = parent["art"].mutate(new_content=child_content, created_by="dgm", version=nv)
-        await store.put_artifact(child_art)
+        # Record with lineage + measurement so the dashboard can color and rank it.
+        await store.record(
+            Variant(artifact=child_art, parent=parent["art"], search_method="dgm"),
+            GapMeasurement(score=sc),
+        )
         archive.append({"art": child_art, "content": child_content, "score": sc, "traj": traj})  # never discard
         best = max(best, sc)
         print(f"iter {it}: candidate={sc:.2f}  best={best:.2f}  archive={len(archive)}  (from parent {parent['score']:.2f})")

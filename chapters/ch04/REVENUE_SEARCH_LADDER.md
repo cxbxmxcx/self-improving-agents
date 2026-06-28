@@ -40,8 +40,8 @@ The cost ladder is real but conditional. SPO is the right default when the feedb
 
 Run the three loops in order; each prints its climb. They share the task and scorer in `agents/revenue.py` and differ only in the Search.
 
-- `python chapters/ch03/revenue_spo_loop.py` (SPO, plateaus at 0.63)
-- `python chapters/ch03/revenue_gepa_loop.py` (GEPA, reaches 0.86)
-- `python chapters/ch03/revenue_dgm_loop.py` (DGM, reaches 1.00)
+- `python chapters/ch03/04_revenue_spo_loop.py` (SPO, plateaus at 0.63)
+- `python chapters/ch04/03_revenue_gepa_loop.py` (GEPA, reaches 0.86)
+- `python chapters/ch04/06_revenue_dgm_loop.py` (DGM, reaches 1.00)
 
-`chapters/ch03/revenue_check.py` validates the substrate before any search run: genesis low, oracle 1.0, fully deterministic at temperature 0.
+`chapters/ch03/02_revenue_check.py` validates the substrate before any search run: genesis low, oracle 1.0, fully deterministic at temperature 0.
