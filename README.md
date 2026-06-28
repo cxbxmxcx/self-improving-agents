@@ -14,9 +14,10 @@ Spec version implemented: **0.1**.
 ```
 helix/                  framework modules (Artifact, Trajectory, Agent, ...)
 chapters/ch02/          getting started: HelixAgent v0 and v1, SPO offline loop
-chapters/ch03/          evolutionary search: GEPA, DGM, the cost ladder
-chapters/ch04/          memory and online improvement (planned, README only)
-agents/                 example agents (helpdesk, travel, revenue, ...)
+chapters/ch03/          measuring and searching: ground-truth signals, SPO, the cost ladder
+chapters/ch04/          evolutionary search: GEPA, DGM, the lineage dashboard (planned)
+chapters/ch05/          memory and online improvement (planned, README only)
+agents/                 example agents (helpdesk, researcher, revenue)
 chapter_appendices/     appendix A (setup), appendix B (RAG), ch3 v0 scaffolding
 ingestion/              PDF -> LanceDB ingestion pipeline
 data/helix_corpus.lance the shipped corpus (built from ingestion/pdfs/)
