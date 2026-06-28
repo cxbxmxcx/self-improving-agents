@@ -1,373 +1,211 @@
-# Chapter 3: Searching for better text with evolutionary methods
+# Chapter 3: Measuring what good looks like
 
-Chapter 2 introduced one search method (SPO), one artifact (the system
-prompt), and one signal family (the LLM-as-judge) on a RAG agent. Chapter
-3 widens all three. The running example becomes a **travel task agent**: a
-multi-tool agent that books flights, hotels, and activities against a
-deterministic simulation. With several tools, the natural-language *tool
-description* is what tells the model which tool to call and which
-constraints to pass, so optimizing it produces a visible jump in task
-success, which a single-tool RAG agent cannot show. And because the trip is
-checkable, the signal becomes **ground truth**, not a judge: a
-deterministic task-success score that evolutionary search (GEPA) is best
-driven by. The reader learns GEPA and DGM from scratch, applies them to a
-tool description, and runs the framework's multi-improver pattern on the
-same artifact.
+In 2003 Jurgen Schmidhuber described a machine that could rewrite any part
+of its own code, with one strict condition: it was only allowed to make a
+change once it had proven the change would help. He called it the Godel
+machine, and it is still the cleanest definition of self-improvement we
+have: improve yourself, but only for the better, and know it for certain.
+Real agents are far too messy to prove anything about, so this chapter is
+about the practical version of that dream, measuring whether a change helped
+instead of proving it.
 
-Four sections, runnable scripts:
+You already built one measurement in chapter 2: an LLM-as-judge that
+preferred one prompt's answer to another. That is one member of a whole
+family of signals, and a judge's opinion sits at the noisy, cheap end of it.
+This chapter introduces the family, names the primitive underneath it, and
+shows why no single signal is ever quite enough.
+
+Four runnable scripts:
 
 | § | Concept | Script |
 |---|---------|--------|
-| 3.1 | Evolutionary economics, tool descriptions as artifacts, the task agent + ground-truth signal | `travel_tool_optimization.py` |
-| 3.2 | GEPA from scratch: population, reflective mutation, Pareto over two objectives | `gepa_travel_from_scratch.py` |
-| 3.3 | DGM from scratch: archive of variants, quality-diversity sampling | `dgm_travel_from_scratch.py` |
-| 3.4 | Several methods on one artifact: SPO + GEPA + DGM via the multi-improver pattern | `travel_tool_optimization.py`, `escalating_travel.py` |
+| 3.1 | The proof gate, and why we measure instead | `01_godel_gate.py` (no LLM) |
+| 3.2 | The Gap Function and the family of signals | `02_revenue_check.py` |
+| 3.3 | The signal ceiling: two signals on one run | `03_two_signals.py` |
+| 3.4 | SPO and the plateau | `04_revenue_spo_loop.py` |
 
-The simulation, agent, and signal live in `agents/travel_sim.py`,
-`agents/travel.py`, and `helix/signals/task_success.py`; the scenarios are
-`chapters/ch03/travel_scenarios.json`. The earlier RAG-based scripts
-(`tool_description_loop.py`, `minimal_gepa.py`, `minimal_dgm.py`,
-`dual_improver.py`, `escalating_improver.py`) remain in the directory as the
-prior, judge-based variants for comparison.
-
-## The search-method cost ladder (revenue task)
-
-The chapter's headline demonstration is the cost ladder: SPO, GEPA, and
-DGM run as the identical improvement loop on one deterministic task,
-swapping only the Search object, and score 0.63 < 0.86 < 1.00. The task is
-a revenue data-investigation agent (`agents/revenue.py`) with hidden
-business rules and plain-Python scoring, so the gap between methods is
-mechanical and inspectable, with no LLM judge in the loop.
-
-| Script | Role |
-|--------|------|
-| `revenue_check.py` | Validates the substrate: genesis misses the gotchas, the oracle scores 1.0, both deterministic |
-| `revenue_spo_loop.py` | SPO plateaus at 0.63 on outcome-only feedback |
-| `revenue_gepa_loop.py` | GEPA's trace reflection reaches 0.86, then the population converges |
-| `revenue_dgm_loop.py` | DGM's quality-diversity archive recovers the last rule and hits 1.00 |
-
-The full findings, including why the configuration matters (mid-tier
-proposer, interfering rules, smooth scoring), are written up in
-[`REVENUE_SEARCH_LADDER.md`](REVENUE_SEARCH_LADDER.md). Read that before
-re-running; the result is conditional on the recipe, not a universal
-ranking of the methods.
-
-This chapter is denser than Ch 2 (~30 pages versus ~22). The pedagogy
-remains "build it twice": each method is hand-written first in 80 lines,
-then bridged to its framework class so the reader sees the algorithm
-naked before they see the production wrapper.
-
-## A note on cost
-
-The DGM paper (Zhang et al., 2025) reports an improvement from 20% to
-50% on SWE-Bench. The reported compute cost: roughly **$22,000**. The
-AlphaEvolve paper (Romera-Paredes et al., 2024) is in the same range.
-That's research-budget territory.
-
-This chapter teaches the same patterns at **practical cost**: ~$2-5 per
-full chapter run on Haiku + Sonnet, with the eval slice tunable down to
-~$0.50 per run if you want to iterate cheaply. The trade is fidelity to
-benchmark performance: we don't expect a 30-percentage-point lift on
-SWE-Bench from $2 of compute. What we expect is a working demonstration
-of the patterns that scaled the published results, applied to an artifact
-you can actually afford to search over.
-
-This is a central theme of the book: foundations from papers, recipes
-that real engineering teams can run.
+The search methods that climb past where SPO stops, GEPA and DGM, are
+chapter 4. This chapter ends on the wall they exist to cross.
 
 ## Prerequisites
 
-You should have completed Chapter 2 and have a working LanceDB corpus at
-`data/helix_corpus.lance/`. If you haven't:
-
-```
-python ingestion/build_index.py
-```
-
-You should also have a populated `chapters/ch02/runs/helix_archive.sqlite`
-from running `05_spo_offline_loop.py` at least once; Ch 3 inherits Ch 2's
-archive and extends it.
+You should have completed chapter 2. The revenue task runs entirely in
+memory (`agents/revenue.py`), so it needs no corpus or index; you only need
+a working LLM provider key in `.env`. The one no-LLM demo (`01_godel_gate.py`)
+runs with no key and no cost at all.
 
 ---
 
-## §3.1 The economics of evolutionary search
+## §3.1 The dream of a self-improving machine
 
-Chapter 2's SPO works one candidate at a time and accepts on win.
-Evolutionary search keeps *many* candidates alive: a population (GEPA)
-or an archive (DGM). The reasons to do this:
+A proof is the strongest signal you can have, because if you can prove a
+change helps, you never have to test it. Remember, though, that we are
+improving a language model wired to eight tools, and nobody can prove a
+useful thing about that. So we give up the proof and keep the spirit: a
+change is worth making only if we can show it helped, and the showing is a
+measurement we can trust.
 
-1. **Escape local optima.** SPO's hill climb can converge to a prompt
-   that's locally good but globally limited. Population/archive methods
-   maintain diversity, so the search can recover from a dead end by
-   sampling a different branch of history.
-2. **Multi-objective optimization.** When a candidate is better on one
-   axis (quality) but worse on another (cost), single-objective search
-   has no way to keep it. Pareto selection (GEPA) keeps the non-dominated
-   front.
-3. **Reuse of distant ancestors.** DGM's archive lets a mutation in
-   round 20 fork from a candidate produced in round 3, not just from
-   round 19's winner. Good ideas don't die when they're temporarily
-   out-performed.
-
-The cost of all of this is more evaluations per round. A population of 4
-costs 4× SPO per generation. An archive of 100 needs sampling logic
-but the per-round cost depends on how many you mutate per round.
-Practical recipes pick small populations and short archives because
-LLM-as-judge dominates the cost line.
-
-### Tool descriptions as artifacts
-
-A tool's *description* is the natural-language string the LLM reads to
-decide whether to call the tool. It is an L1 text artifact in the same
-sense the system prompt is: improvable by SPO, GEPA, or DGM without
-touching code.
-
-The framework's `TextDescriptionTool` (SPEC §16.2.2) wraps a plain
-Python callable with an artifact-backed description. The implementation
-stays a normal Python function. The description is a `TOOL_DESCRIPTION`
-artifact in the archive. Search methods mutate the description; the
-agent reads the current live description on every request.
-
-### The task agent and the ground-truth signal
-
-The travel agent's `search_flights` tool accepts `nonstop` and `max_price`,
-but its genesis description ("Search for flights.") never mentions them, so
-the agent ignores those constraints and books the wrong flight. That is the
-failure mode the chapter fixes by searching over the description.
-
-Because a trip is checkable, the signal is ground truth, not a judge.
-`helix.signals.task_success.TaskSuccessSignal` runs the agent against each
-scenario and scores the booked trip deterministically (right route, date,
-nonstop, under budget, the activities asked for), and `TravelTaskJudge`
-(`agents/travel.py`) is the pairwise form the framework round consumes. The
-itinerary is read back from the trajectory by `reconstruct_trip`, so the
-agent stays stateless and clones cleanly under `with_artifacts`.
-
-Run the warmup:
+Before we walk away from the proof, it helps to see it once. Run the no-LLM
+demo:
 
 ```
-python chapters/ch03/travel_tool_optimization.py
+python chapters/ch03/01_godel_gate.py
 ```
 
-The script targets `prompt.tool.search_flights.description` with framework
-SPO and GEPA, judged by `TravelTaskJudge`. Everything from Ch 2 §2.4 carries
-over: the same Improver, Archive, and promotion gate. What changed is the
-agent (multi-tool, so the description matters) and the signal (ground truth,
-so GEPA has something deterministic to climb).
+A tiny `provably_better` gate accepts a candidate only when it can check the
+whole input space and prove the candidate is correct everywhere and cheaper.
+You can prove that about a sort over twenty-four inputs because the space is
+tiny; you cannot prove it about a tool-wired language model, which is exactly
+why the agent gets a measurement instead of a proof. Next to the proof gate
+sits the `empirically_better` gate we actually use, which judges on a single
+sample and can be fooled by an easy one.
 
 ---
 
-## §3.2 GEPA from scratch
+## §3.2 The Gap Function and the family of signals
 
-GEPA (Agrawal et al., ICLR 2026 Oral) is *population-based reflective
-mutation with Pareto selection*. Three distinctive ideas:
+Every signal you will ever build does the same job the chapter-2 judge did,
+just less noisily: it looks at what the agent produced and reports the gap
+between that and good. Because the job is always the same, the framework
+gives every signal the same return shape, a `GapMeasurement`, and that one
+shape is the spine the whole book hangs on. A ground-truth check fills its
+`score`, the chapter-2 judge fills its `preference`, and a reflection fills
+its `feedback`, but it is always the same object, so the rest of the loop
+never has to care which signal ran.
 
-1. **A population** of N candidates evolves together. Each generation
-   produces offspring; the population is replaced by selection.
-2. **Reflective mutation**: instead of "rewrite this prompt to be
-   better," the proposer reads a *trajectory*, what the agent did with
-   this prompt on a specific question, and proposes an edit targeting
-   the failure mode. The LLM critiques what went wrong, then edits.
-3. **Pareto selection**: when scoring uses multiple objectives, keep
-   the non-dominated front. A candidate that scores higher on quality
-   but uses more tokens isn't dominated by a candidate that's better
-   on both; both survive.
+Think of the family as a spectrum. At one end sits proof, certain but almost
+never available; at the other sits the judge, available everywhere but only
+an opinion; ground truth and reflection live in between. As a general rule,
+you reach for the most trustworthy signal your task can actually give you,
+and most tasks cannot give you proof.
 
-Run:
+### Ground truth: precise, and only as good as your checker
+
+On the revenue task we already know the right leaderboard, so instead of
+asking an opinion we can check the agent's answer against the truth. That is
+a ground-truth signal: it runs the agent and scores the result against a
+known-correct value, so the same output always earns the same score. That is
+as close to proof as most tasks get.
+
+The catch is that someone has to build that checker, and a checker is itself
+code that can be wrong. A confidently wrong oracle is worse than an honest
+judge, because it scores a bad answer 1.0 and sends your search marching in
+the wrong direction. Remember, ground truth is the most precise signal you
+can have and the most expensive to get right, so you check the checker first.
 
 ```
-python chapters/ch03/gepa_travel_from_scratch.py
+python chapters/ch03/02_revenue_check.py
 ```
 
-The script (nothing imported from `helix.search.gepa`):
+It runs a deliberately weak genesis prompt and a deliberately perfect oracle
+twice each at temperature 0. This is the check-the-checker step: if your
+oracle does not score 1.0 on a known-perfect answer, your ground truth is
+broken before any search begins. The revenue check scores with plain Python
+in `agents/revenue.py`; `helix.signals.task_success.TaskSuccessSignal` is the
+same idea in its general, reusable form.
 
-- Starts a population from the genesis `search_flights` description plus
-  reflective variants of it. (~10 lines.)
-- Defines `_reflective_mutate(parent, feedback)`: one LLM call that reads
-  which scenarios failed and what the agent booked, then rewrites the
-  description to pass the missed constraints. (~20 lines.)
-- Scores each candidate with `TaskSuccessSignal` (ground-truth task
-  success) on one objective and description length, a stand-in for prompt
-  cost, on the other. (~10 lines.)
-- Defines `_pareto_front(scored)`: keep candidates not dominated on
-  (task-success up, cost down). (~15 lines.)
-- Runs three generations and prints the Pareto front each time. (~25
-  lines.)
+### Reflection: a critique with no score
 
-The reader watches the two-objective tradeoff in action: in generation 1
-the population has one high-quality / high-cost candidate and one
-medium-quality / low-cost candidate. Both survive. Generation 2's
-offspring sample from both. By generation 3 the front contains
-candidates the reader can pick from depending on their cost tolerance.
-
-The framework version is `helix.search.gepa.GEPA`, which adds caching,
-budget enforcement, observability, and a richer crossover operator.
-
-### Pareto, in concrete terms
-
-A candidate is **dominated** if another candidate scores at least as
-high on every objective and strictly higher on at least one. The
-**Pareto front** is the set of non-dominated candidates: every member
-is best at *something*. With objectives `(quality, -tokens)` (negated
-because lower tokens is better), the front looks like a staircase:
-quality goes up, cost also goes up, and the front is the upper-right
-boundary of the population in score space.
-
-This is what GEPA's selection step keeps. Single-objective search keeps
-one winner; multi-objective search keeps the staircase.
+A reflection signal does something a score never can: it reads the agent's
+trajectory and says what went wrong in words. It fills the `GapMeasurement`
+`feedback` field and leaves `score` empty, because a critique is not a
+number; it is the difference between "the totals are wrong" and "you never
+filtered the internal channel." This is the second new signal of the chapter,
+and `helix.signals.reflection.Reflection` is the framework version that
+chapter 4's GEPA improves against.
 
 ---
 
-## §3.3 DGM from scratch
+## §3.3 The signal ceiling: why one signal is never enough
 
-DGM (Zhang et al., 2025) is *archive-evolutionary search*. Three
-distinctive ideas:
+Here is the uncomfortable truth the family hides: no single signal is
+complete. A ground-truth score tells you how wrong you are but never why, and
+a reflection tells you why but never how wrong. This is the
+generation-verification gap, and it is the real reason a search starved of
+information stalls, not just a quirk of one method.
 
-1. **An archive instead of a population.** Every variant ever produced
-   stays in the archive forever. There is no generational replacement:
-   nothing is discarded.
-2. **Quality-diversity sampling.** Selecting the seed for the next
-   mutation samples from the *whole archive*, weighting both by score
-   (quality) and by some behavioral or content distance from recent
-   picks (diversity). A round-20 mutation might fork from a candidate
-   produced in round 3 because it's been a long time since anything
-   in that branch was tried.
-3. **Lineage as a first-class object.** Every mutation carries a parent
-   pointer back to its seed. The archive's tree records the full
-   evolutionary history; you can replay any branch.
-
-Run:
+The way to feel it is to put the two signals on the same run and watch each
+fall short of the other:
 
 ```
-python chapters/ch03/dgm_travel_from_scratch.py
+python chapters/ch03/03_two_signals.py
 ```
 
-The script (nothing imported from `helix.search.dgm`):
+The script runs the revenue agent once on the genesis prompt, then measures
+that one trajectory two ways. Ground truth returns a `GapMeasurement` with
+`score` 0.63 and no diagnosis, the symptom; reflection returns one with
+`feedback` naming the three rules the agent skipped (status, channel,
+payment) and no score, the diagnosis. The score has a number and no why, the
+critique has a why and no number, and neither alone is enough to drive a
+confident fix.
 
-- Defines an `Archive` of `Entry(artifact, score, parent_version,
-  times_sampled)` over candidate `search_flights` descriptions. (~15 lines.)
-- Defines `sample_quality_diversity()`: weight by score, halved each time a
-  branch is re-sampled. (~10 lines.)
-- Defines `mutate(seed)`: one LLM call to rewrite the sampled description,
-  conditioned on its task-success score. (~15 lines.)
-- Scores each candidate with `TaskSuccessSignal` (ground truth) and runs
-  ~8 rounds, printing which version the sampler forked from each time.
-
-The reader sees that round 10 didn't fork from round 9's winner; it
-forked from round 3, because round 3 was high-scoring and the sampler
-hadn't picked from that branch lately. That's the DGM dynamic: history
-is alive, not just the latest generation.
-
-The framework version is `helix.search.dgm.DGMSearch`. It accepts a
-**pluggable mutator** so you can use blind LLM mutation, SPO-style
-feedback-conditioned mutation, or GEPA's reflective mutation as the
-operator inside DGM's archive loop. Same search shape, different
-mutation strategies.
-
-### What DGM is, what DGM isn't
-
-DGM's paper applies the pattern to code (the agent edits its own
-implementation, runs SWE-Bench, gets better at coding). That result
-costs $22K. The chapter applies the same *pattern* to a tool description,
-costing ~$1 per chapter run.
-
-The chapter is honest about this: the pattern generalizes, the
-benchmark numbers don't. You won't see a 20→50% lift on a coding
-benchmark from improving a tool description; you'll see a measurable
-quality improvement on the eval set, at a budget that lets you actually
-try it.
-
-The code-level DGM, where the artifact under search is the tool's
-implementation and not just its description, is Ch 11/12 territory.
-The same `DGMSearch` class will be reused there.
+That gap is the whole motivation for the rest of the book. You escape it
+either with a smarter search that squeezes more from the signal you have, or
+with a richer signal that says more, and the next chapter does both at once.
 
 ---
 
-## §3.4 Three methods on one artifact
+## §3.4 SPO and the plateau
 
-SPO mutates one candidate at a time and accepts on win. GEPA evolves a
-population with reflection and Pareto selection. DGM searches an archive
-with quality-diversity sampling. They are different strategies for the
-same problem: find a better artifact than the one you have.
-
-The multi-improver pattern (SPEC §16.1) lets all three run concurrently
-on the same artifact. Each writes to the shared archive. `archive.best()`
-returns the overall winner regardless of which method produced it.
-
-Two runnable demonstrations:
-
-**Parallel: three improvers, same artifact**
+Now we put it together and run SPO on the revenue task with the Archive and
+the propose-measure-select-record loop you already built in chapter 2.
+Nothing about the loop is new, which is the point; what is new is the task,
+hard enough to push SPO to its limit, and the ground-truth scorer driving it.
+Watching a method fail well is how you learn why the next one exists.
 
 ```
-python chapters/ch03/travel_tool_optimization.py
+python chapters/ch03/04_revenue_spo_loop.py
 ```
 
-The script attaches three `OfflineImprover`s (SPO, GEPA, DGM) to the travel
-agent, all targeting `prompt.tool.search_flights.description` and judged by
-`TravelTaskJudge`. The framework treats each independently and the shared
-archive arbitrates by score, so the best candidate may have come from any
-method.
+The script re-implements the chapter-2 loop inline for readability: build the
+agent on the genesis prompt, hand it an SPO search and the ground-truth
+scorer, and drive ten rounds. Each round rewrites the current best prompt,
+scores it, and records the result to the archive with its parent pointer. The
+only real change from chapter 2 is the signal dial, which has turned from a
+judge's preference to a checkable score.
 
-**Sequential: escalating strategy chain**
+Here is the wall. The genesis prompt already scores 0.63, and across ten
+rounds SPO cannot push past it; it generates plausible rewrites, but its only
+feedback is the outcome score, which says the totals are wrong without ever
+saying which of six rules it forgot. The reflection from section 3.3 knew the
+answer (status, channel, payment), but SPO never sees a reflection, so it is
+stuck.
 
-```
-python chapters/ch03/escalating_travel.py
-```
+The plateau has two causes, and that is the lesson. SPO is a blind search
+trapped in a local optimum, and it is driven by a signal too thin to localize
+the fix. Chapter 4 turns both dials at once: GEPA is a smarter search, and it
+reads the reflection signal you just met, which is how it climbs to 0.86;
+DGM goes further to 1.00.
 
-A `StrategyChain` runs SPO until it fails N times consecutively, then
-rotates to GEPA, then to DGM. The framework retires methods that
-plateau and brings in the next strategy. The cost shape is: cheap
-(SPO) → moderate (GEPA, more candidates per round) → thorough (DGM,
-sampling from full history).
-
-Both scripts grade with `TravelTaskJudge`, the deterministic ground-truth
-signal: it reconstructs the booked trip from each trajectory and prefers the
-description that satisfied more constraints. To make it multi-objective
-(quality versus token cost), wrap it with a `MetricSignal(metric="tokens")`
-in a `CompositeSignal`; the from-scratch scripts show the Pareto idea
-directly.
-
-After running either script, launch the dashboard:
-
-```
-streamlit run helix/dashboard/app.py
-```
-
-The artifact lineage view shows the three methods' candidates as three
-colored branches. The score timeline shows where each method
-contributed. The promote-to-live button works the same as in Ch 2: a
-human reviews and promotes the overall winner.
+| score | method | where it stops |
+|-------|--------|----------------|
+| 0.63 | SPO | this chapter: a blind search on a signal that cannot say why |
+| 0.86 | GEPA | chapter 4 |
+| 1.00 | DGM | chapter 4 |
 
 ---
 
-## Cost expectations
+## A note on cost
 
-Practical-budget recipes for one full chapter run:
+This chapter is the cheap one. `01_godel_gate.py` is free; `02_revenue_check.py`
+and `03_two_signals.py` are a handful of agent and reflection calls;
+`04_revenue_spo_loop.py` is one agent run plus one proposer call per round,
+around ten rounds. The expensive search, the methods that keep many
+candidates alive at once, lands in chapter 4, where the full cost ladder is
+run and written up in
+[`../ch04/REVENUE_SEARCH_LADDER.md`](../ch04/REVENUE_SEARCH_LADDER.md).
 
-| Section | Per run | Notes |
-|---------|---------|-------|
-| §3.1 warmup | ~$0.30 | 3 SPO rounds on tool description, small eval slice |
-| §3.2 GEPA from scratch | ~$1.00 | Population of 4, three generations, two-objective scoring |
-| §3.3 DGM from scratch | ~$1.00 | 10 rounds, three eval questions per round |
-| §3.4 parallel three-method | ~$2.00 | Three improvers, three rounds each |
-| §3.4 escalating chain | ~$1.00 | Five rounds total across rotating methods |
-| **Full chapter** | **~$5.00** | All scripts run once |
-
-Iterate cheaply by reducing the eval slice (`QUESTIONS_PER_ROUND`) and
-the rounds/generations. Most chapter knobs are at the top of each
-script for exactly this purpose.
+The honest framing carries across both chapters: the foundations come from
+papers that cost research budgets to run, and the recipes here cost a few
+dollars. The pattern generalizes even when the benchmark numbers do not.
 
 ---
 
-## What's deferred
+## What's next
 
-- **Code-level DGM**: aiming `DGMSearch` at a tool's implementation
-  rather than its description. Chapter 11/12, where sandboxed code
-  execution joins the framework.
-- **Memory-grounded search (MemRL)**: evolutionary search where the
-  artifact is a memory entry, not a prompt. Chapter 4.
-- **Online evolutionary search**: continuous mutation against live
-  traffic, no labeled eval set. Chapter 8 (with HITL and feedback).
-- **Combining evolutionary search with reflection as a first-class
-  Signal**: a Reflector that critiques agent behavior and feeds its
-  output to *any* search method. Chapter 5.
+Chapter 4 picks up exactly where this one stops, at SPO's plateau, and
+introduces the methods that climb past it. GEPA reaches 0.86 by reading the
+reflection signal from section 3.3, and DGM reaches 1.00 with an archive that
+never forgets. It also breaks out the lineage dashboard so you can see the
+whole search as a tree, and the Godel machine returns there when DGM relaxes
+its proof gate to evidence.

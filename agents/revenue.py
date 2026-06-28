@@ -1,17 +1,18 @@
 """A deterministic data-investigation task for the Chapter 3 improvement loop.
 
 The agent answers a vague analytics question ("top reps last quarter") by chaining
-query tools over a tiny in-memory company database. The catch is several business
-rules the request leaves implicit: revenue is net of discounts AND a refund column,
-"last quarter" is relative to a fixed TODAY (not the latest data present), orders
-with status 'cancelled' or 'returned' do not count, and totals are grouped by sales
-rep. A vague genesis prompt gets some wrong; every tool call still "succeeds" and
-the number is silently off. The improvement loop searches the system prompt to pin
-the rules, and a plain-code scorer grades the answer against a canonical pipeline.
+query tools over a tiny in-memory company database. The catch is six business rules
+the request leaves implicit: revenue is net of discounts AND a refund column, "last
+quarter" is relative to a fixed TODAY (not the latest data present), orders with
+status 'cancelled' or 'returned' do not count, internal-channel orders do not count,
+unpaid (pending) orders do not count, and totals are grouped by sales rep. A vague
+genesis prompt gets some wrong; every tool call still "succeeds" and the number is
+silently off. The improvement loop searches the system prompt to pin the rules, and
+a plain-code scorer grades the answer against a canonical pipeline.
 
 No LLM judge and no personas: the score is computed by re-running the canonical
 query in Python and comparing the agent's reported leaderboard to the ground truth.
-The four rules are near-orthogonal, so partial credit is separable, which is what
+The six rules are near-orthogonal, so partial credit is separable, which is what
 gives the population (GEPA) and archive (DGM) searches room to beat single-mutation
 hill-climbing (SPO).
 """
@@ -116,8 +117,9 @@ def _quarter_of(iso_date: str) -> str:
 
 
 def ground_truth(top_n: int = 3) -> list[tuple[str, float]]:
-    """The canonical pipeline, in plain Python: net revenue by rep for last
-    quarter, excluding cancelled orders, top N. This defines the correct answer."""
+    """The canonical pipeline, in plain Python: net revenue (with refund subtracted)
+    by rep for last quarter, excluding cancelled, returned, internal-channel, and
+    unpaid orders, top N. This defines the correct answer against all six rules."""
     target = _last_quarter_label(TODAY)
     name_of = {r["rep_id"]: r["rep_name"] for r in REPS}
     excluded = {"cancelled", "returned"}
@@ -388,7 +390,7 @@ def reconstruct_answer(trajectory: Any) -> list:
 # ---------------------------------------------------------------------------
 
 # The user's request: deliberately vague ("last quarter", "brought in"), but it
-# carries today's date the way a real query would. The four implicit rules are
+# carries today's date the way a real query would. The six implicit rules are
 # what a good prompt must pin down.
 TASK_REQUEST = (
     "Today's date is 2026-04-15. Who were our top 3 reps last quarter and how much "
@@ -400,7 +402,7 @@ POLICY_GENESIS = (
     "then report the result."
 )
 
-# The oracle pins all four implicit rules; the search must discover this.
+# The oracle pins all six implicit rules; the search must discover this.
 POLICY_ORACLE = (
     "You are a sales analyst answering questions from a company database using the "
     "query tools. For a 'top reps last quarter' question, follow these rules exactly: "

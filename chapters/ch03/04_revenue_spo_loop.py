@@ -11,7 +11,7 @@ toward the oracle.
 The point of the chapter: swapping SPO for GEPA or DGM changes only the `search`
 object passed to `improve()`. The loop is identical. Run:
 
-    python chapters/ch03/revenue_spo_loop.py
+    python chapters/ch03/04_revenue_spo_loop.py
 """
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ if str(REPO_ROOT) not in sys.path:
 
 from helix.archive import SQLiteArchive
 from helix.env import load_env
-from helix.search.base import SearchBudget
+from helix.search.base import SearchBudget, Variant
 from helix.search.spo import SPO
 from helix.signal import Cost, GapMeasurement, Preference
 
@@ -80,10 +80,14 @@ async def improve(search, rounds: int) -> tuple[str, float]:
     SPO, GEPA, and DGM examples."""
     archive = _fresh_archive()
     seed = build_revenue_policy(POLICY_GENESIS)
-    await archive.put_artifact(seed)
 
     best_content, (best_score, best_fb) = POLICY_GENESIS, await measure(POLICY_GENESIS)
     print(f"genesis: score={best_score:.2f}  ({best_fb})")
+    # Record the genesis with its score so the lineage tree has a ranked root.
+    await archive.record(
+        Variant(artifact=seed, parent=seed, search_method="human"),
+        GapMeasurement(score=best_score, feedback=best_fb),
+    )
 
     budget = SearchBudget(max_candidates=rounds)
     # SPO yields one candidate at a time; we fill its measurement, which SPO reads
@@ -99,7 +103,8 @@ async def improve(search, rounds: int) -> tuple[str, float]:
             preference = Preference.TIE
         variant.measurement = GapMeasurement(score=score, preference=preference,
                                               feedback=fb, confidence=score, cost=Cost())
-        await archive.put_artifact(variant.artifact)
+        # Record with lineage + measurement so the dashboard can color and rank it.
+        await archive.record(variant, variant.measurement)
         marker = ""
         if score > best_score:
             best_content, best_score, best_fb = variant.artifact.content, score, fb

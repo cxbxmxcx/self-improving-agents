@@ -14,6 +14,8 @@ NONE because reflection is purely textual.
 
 from __future__ import annotations
 
+import json as _json
+import re as _re
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -36,6 +38,29 @@ class _ReflectionOutput(BaseModel):
         description="Concrete, actionable critique that a mutation operator can act on."
     )
     confidence: float = Field(ge=0.0, le=1.0)
+
+
+def _strip_code_fences(raw: str) -> str:
+    """Anthropic JSON-mode responses often arrive wrapped in a ```json fence.
+    Strip it so json.loads sees clean JSON."""
+    s = raw.strip()
+    if s.startswith("```"):
+        s = _re.sub(r"^```[a-zA-Z]*\n?", "", s)
+        s = _re.sub(r"\n?```$", "", s)
+    return s.strip()
+
+
+def _coerce_feedback(value: Any) -> str:
+    """Reflection feedback must be a string, but models sometimes return a nested
+    object or list. Flatten those into one readable critique rather than discarding
+    the diagnosis the reflector actually produced."""
+    if isinstance(value, str):
+        return value
+    if isinstance(value, dict):
+        return "; ".join(_coerce_feedback(v) for v in value.values())
+    if isinstance(value, (list, tuple)):
+        return "; ".join(_coerce_feedback(v) for v in value)
+    return str(value)
 
 
 DEFAULT_REFLECTION_PROMPT = """You are critiquing an agent's behavior on one task.
@@ -114,25 +139,36 @@ Final agent answer:
 {trajectory.final_output if trajectory.final_output else '(no final output)'}
 
 What went well, what went poorly, and what concrete edits should be made to
-the candidate prompt? Reply as JSON with two fields:
-  "feedback": the critique string
-  "confidence": float in [0, 1]"""
+the candidate prompt? Reply with a brief plain-text critique."""
 
+        # Reflection is a textual signal, so we ask for prose rather than forcing
+        # JSON mode (which is not honored uniformly across providers and makes some
+        # models emit prose plus a stray JSON block). The parse below still accepts
+        # a JSON object if a model returns one.
         response = await helix_acompletion(
             model=self.model,
             messages=[
                 {"role": "system", "content": self.prompt},
                 {"role": "user", "content": user_prompt},
             ],
-            response_format={"type": "json_object"},
         )
-        raw = response.choices[0].message.content or "{}"
+        raw = response.choices[0].message.content or ""
+        cleaned = _strip_code_fences(raw)
         try:
-            import json as _json
-            data = _json.loads(raw)
-            out = _ReflectionOutput(**data)
+            data = _json.loads(cleaned)
+            out = _ReflectionOutput(
+                feedback=_coerce_feedback(data.get("feedback", "")),
+                confidence=float(data.get("confidence", 0.5)),
+            )
         except Exception:
-            out = _ReflectionOutput(feedback="(reflection output malformed)", confidence=0.0)
+            # JSON mode is not guaranteed on every provider, and the model often
+            # returns a plain-prose critique instead. For a reflection signal that
+            # prose IS the feedback, so use it directly rather than losing the
+            # diagnosis the reflector actually produced.
+            out = _ReflectionOutput(
+                feedback=cleaned.strip() or "(reflection produced no output)",
+                confidence=0.5,
+            )
 
         usage = getattr(response, "usage", None)
         cost = Cost(tokens=getattr(usage, "total_tokens", 0) if usage else 0)
