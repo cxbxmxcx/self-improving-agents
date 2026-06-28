@@ -14,7 +14,7 @@ plateaus at 0.63, GEPA does three things SPO does not:
 The reflector and proposer are the SAME mid-tier sonnet SPO used, so any gain comes
 from the mechanism, not a stronger model. Run:
 
-    python chapters/ch03/revenue_gepa_loop.py
+    python chapters/ch04/03_revenue_gepa_loop.py
 """
 from __future__ import annotations
 
@@ -30,6 +30,8 @@ if str(REPO_ROOT) not in sys.path:
 from helix.archive import SQLiteArchive
 from helix.env import load_env
 from helix.llm_call import acompletion
+from helix.search.base import Variant
+from helix.signal import GapMeasurement
 
 from agents.revenue import (
     POLICY_GENESIS, TASK_REQUEST, build_revenue_agent, build_revenue_policy,
@@ -122,10 +124,14 @@ def _fresh_archive() -> SQLiteArchive:
 async def improve_gepa(rounds: int, pop: int):
     archive = _fresh_archive()
     seed = build_revenue_policy(POLICY_GENESIS)
-    await archive.put_artifact(seed)
 
     s0, _, traj0 = await measure_full(POLICY_GENESIS)
     print(f"genesis: score={s0:.2f}")
+    # Record the genesis with its score so the lineage tree has a ranked root.
+    await archive.record(
+        Variant(artifact=seed, parent=seed, search_method="human"),
+        GapMeasurement(score=s0),
+    )
     # population entries: (artifact, content, score, trajectory)
     population = [(seed, POLICY_GENESIS, s0, traj0)]
 
@@ -149,7 +155,11 @@ async def improve_gepa(rounds: int, pop: int):
             sc, _, traj = await measure_full(content)
             nv = await archive.next_version(parent_art.id) if hasattr(archive, "next_version") else parent_art.version + 1
             child = parent_art.mutate(new_content=content, created_by="gepa", version=nv)
-            await archive.put_artifact(child)
+            # Record with lineage + measurement so the dashboard can color and rank it.
+            await archive.record(
+                Variant(artifact=child, parent=parent_art, search_method="gepa"),
+                GapMeasurement(score=sc),
+            )
             return child, content, sc, traj
 
         evaluated = await asyncio.gather(*[eval_child(pa, c) for pa, c in proposed])

@@ -33,6 +33,7 @@ COLOR_BY_CREATOR = {
     "gepa_mutation": "#E64B35",    # vermillion (GEPA family)
     "gepa_gen0_init": "#E64B35",
     "gepa_crossover": "#F39B7F",   # muted salmon (GEPA crossover)
+    "dgm": "#7E6148",              # warm brown (DGM family)
     "hillclimb": "#4DBBD5",        # soft cyan
 }
 
@@ -47,6 +48,8 @@ def _creator_color(created_by: str) -> str:
         return COLOR_BY_CREATOR["spo_round_0"]
     if created_by.startswith("gepa"):
         return COLOR_BY_CREATOR["gepa_mutation"]
+    if created_by.startswith("dgm"):
+        return COLOR_BY_CREATOR["dgm"]
     if created_by.startswith("hillclimb"):
         return COLOR_BY_CREATOR["hillclimb"]
     return "#888888"
