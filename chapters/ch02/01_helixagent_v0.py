@@ -5,17 +5,16 @@ archive, signal, or search exists. One system prompt (an Artifact), one
 retrieval tool against the corpus, working memory only. Pure agent loop. SPEC
 section 11.1.
 
-The point of this listing is the "before." Run it, watch it answer, and note
-where it struggles (band-4 trap questions in the eval set have no answer in the
-corpus; v0 tends to guess). Section §2.4 produces a candidate prompt that beats
-this baseline, and the diff against `02_helixagent_v1.py` is the chapter's whole
-thesis: v1 is the same agent, the only change is that v1 reads its system prompt
-from the archive instead of a hardcoded genesis. The agent loop never changes.
+The whole listing is the "build once, run many" block in `main_async`. Building
+the agent opens the corpus index, so build it once and reuse it across
+questions; that reuse is safe because `Agent.run()` rebuilds its working memory
+per call and v0 wires no persistent memory tiers, so nothing leaks between
+questions. The band-4 trap question has no answer in the corpus, so watch
+whether v0 abstains or guesses; that weakness is what section 2.4 improves, and
+the only change v1 makes is to read its prompt from the archive instead.
 
 The shared v0 building blocks (genesis prompt, retrieve tool, agent factory)
-live in `agent_v0.py` next to this file; this listing imports them and runs the
-agent where the reader can see it. The Ch 3 tool-description scaffolding builds
-on the same blocks in `chapter_appendices/getting_started/helixagent_v0.py`.
+live in `agent_v0.py` next to this file.
 """
 
 from __future__ import annotations
@@ -29,8 +28,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from helix.agent import Agent
-from helix.env import load_env
-from helix.trajectory import Trajectory
+from helix.trajectory import StepKind, Trajectory
 
 from chapters.ch02.agent_v0 import (
     DEFAULT_MODEL,
@@ -38,16 +36,18 @@ from chapters.ch02.agent_v0 import (
     build_system_prompt,
 )
 
-load_env()
+# An open synthesis question, a single-paper factual lookup, and a band-4 trap
+# whose answer is not in the corpus.
+QUESTIONS = [
+    "Summarize the core idea of self-improving agents in the corpus.",
+    "What four operators does ExpeL use to manage memory entries?",
+    "What benchmark score is reported for 'Helix-9' agent on MMLU?",
+]
 
 
-async def build_agent(model: str = DEFAULT_MODEL) -> Agent:
-    """The v0 agent: genesis system prompt, one retrieve tool, no archive.
 
-    The system prompt is the genesis Artifact, taken directly. There is no
-    archive and no live champion yet; that is exactly the difference v1
-    introduces in `02_helixagent_v1.py`.
-    """
+def build_agent(model: str = DEFAULT_MODEL) -> Agent:
+    """The v0 agent: genesis prompt, one retrieve tool, no archive."""
     return Agent(
         system_prompt=build_system_prompt(),
         tools=[build_retrieve_tool()],
@@ -55,30 +55,25 @@ async def build_agent(model: str = DEFAULT_MODEL) -> Agent:
     )
 
 
-async def ask_one(question: str, model: str = DEFAULT_MODEL) -> tuple[str, Trajectory]:
-    agent = await build_agent(model=model)
-    output, trajectory = await agent.run(question)
-    return output, trajectory
+def print_trace(question: str, output: str, trajectory: Trajectory) -> None:
+    """Print the answer plus one line per retrieve call the agent made."""
+    print(f"\nQ: {question}\n\n{output}\n")
+    for step in trajectory.steps:
+        if step.kind == StepKind.TOOL_CALL:
+            args = ", ".join(f"{k}={v!r}" for k, v in step.payload["arguments"].items())
+            print(f"  -> {step.payload['name']}({args})")
+    print(f"  [{len(trajectory.steps)} steps, outcome={trajectory.outcome.value}]")
+
+
+async def main_async(model: str = DEFAULT_MODEL) -> None:
+    agent = build_agent(model=model)  # build once: this opens the corpus index
+    for question in QUESTIONS:
+        output, trajectory = await agent.run(question)
+        print_trace(question, output, trajectory)
 
 
 def main() -> None:
-    """Run a single sample question against the v0 baseline."""
-    question = "Summarize the main idea of self-improving agents based on the corpus."
-    output, trajectory = asyncio.run(ask_one(question))
-
-    print("=" * 70)
-    print(f"Q: {question}")
-    print("=" * 70)
-    print(f"\n{output}\n")
-    print("-" * 70)
-    print(f"Trajectory: {trajectory.id}")
-    print(f"Steps: {len(trajectory.steps)}  Outcome: {trajectory.outcome.value}")
-    print(f"Artifacts used: {trajectory.artifacts_used}")
-    print()
-    print("This is the baseline. For the measured 'before' across all 20 eval")
-    print("questions, run `python chapters/ch02/eval_harness.py` (no judge).")
-    print("Then `python chapters/ch02/02_helixagent_v1.py` to see the same agent")
-    print("read its prompt from the archive instead.")
+    asyncio.run(main_async())
 
 
 if __name__ == "__main__":

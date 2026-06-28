@@ -5,20 +5,25 @@ in 80 lines. The framework version adds caching, parent-pointer
 bookkeeping, observability, and budget enforcement. The algorithm is the
 same three steps you'll see below: mutate, score, accept.
 
+SPO is self-supervised: there are no reference answers and no labels. The
+only signal is a pairwise comparison of two prompts' outputs, judged against
+a rubric that says what a good answer looks like. That is what lets SPO
+improve a prompt with nothing but a set of questions.
+
 Run:
     python chapters/ch02/04_minimal_spo.py
 
 What you'll see, for three rounds:
-  - The current prompt's answer on a small eval slice.
   - A mutated candidate prompt (with the judge's last feedback used as
     guidance, just like SPO).
-  - The candidate's answer on the same slice.
-  - The judge's verdict: candidate wins or reference wins.
-  - Accept on win (candidate becomes the new reference); reject on loss.
+  - The candidate and the current best each answer the same questions.
+  - The rubric judge's verdict per question: candidate wins, current best
+    wins, or tie.
+  - Accept on win (candidate becomes the new current best); reject otherwise.
 
-This is SPO: hill-climbing search guided by pairwise judge feedback.
-Section §2.4 introduces the framework version that adds production
-plumbing around the same loop.
+This is SPO: hill-climbing search guided by a self-supervised pairwise judge.
+Section §2.4 introduces the framework version that adds production plumbing
+around the same loop.
 """
 
 from __future__ import annotations
@@ -36,24 +41,30 @@ if str(REPO_ROOT) not in sys.path:
 
 from helix.env import load_env
 
-# Reuse the swap-and-agree judge from §2.2 (listing 03). The sibling module
-# name starts with a digit, so it is loaded with importlib rather than a plain
-# `import`; the rest of the SPO algorithm is written out below.
-import importlib
-
-judge_with_swap_and_agree = importlib.import_module(
-    "chapters.ch02.03_minimal_judge"
-).judge_with_swap_and_agree
-
 load_env()
 
 
 AGENT_MODEL = "claude-haiku-4-5"
 PROPOSER_MODEL = "claude-sonnet-4-6"
+JUDGE_MODEL = "claude-sonnet-4-6"
 ROUNDS = 3
-QUESTIONS_PER_ROUND = 3  # small slice so the demo is cheap
+QUESTIONS_PER_ROUND = 8  # enough questions that decisive wins separate from ties
 
-EVAL_QUESTIONS_PATH = Path(__file__).parent / "eval_questions.json"
+# Just questions, no answers. SPO is self-supervised: the signal comes from
+# comparing two prompts' outputs against the rubric, never from a labeled key.
+# Each question needs a complete, multi-part answer, so a prompt that explains
+# fully beats one that answers in a single terse sentence. That is the gap SPO
+# climbs.
+QUESTIONS = [
+    "Explain the difference between weather and climate.",
+    "Why does the sky appear blue during the day?",
+    "Describe the main stages of the water cycle.",
+    "What causes the seasons on Earth?",
+    "Explain the difference between a virus and a bacterium.",
+    "Why does ice float on water?",
+    "How do vaccines help the immune system?",
+    "Summarize the plot of Romeo and Juliet in two or three sentences.",
+]
 
 
 # --------------------------- the agent ---------------------------
@@ -76,10 +87,82 @@ async def answer_with_prompt(system_prompt: str, question: str) -> str:
     return response.choices[0].message.content or ""
 
 
+# --------------------------- the self-supervised judge ---------------------------
+
+
+# The rubric is the single shared objective: what a good answer looks like. The
+# judge uses it to compare two answers; the proposer (below) uses the same text
+# to know what to optimize toward. It is a rubric, not an answer key, which is
+# what keeps SPO self-supervised. Defining it once means the two uses can never
+# drift apart.
+RUBRIC = """1. Accuracy: correct, with no invented or misleading claims.
+2. Completeness: covers the key points the question calls for.
+3. Clarity: well organized and easy to follow.
+4. Honesty: acknowledges uncertainty instead of guessing."""
+
+JUDGE_SYSTEM = f"""You are comparing two answers, LEFT and RIGHT, to the same question,
+and deciding which one is better.
+
+Judge on this rubric, in order of importance:
+{RUBRIC}
+
+If the two answers are equally good, reply TIE.
+
+Reply as JSON: "winner" ("LEFT", "RIGHT", or "TIE") and "feedback" (one sentence)."""
+
+
+async def judge_once(question: str, left: str, right: str) -> dict:
+    """One rubric-based pairwise judge call. No reference answer."""
+    user_prompt = f"""Question:
+{question}
+
+Answer LEFT:
+{left}
+
+Answer RIGHT:
+{right}
+
+Which answer is better? Reply as JSON with "winner" and "feedback"."""
+    response = await litellm.acompletion(
+        model=JUDGE_MODEL,
+        messages=[
+            {"role": "system", "content": JUDGE_SYSTEM},
+            {"role": "user", "content": user_prompt},
+        ],
+        response_format={"type": "json_object"},
+    )
+    raw = response.choices[0].message.content or "{}"
+    try:
+        return json.loads(raw)
+    except Exception:
+        return {"winner": "TIE", "feedback": "judge output malformed"}
+
+
+async def judge_with_swap_and_agree(question: str, answer_a: str, answer_b: str) -> dict:
+    """Run the rubric judge both ways and require agreement; disagreement = TIE.
+
+    This is the swap-and-agree idea from section 2.2, minus the reference: it
+    suppresses position bias without ever consulting a labeled answer.
+    """
+    forward = await judge_once(question, left=answer_a, right=answer_b)
+    reverse = await judge_once(question, left=answer_b, right=answer_a)
+    flip = {"LEFT": "RIGHT", "RIGHT": "LEFT", "TIE": "TIE"}
+    reverse_remapped = flip.get(reverse.get("winner"), "TIE")
+    forward_winner = forward.get("winner", "TIE")
+    if forward_winner == reverse_remapped and forward_winner != "TIE":
+        return {"winner": forward_winner, "feedback": forward.get("feedback", ""), "agreed": True}
+    return {"winner": "TIE",
+            "feedback": f"swap-disagreement: forward={forward_winner}, reverse={reverse_remapped}",
+            "agreed": False}
+
+
 # --------------------------- the SPO mutation step ---------------------------
 
 
-MUTATION_PROMPT = """You are improving a system prompt for a research assistant.
+MUTATION_PROMPT = """You are improving the system prompt for an AI assistant.
+
+The assistant's answers are judged on this rubric, in order of importance:
+{rubric}
 
 Current prompt:
 ---
@@ -91,8 +174,8 @@ The pairwise judge most recently said this about the prompt's output:
 {feedback}
 ---
 
-Rewrite the system prompt so the agent does better next time. Keep it
-concise (one paragraph). Output only the new prompt text, nothing else."""
+Rewrite the system prompt so the assistant scores better against that rubric.
+Output only the new prompt text, nothing else."""
 
 
 async def propose_mutation(current_prompt: str, last_feedback: str) -> str:
@@ -107,8 +190,9 @@ async def propose_mutation(current_prompt: str, last_feedback: str) -> str:
             {
                 "role": "user",
                 "content": MUTATION_PROMPT.format(
+                    rubric=RUBRIC,
                     current=current_prompt,
-                    feedback=last_feedback or "(no feedback yet — this is the first round)",
+                    feedback=last_feedback or "(no feedback yet; this is the first round)",
                 ),
             },
         ],
@@ -120,37 +204,35 @@ async def propose_mutation(current_prompt: str, last_feedback: str) -> str:
 
 
 GENESIS_PROMPT = (
-    "You are a research assistant. Answer the user's question accurately "
-    "and cite sources when possible."
+    # Deliberately flawed so the first mutation has room to win: it forces
+    # terse, one-sentence answers with no explanation, which the rubric judge
+    # marks down for incompleteness on questions that need a full answer.
+    "You are an assistant. Answer every question in a single short sentence, "
+    "and never add explanation, detail, or reasoning."
 )
 
 
-def load_eval_slice() -> list[dict]:
-    """Pick a small slice of the eval set for the demo."""
-    data = json.loads(EVAL_QUESTIONS_PATH.read_text(encoding="utf-8"))
-    return list(data["questions"])[:QUESTIONS_PER_ROUND]
-
-
-async def score_candidate_vs_reference(
+async def score_candidate_vs_current(
     candidate_prompt: str,
-    reference_prompt: str,
-    questions: list[dict],
+    current_prompt: str,
+    questions: list[str],
 ) -> tuple[int, int, int, str]:
-    """Run both prompts on the eval slice and judge each pair.
+    """Run both prompts on the questions and let the rubric judge pick a winner.
 
-    Returns (wins, losses, ties, last_feedback_string). 'wins' counts
-    questions where the candidate beat the reference.
+    No reference answers anywhere: the candidate's output is compared only
+    against the current best's output, judged by the rubric. Returns
+    (wins, losses, ties, last_feedback). 'wins' counts questions where the
+    candidate beat the current best.
     """
     wins = losses = ties = 0
     last_feedback = ""
-    for q in questions:
-        cand_answer = await answer_with_prompt(candidate_prompt, q["question"])
-        ref_answer = await answer_with_prompt(reference_prompt, q["question"])
+    for question in questions:
+        cand_answer = await answer_with_prompt(candidate_prompt, question)
+        curr_answer = await answer_with_prompt(current_prompt, question)
         verdict = await judge_with_swap_and_agree(
-            question=q["question"],
-            reference=q["reference_answer"],
-            answer_a=cand_answer,  # LEFT
-            answer_b=ref_answer,   # RIGHT
+            question,
+            answer_a=cand_answer,  # LEFT  = candidate
+            answer_b=curr_answer,  # RIGHT = current best
         )
         winner = verdict.get("winner")
         if winner == "LEFT":
@@ -164,8 +246,8 @@ async def score_candidate_vs_reference(
 
 
 async def main_async() -> None:
-    questions = load_eval_slice()
-    print(f"Loaded {len(questions)} eval questions.")
+    questions = QUESTIONS[:QUESTIONS_PER_ROUND]
+    print(f"Loaded {len(questions)} questions (no reference answers).")
     print()
 
     # The 'current best' starts as the genesis prompt. Each round may
@@ -185,11 +267,11 @@ async def main_async() -> None:
         print(f"  {candidate_prompt[:200]}{'...' if len(candidate_prompt) > 200 else ''}")
         print()
 
-        # 2. Score the candidate against the reference.
+        # 2. Score the candidate against the current best with the rubric judge.
         print(f"Judging on {len(questions)} questions ...")
-        wins, losses, ties, last_feedback = await score_candidate_vs_reference(
+        wins, losses, ties, last_feedback = await score_candidate_vs_current(
             candidate_prompt=candidate_prompt,
-            reference_prompt=current_prompt,
+            current_prompt=current_prompt,
             questions=questions,
         )
         print(f"  candidate: {wins} wins, {losses} losses, {ties} ties")
@@ -198,10 +280,10 @@ async def main_async() -> None:
 
         # 3. Accept on win (more wins than losses). Reject otherwise.
         if wins > losses:
-            print(f"  [ACCEPT] candidate beat reference; promoting to new current.")
+            print(f"  [ACCEPT] candidate beat the current best; promoting it.")
             current_prompt = candidate_prompt
         else:
-            print(f"  [REJECT] candidate did not beat reference; keeping current.")
+            print(f"  [REJECT] candidate did not beat the current best; keeping it.")
         print()
 
     print("=" * 70)
