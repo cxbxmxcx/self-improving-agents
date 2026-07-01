@@ -49,9 +49,9 @@ def bubble_early_exit(xs: list[int]) -> tuple[list[int], int]:
 
 
 def one_pass(xs: list[int]) -> tuple[list[int], int]:
-    """A DECEPTIVE candidate: a single bubble pass. It is cheap and correct on
-    already-sorted input, but wrong on most inputs. It will fool an evidence gate
-    that only ever looks at the easy sample."""
+    """A deliberately deceptive candidate: a single bubble pass. It is cheap and
+    correct on already-sorted input, but wrong on most inputs. It will fool an
+    evidence gate that only ever looks at the easy sample."""
     xs, comps = list(xs), 0
     for k in range(len(xs) - 1):
         comps += 1
@@ -61,17 +61,17 @@ def one_pass(xs: list[int]) -> tuple[list[int], int]:
 
 
 def provably_better(current, candidate) -> bool:
-    """The Godel gate: apply the candidate only if it is PROVABLY better over the
-    entire input space. Correct everywhere, never more comparisons, and strictly
+    """The proof gate: accept the candidate only if it is provably better over the
+    entire input space, correct everywhere and never more comparisons, strictly
     fewer on at least one input. No sample can fool this, but you can almost never
     build it for real code."""
     strictly = False
-    for xs in ALL_INPUTS:
+    for xs in ALL_INPUTS:               # walk every input, not a sample
         out, cand_comps = candidate(xs)
         _, cur_comps = current(xs)
-        if out != sorted(xs):       # not even correct: no proof
+        if out != sorted(xs):           # wrong on even one input: no proof
             return False
-        if cand_comps > cur_comps:  # worse somewhere: no proof
+        if cand_comps > cur_comps:      # worse on even one input: no proof
             return False
         if cand_comps < cur_comps:
             strictly = True
@@ -79,9 +79,9 @@ def provably_better(current, candidate) -> bool:
 
 
 def empirically_better(current, candidate, sample: list[int]) -> bool:
-    """The evidence gate: apply the candidate if it looks better on ONE sample.
-    Always available, costs a single run, and trusts whatever the sample shows."""
-    out, cand_comps = candidate(sample)
+    """The evidence gate: accept the candidate if it looks better on one sample.
+    Always available, costs a single run, and trusts whatever that sample shows."""
+    out, cand_comps = candidate(sample)  # run one input, not the whole space
     _, cur_comps = current(sample)
     return out == sorted(sample) and cand_comps < cur_comps
 
