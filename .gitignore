@@ -243,3 +243,10 @@ chapters/*/runs/
 # Source PDFs are fetched by ingestion/download_corpus.py, not shipped in git
 # (the built index at data/helix_corpus.lance/ ships instead).
 ingestion/pdfs/
+
+# Book manuscript: prose drafts and figure sources live in the manuscript, not
+# in this companion code repo. Chapter READMEs and the runnable listings stay
+# tracked; the draft prose and the draw.io figure sources do not.
+*.draft.md
+*.drawio
+chapters/*/figures/_png/
