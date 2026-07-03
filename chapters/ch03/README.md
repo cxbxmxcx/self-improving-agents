@@ -20,7 +20,7 @@ Six runnable scripts across four sections:
 
 | § | Concept | Script |
 |---|---------|--------|
-| 3.1 | The proof gate, and why we measure instead | `01_godel_gate.py` (no LLM) |
+| 3.1 | The proof gate, and why we measure instead | `01_godel_gate.py` |
 | 3.2 | The revenue task, and checking the checker | `02_revenue_check.py` |
 | 3.3 | Reflection and the signal ceiling | `03_two_signals.py` |
 | 3.4 | Two climbers into the plateau | `04_revenue_hillclimb_loop.py`, `05_revenue_spo_loop.py`, `06_revenue_climbers_compare.py` (no LLM) |
@@ -32,8 +32,8 @@ chapter ends on the wall they exist to cross.
 
 You should have completed chapter 2. The revenue task runs entirely in
 memory (`agents/revenue.py`), so it needs no corpus or index; you only need
-a working LLM provider key in `.env`. Two scripts run with no key and no cost
-at all: `01_godel_gate.py` and `06_revenue_climbers_compare.py`.
+a working LLM provider key in `.env`. One script runs with no key and no cost
+at all: `06_revenue_climbers_compare.py`.
 
 ---
 
@@ -46,18 +46,20 @@ improving a language model wired to eight tools, though, and nobody can prove a
 useful thing about that, so we give up the proof and keep the spirit: a change
 is worth making only if we can show it helped.
 
-You can see the trade in ten lines:
+You can see the trade on a live agent:
 
 ```
 python chapters/ch03/01_godel_gate.py
 ```
 
-A `provably_better` gate accepts a candidate only when it can check the whole
-input space and prove it correct everywhere; you can do that for a sort over
-twenty-four inputs because the space is tiny. You cannot do it for a tool-wired
-agent, so the agent gets an `empirically_better` gate that judges on a sample
-and can be fooled by an easy one. That gap, proof you cannot have versus
-evidence you can, is the trade every search in this book makes.
+The chapter-2 agent (one genesis prompt artifact, no tools) answers three
+questions about the line "strawberry fields are forever and ever". Arithmetic
+and a letter count have a computable truth, so the `proof_gate` derives the
+answer itself and its verdict is certain: the agent says 8 r's, `LINE.count("r")`
+computes 7, rejected. The third question, a five-word summary, has no checker
+at all, so verification degrades to measurement. That gap, proof where truth is
+computable versus measurement everywhere else, is the trade every search in
+this book makes.
 
 Every signal returns the same shape, a `GapMeasurement`, and that one object is
 the spine the whole book hangs on. A ground-truth check fills its `score`, the
@@ -194,9 +196,9 @@ thin to say which rule is missing.
 
 Chapter 4 turns both dials at once, a search that keeps many candidates and the
 reflection signal you met in 3.3, climbing from 0.63 to 0.86 and then to 1.00.
-That last step completes the Godel arc from 3.1: DGM swaps the proof gate for an
-evidence gate, the same relaxation hill-climbing made here, now with an archive
-that never forgets.
+That last step completes the Godel arc from 3.1: DGM swaps the Godel machine's
+proof for measured evidence, the same relaxation hill-climbing made here, now
+with an archive that never forgets.
 
 | score | method | where it stops |
 |-------|--------|----------------|
@@ -208,8 +210,8 @@ that never forgets.
 
 ## A note on cost
 
-This chapter is the cheap one. `01_godel_gate.py` and
-`06_revenue_climbers_compare.py` are free (no LLM), and `02_revenue_check.py`
+This chapter is the cheap one. `06_revenue_climbers_compare.py` is free (no
+LLM), `01_godel_gate.py` is three one-line model calls, and `02_revenue_check.py`
 and `03_two_signals.py` are a handful of agent and reflection calls. The two
 loops are one agent run plus one proposer call per round, around ten rounds each.
 
