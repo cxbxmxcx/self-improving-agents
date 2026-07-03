@@ -34,6 +34,22 @@ def test_gap_measurement_round_trip_via_dict():
     assert rt.metadata["judge_model"] == "gpt-4o"
 
 
+def test_proven_marks_only_computed_truths_and_survives_round_trip():
+    # A formal proof: the score was computed, not estimated.
+    proof = GapMeasurement(score=1.0, proven=True)
+    assert GapMeasurement.from_dict(proof.to_dict()).proven is True
+
+    # Every other family defaults to unproven, including a deterministic
+    # ground-truth check: a checker is code that can be wrong.
+    ground_truth = GapMeasurement(score=1.0, confidence=1.0)
+    assert ground_truth.proven is False
+
+    # Rows persisted before the field existed deserialize as unproven.
+    legacy = ground_truth.to_dict()
+    del legacy["proven"]
+    assert GapMeasurement.from_dict(legacy).proven is False
+
+
 class _FakeAbsoluteSignal:
     """A toy absolute signal that returns a fixed score."""
 

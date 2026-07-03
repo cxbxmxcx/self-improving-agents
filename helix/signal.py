@@ -184,7 +184,9 @@ class GapMeasurement:
     - Reflective signals fill `feedback`.
     - Contrastive signals fill both `preference` and a differential `feedback`.
     - PRMs fill `score` (aggregate) and a per-step array in `metadata`.
-    - Formal-proof signals fill `score` as 1.0 or 0.0.
+    - Formal-proof signals fill `score` as 1.0 or 0.0 and set `proven`: the
+      score was computed as a truth, not estimated. Ground-truth signals do
+      not set it; a checker is code that can be wrong.
     - Metric signals fill `raw_value` with the observation and `score` with
       its normalized form; `triggered` is True when the threshold fired.
     """
@@ -193,6 +195,7 @@ class GapMeasurement:
     preference: Preference = Preference.NONE
     feedback: str | None = None
     confidence: float = 1.0
+    proven: bool = False
     rubric_id: ParentRef = None
     signal_id: str | None = None
     signal_version: int | None = None
@@ -207,6 +210,7 @@ class GapMeasurement:
             "preference": self.preference.value,
             "feedback": self.feedback,
             "confidence": self.confidence,
+            "proven": self.proven,
             "rubric_id": list(self.rubric_id) if self.rubric_id else None,
             "signal_id": self.signal_id,
             "signal_version": self.signal_version,
@@ -228,6 +232,7 @@ class GapMeasurement:
             preference=Preference(data.get("preference", "none")),
             feedback=data.get("feedback"),
             confidence=data.get("confidence", 1.0),
+            proven=bool(data.get("proven", False)),
             rubric_id=tuple(data["rubric_id"]) if data.get("rubric_id") else None,
             signal_id=data.get("signal_id"),
             signal_version=data.get("signal_version"),
