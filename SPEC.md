@@ -132,6 +132,7 @@ GapMeasurement:
     preference: enum {LEFT, RIGHT, TIE, None} for pairwise signals
     feedback: textual critique, optional, used by reflective search methods
     confidence: float in [0, 1], the signal's self-reported confidence
+    proven: bool, True only when the score is a computed truth (formal proof), not an estimate
     rubric_id: (id, version) of the rubric that produced this, if applicable
     signal_id: stable identifier for the signal configuration that produced this
     signal_version: integer version bumped when the signal's semantics change
@@ -141,7 +142,7 @@ GapMeasurement:
     metadata: signal-specific extra fields (PRM step scores, judge raw response, etc.)
 ```
 
-The GapMeasurement is deliberately a union shape rather than a polymorphic hierarchy. Different signal families fill different fields. A pairwise signal fills `preference` and may fill `feedback`. An absolute signal fills `score`. A PRM fills `score` and a per-step array in `metadata`. ContrastiveJudge fills `feedback` with differential critique. A metric signal fills `raw_value` with the observation and `score` with its normalized form. This keeps the consumption side (search methods) uniform.
+The GapMeasurement is deliberately a union shape rather than a polymorphic hierarchy. Different signal families fill different fields. A pairwise signal fills `preference` and may fill `feedback`. An absolute signal fills `score`. A PRM fills `score` and a per-step array in `metadata`. ContrastiveJudge fills `feedback` with differential critique. A metric signal fills `raw_value` with the observation and `score` with its normalized form. A formal-proof signal fills `score` as 1.0 or 0.0 and sets `proven`, meaning the score was computed as a truth rather than estimated; ground-truth signals leave `proven` False because a checker is code that can be wrong. This keeps the consumption side (search methods) uniform.
 
 `signal_id` and `signal_version` are populated by the signal on return; the archive persists them so prior measurements remain attributable. `triggered` is True when the signal's own gap-vs-threshold test fired (§3.6); search methods and improvers can read it independent of the score. `raw_value` carries the pre-normalization observation so dashboards can render both the observed quantity and its normalized form.
 
