@@ -1,105 +1,106 @@
-"""Chapter 3: the Godel machine's proof gate, in plain Python (no LLM, no cost).
+"""Chapter 3: the Godel machine's proof gate, on a live agent.
 
-Schmidhuber's Godel machine rewrites its own code only when it can PROVE the
-rewrite raises utility. Real agents cannot prove anything useful about
-themselves, so the rest of this book trades the proof for a measurement. This
-demo shows exactly what that trade gives up.
+Schmidhuber's Godel machine accepts a change to itself only when it can PROVE
+the change helps. Real agents cannot prove anything useful about themselves,
+so the rest of this book trades the proof for a measurement. This demo shows
+the one place the proof still exists: a claim whose truth is computable.
 
-A proof gate is certain but almost never available; an evidence gate is always
-available but only as trustworthy as the sample it saw. We "self-modify" a sort
-routine and judge each candidate two ways: a Godel gate that checks the whole
-input space, and an evidence gate that checks one sample. Run:
+We reuse the chapter-2 agent pattern (one system prompt artifact, no tools) and
+ask it three questions. Two have a computable truth, so a one-line Python
+expression is a complete proof and the gate's verdict is certain. The third has
+no checker at all, and that is where measurement, and this chapter, begins. Run:
 
     python chapters/ch03/01_godel_gate.py
 """
 from __future__ import annotations
 
-from itertools import permutations
+import asyncio
+import re
+import sys
+from pathlib import Path
 
-# The whole input space for length-4 lists: 24 permutations. Small enough to
-# check exhaustively, which is the only reason a proof is possible here.
-ALL_INPUTS = [list(p) for p in permutations(range(4))]
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-def bubble(xs: list[int]) -> tuple[list[int], int]:
-    """The current implementation. Always does the full n*(n-1) comparisons."""
-    xs, comps = list(xs), 0
-    for _ in range(len(xs)):
-        for k in range(len(xs) - 1):
-            comps += 1
-            if xs[k] > xs[k + 1]:
-                xs[k], xs[k + 1] = xs[k + 1], xs[k]
-    return xs, comps
+from helix.agent import Agent
+from helix.artifact import Subtype, genesis
+from helix.env import load_env
 
+load_env()
 
-def bubble_early_exit(xs: list[int]) -> tuple[list[int], int]:
-    """A GENUINELY better candidate: correct everywhere, and it stops early once a
-    pass makes no swaps, so it never does more comparisons and often does fewer."""
-    xs, comps = list(xs), 0
-    for _ in range(len(xs)):
-        swapped = False
-        for k in range(len(xs) - 1):
-            comps += 1
-            if xs[k] > xs[k + 1]:
-                xs[k], xs[k + 1] = xs[k + 1], xs[k]
-                swapped = True
-        if not swapped:
-            break
-    return xs, comps
+MODEL = "claude-haiku-4-5"  # the chapter-2 default; any model makes the point
+
+LINE = "strawberry fields are forever and ever"
 
 
-def one_pass(xs: list[int]) -> tuple[list[int], int]:
-    """A deliberately deceptive candidate: a single bubble pass. It is cheap and
-    correct on already-sorted input, but wrong on most inputs. It will fool an
-    evidence gate that only ever looks at the easy sample."""
-    xs, comps = list(xs), 0
-    for k in range(len(xs) - 1):
-        comps += 1
-        if xs[k] > xs[k + 1]:
-            xs[k], xs[k + 1] = xs[k + 1], xs[k]
-    return xs, comps
+def build_agent() -> Agent:
+    """The chapter-2 agent pattern, minus the retrieve tool: one genesis prompt
+    artifact and a model. Counting letters needs no corpus."""
+    prompt = genesis(
+        id="prompt.godelgate.system",
+        kind=Subtype.PROMPT,
+        content="You are a careful assistant. When asked for a number, reply "
+                "with the number alone and nothing else.",
+        created_by="human",
+    )
+    return Agent(system_prompt=prompt, model=MODEL, temperature=0.0)
 
 
-def provably_better(current, candidate) -> bool:
-    """The proof gate: accept the candidate only if it is provably better over the
-    entire input space, correct everywhere and never more comparisons, strictly
-    fewer on at least one input. No sample can fool this, but you can almost never
-    build it for real code."""
-    strictly = False
-    for xs in ALL_INPUTS:               # walk every input, not a sample
-        out, cand_comps = candidate(xs)
-        _, cur_comps = current(xs)
-        if out != sorted(xs):           # wrong on even one input: no proof
-            return False
-        if cand_comps > cur_comps:      # worse on even one input: no proof
-            return False
-        if cand_comps < cur_comps:
-            strictly = True
-    return strictly
+def first_int(text: str) -> int | None:
+    match = re.search(r"-?\d+", text)
+    return int(match.group()) if match else None
 
 
-def empirically_better(current, candidate, sample: list[int]) -> bool:
-    """The evidence gate: accept the candidate if it looks better on one sample.
-    Always available, costs a single run, and trusts whatever that sample shows."""
-    out, cand_comps = candidate(sample)  # run one input, not the whole space
-    _, cur_comps = current(sample)
-    return out == sorted(sample) and cand_comps < cur_comps
+def proof_gate(claimed: int | None, truth: int) -> str:
+    """The Godel condition in miniature: derive the truth, compare, done.
+    No sample, no judge, no confidence interval. The verdict is certain."""
+    return "ACCEPT (certain)" if claimed == truth else "REJECT (certain)"
+
+
+async def main_async() -> None:
+    agent = build_agent()
+
+    print(f'The line: "{LINE}"')
+    print()
+
+    # Claim 1: arithmetic. The proof is the computation itself.
+    answer, _ = await agent.run("What is 1 + 1 + 1?")
+    claimed = first_int(answer)
+    print("Q1: What is 1 + 1 + 1?")
+    print(f"  agent's answer : {claimed}")
+    print(f"  the proof      : 1 + 1 + 1 = {1 + 1 + 1}  (computed, not sampled)")
+    print(f"  proof gate     -> {proof_gate(claimed, 1 + 1 + 1)}")
+    print()
+
+    # Claim 2: a letter count. The proof is one expression: LINE.count("r").
+    answer, _ = await agent.run(
+        f'How many times does the letter r appear in "{LINE}"?'
+    )
+    claimed = first_int(answer)
+    print("Q2: How many r's in the line?")
+    print(f"  agent's answer : {claimed}")
+    print(f'  the proof      : LINE.count("r") = {LINE.count("r")}  (computed, not sampled)')
+    print(f"  proof gate     -> {proof_gate(claimed, LINE.count('r'))}")
+    print()
+
+    # Question 3: no checker exists. This is almost everything an agent does.
+    answer, _ = await agent.run(f'Summarize this line in five words: "{LINE}"')
+    print("Q3: Summarize the line in five words.")
+    print(f"  agent's answer : {answer.strip()}")
+    print("  the proof      : none exists. You can count the words, but no")
+    print("                   expression computes whether the summary is good.")
+    print()
+    print("Where a truth is computable, the gate is certain and free. Almost")
+    print("nothing an agent produces has one, so the gate degrades to a")
+    print("measurement, and making that measurement trustworthy is this chapter.")
 
 
 def main() -> None:
-    sorted_sample = [0, 1, 2, 3]  # the easy case the evidence gate happens to see
-
-    print("Candidate A: bubble_early_exit (genuinely better)")
-    print(f"  Godel gate    -> {'ACCEPT' if provably_better(bubble, bubble_early_exit) else 'REJECT'}")
-    print(f"  evidence gate -> {'ACCEPT' if empirically_better(bubble, bubble_early_exit, sorted_sample) else 'REJECT'}")
-    print()
-    print("Candidate B: one_pass (cheap on the sample, wrong in general)")
-    print(f"  Godel gate    -> {'ACCEPT' if provably_better(bubble, one_pass) else 'REJECT'}")
-    print(f"  evidence gate -> {'ACCEPT' if empirically_better(bubble, one_pass, sorted_sample) else 'REJECT'}")
-    print()
-    print("The Godel gate rejects B because it is wrong on inputs the sample never showed.")
-    print("The evidence gate accepts B, fooled by the one easy case. That gap, proof you")
-    print("cannot have versus evidence you can, is the trade every search in this book makes.")
+    asyncio.run(main_async())
 
 
 if __name__ == "__main__":
