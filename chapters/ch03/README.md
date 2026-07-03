@@ -12,17 +12,18 @@ instead of proving it.
 You already built one measurement in chapter 2: an LLM-as-judge that
 preferred one prompt's answer to another. That is one member of a whole
 family of signals, and a judge's opinion sits at the noisy, cheap end of it.
-This chapter introduces the family, names the primitive underneath it, and
-shows why a single climber on any one signal eventually stalls.
+This chapter introduces the family, runs every member against one revenue
+task that carries through chapter 4, and shows why a single climber on any
+one signal eventually stalls.
 
 Six runnable scripts across four sections:
 
 | § | Concept | Script |
 |---|---------|--------|
 | 3.1 | The proof gate, and why we measure instead | `01_godel_gate.py` (no LLM) |
-| 3.2 | Ground truth, reflection, and the signal ceiling | `02_revenue_check.py`, `03_two_signals.py` |
-| 3.3 | Hill-climbing and SPO: two single-candidate searches | `04_revenue_hillclimb_loop.py`, `05_revenue_spo_loop.py` |
-| 3.4 | The offline loop and the plateau | `06_revenue_climbers_compare.py` (no LLM) |
+| 3.2 | The revenue task, and checking the checker | `02_revenue_check.py` |
+| 3.3 | Reflection and the signal ceiling | `03_two_signals.py` |
+| 3.4 | Two climbers into the plateau | `04_revenue_hillclimb_loop.py`, `05_revenue_spo_loop.py`, `06_revenue_climbers_compare.py` (no LLM) |
 
 The methods that climb past the plateau, GEPA and DGM, are chapter 4. This
 chapter ends on the wall they exist to cross.
@@ -66,20 +67,22 @@ signal ran (`helix/signal.py`).
 
 ---
 
-## §3.2 The family of signals
+## §3.2 The revenue task
 
-Think of the family as a spectrum. At one end sits proof, certain but almost
-never available; at the other sits the judge, available everywhere but only an
-opinion; ground truth and reflection live in between. As a general rule, you
-reach for the most trustworthy signal your task can actually give you.
+Every number in this chapter and the next comes from one running example: a
+small company database and one vague analytics question, "who were our top
+three reps last quarter and how much did they bring in?" The agent has five
+tables and eight query tools, and six rules the question never spells out (net
+of refunds, the right quarter, four kinds of orders to exclude) separate a
+correct answer from a plausible one. A canonical pipeline in plain Python
+knows the true leaderboard, so any answer can be scored against it.
 
 ### Ground truth: precise, and only as good as your checker
 
-On the revenue task we already know the right leaderboard, so we check the
-answer against the truth instead of asking an opinion. The catch is that a
-checker is itself code that can be wrong, and a confidently wrong oracle is
-worse than an honest judge, because it scores a bad answer 1.0 and sends your
-search the wrong way.
+Because we know the right leaderboard, we check the answer against the truth
+instead of asking an opinion. The catch is that a checker is itself code that
+can be wrong, and a confidently wrong oracle is worse than an honest judge,
+because it scores a bad answer 1.0 and sends your search the wrong way.
 
 ```
 python chapters/ch03/02_revenue_check.py
@@ -90,6 +93,15 @@ This is the check-the-checker step: if your oracle does not score 1.0 on a
 known-perfect answer, your ground truth is broken before any search begins. The
 check scores with plain Python in `agents/revenue.py`;
 `helix.signals.task_success.TaskSuccessSignal` is the same idea in general form.
+
+---
+
+## §3.3 The family of signals
+
+Think of the family as a spectrum. At one end sits proof, certain but almost
+never available; at the other sits the judge, available everywhere but only an
+opinion; ground truth and reflection live in between. As a general rule, you
+reach for the most trustworthy signal your task can actually give you.
 
 ### Reflection: a critique with no score
 
@@ -115,11 +127,17 @@ that incompleteness is the wall the rest of the book climbs.
 
 ---
 
-## §3.3 Climbing with what you measured
+## §3.4 Climbing into the plateau
 
 A measurement is only useful if a search consumes it. This section builds the
 two simplest searches, both single-candidate, each fitting a different signal,
 and runs both on the revenue task.
+
+Both run inside the same loop you built in chapter 2: measure, propose,
+select, record, repeat. The chapter-3 scripts re-implement that loop inline
+for readability, and the framework `OfflineImprover` from chapter 2 is the
+durable version with the deploy gate. Swapping the search is the only change
+between them.
 
 ### Hill-climbing: the empirical Godel ratchet
 
@@ -155,15 +173,7 @@ SPO consumes a preference where hill-climbing consumes a score, but it is still
 a single climber, and it stalls at 0.63 too. The signal you have decides which
 search you can run; it does not decide whether a single climber gets stuck.
 
----
-
-## §3.4 The offline loop and the plateau
-
-Both searches run inside the same loop you built in chapter 2: measure, propose,
-select, record, repeat. The chapter-3 scripts re-implement that loop inline for
-readability, and the framework `OfflineImprover` from chapter 2 is the durable
-version with the deploy gate. Swapping the search is the only change between
-them.
+### Two climbers, one wall
 
 Run the two loops, then one no-LLM script reads both run archives and prints a
 signal-agnostic side by side, so the wall is reproducible rather than asserted:
@@ -183,7 +193,7 @@ single climber trapped in a local optimum, and each is driven by a signal too
 thin to say which rule is missing.
 
 Chapter 4 turns both dials at once, a search that keeps many candidates and the
-reflection signal you met in 3.2, climbing from 0.63 to 0.86 and then to 1.00.
+reflection signal you met in 3.3, climbing from 0.63 to 0.86 and then to 1.00.
 That last step completes the Godel arc from 3.1: DGM swaps the proof gate for an
 evidence gate, the same relaxation hill-climbing made here, now with an archive
 that never forgets.
@@ -217,7 +227,7 @@ dollars. The pattern generalizes even when the benchmark numbers do not.
 
 Chapter 4 picks up exactly where this one stops, at the 0.63 plateau, and
 introduces the methods that climb past it. GEPA reaches 0.86 by reading the
-reflection signal from section 3.2, and DGM reaches 1.00 with an archive that
+reflection signal from section 3.3, and DGM reaches 1.00 with an archive that
 never forgets. It also breaks out the lineage dashboard so you can see the whole
 search as a tree, and the Godel machine returns there when DGM relaxes its proof
 gate to evidence.
