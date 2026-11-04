@@ -1,6 +1,6 @@
 # Second Breakfast Games support desk
 
-This is the fictional studio helpdesk used for the practical demonstrations in [Chapter 5, draft 0.15](../chapter5.draft0.15.md). Its tickets cover asset sync, audio, builds, and permissions, with user identities for testing scoped recall. The chapter uses the task's inputs, tool results, and memory records to demonstrate the implementation.
+This is the fictional studio helpdesk used for the practical demonstrations in an earlier version of Chapter 5. Its tickets cover asset sync, audio, builds, and permissions, with user identities for testing scoped recall. The chapter uses the task's inputs, tool results, and memory records to demonstrate the implementation.
 
 ## Start with the walkthrough
 

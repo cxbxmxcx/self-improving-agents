@@ -1,6 +1,6 @@
 # Chapter 7: Searching the harness for better learning mechanisms
 
-Chapter 7 continues chapter 6 by putting the harness's learning code under search. Chapter 6 selected among five learning mechanisms that a person wrote; here a search writes new ones, and a changed harness is measured by how well it learns procedures for task classes it never saw. The [code plan](../plan_ch07_code.md) describes the design, the author's decisions, and the build order; no manuscript draft exists yet.
+Chapter 7 continues chapter 6 by putting the harness's learning code under search. Chapter 6 selected among five learning mechanisms that a person wrote; here a search writes new ones, and a changed harness is measured by how well it learns procedures for task classes it never saw.
 
 ## Learning mechanisms as source
 

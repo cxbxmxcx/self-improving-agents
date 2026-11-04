@@ -270,3 +270,10 @@ tmp/
 /-
 lineage_view_standalone.html
 .vscode/settings.json
+
+# Publishing-process files stay local: the authoring instructions, the Word
+# converter, the chapter figure sources and builders, and local settings.
+CLAUDE.md
+.claude/settings.local.json
+tools/manuscript/
+chapters/*/figures/

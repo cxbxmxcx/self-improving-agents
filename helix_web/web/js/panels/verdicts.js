@@ -15,7 +15,7 @@ const FILTERS = [
 ];
 
 // Selections ride in the hash as one comma-joined param per filter, so a
-// filtered view is a link somebody can paste into a chapter draft.
+// filtered view is a link somebody can paste into a chapter.
 function readSelections(params) {
   const sel = {};
   for (const f of FILTERS) {

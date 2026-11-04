@@ -94,7 +94,7 @@ By Chapter 12 the framework has accumulated hooks, signal implementations, and c
 
 ## 6. Open architectural questions
 
-Items where the spec is provisional and a manuscript decision is pending:
+Items where the spec is provisional and a decision is pending:
 
 **Reflection as Signal versus Search (resolved, v0.3).** The spec puts Reflection in the Signal family (Section 3.3) because it makes GEPA-uses-reflection clean. The alternative, Reflexion as a Search consuming its own Signal output, was rejected in the Chapter 6 plan: Reflection stays a Signal, and its only route to changed behavior is a memory entry read at PRE_MODEL. See §17.
 
@@ -114,18 +114,15 @@ Items where the spec is provisional and a manuscript decision is pending:
 
 ---
 
-## 7. House style for generated content
+## 7. Style for repository content
 
 Any prose, documentation, or commentary generated for this project follows these rules:
 
 - **Paragraphs are 3 sentences.** Hard rule for prose deliverables. Break longer paragraphs at natural conceptual seams.
-- **Chapter openers are 2-3 paragraphs.** Fit the problem, previous-chapter connection, chapter direction, and payoff into that introduction; move setup and detailed explanations into the body.
 - **No em-dashes.** Use commas, semicolons, or colons instead.
-- **Markdown only for documents.** No .docx unless explicitly requested.
+- **Markdown for documents.**
 - **NPG color palette where colors apply:** vermillion (#E64B35), slate blue (#3C5488), ocean teal (#00A087), soft cyan (#4DBBD5), muted salmon (#F39B7F). Nature Editorial infographic aesthetic.
-- **Code listings are short.** 5-20 lines for in-book listings. Repository code can be longer but stays readable.
-- **Draw.io for book figures.** Keep editable `.drawio` sources and match the existing chapter figures' dimensions, typography, NPG colors, and visual conventions. Export PNG previews for the manuscript.
-- **Increment manuscript revisions.** Save each delivered draft edit under the next version tag and preserve the preceding revision, for example `.draft0.6.md` to `.draft0.7.md`.
+- **Code stays readable.** Chapter listings are short, and the code they excerpt stays readable.
 
 ---
 
@@ -239,7 +236,7 @@ Earlier drafts had a single `Improver` class with an `ImproverMode` enum (OFFLIN
 
 **Why peer classes, not subclasses.** Two classes can satisfy the same protocols without sharing a base class, and that is the right shape when their lifecycles genuinely differ. OfflineImprover owns a driver loop and tests candidates against a labeled set; OnlineImprover has no loop and reacts to the agent's `SESSION_END` hook. A shared base class would either be empty (just hierarchy with no shared code) or it would force one of them into the other's shape. The framework already takes the peer-classes-share-protocols stance for Signal families (`PairwiseJudge` and `LiveTrajectoryJudge` are peers, not parent/child); the same logic applies here.
 
-**Why rename, not deprecate.** The codebase is at MEAP, not at a stable release. Keeping `Improver` as a deprecated alias for `OfflineImprover` for one cycle would carry the cost of dual paths in every chapter script and in every test. Author decision: rename cleanly, no alias. Existing call sites get updated in the same change set. This breaks no production users because there are no production users yet.
+**Why rename, not deprecate.** The codebase is pre-release, not a stable release. Keeping `Improver` as a deprecated alias for `OfflineImprover` for one cycle would carry the cost of dual paths in every chapter script and in every test. Author decision: rename cleanly, no alias. Existing call sites get updated in the same change set. This breaks no production users because there are no production users yet.
 
 **Why "improver" stays as a category noun.** The spec uses the word "improver" in prose to refer to either class. There is no `Improver` Protocol or base class; the word is plain English. This matches how the spec uses "signal family" as a category noun without requiring all signals to share a base class. Readers refer to "the improver" without the type system pretending there's a unifying type underneath.
 
@@ -261,7 +258,7 @@ Earlier drafts had a per-role artifact kind enum: `prompt`, `skill`, `tool_descr
 
 **Why kind and layer became two different properties.** Folding the text roles into one kind raised a layer question, because the online-safety rule reads layer and an earlier draft put planner and monitor at L3. The author decision went further than "derive layer from subtype": planner and monitor are demoted to L1 text, and the L3 risk moves onto a `metacognition` composite (§18.2.1) that binds a planner, a monitor, and the memory/state the agent reasons over. The reasoning is that a standalone planner prompt is a low-risk wording change, while the metacognitive scaffold is dangerous precisely because the parts act together to modify the agent's own reasoning, so the risk is emergent from the composition rather than present in any constituent. Layer is therefore `max(subtype floor, max over constituents)`: text is L1, memory L2, code L4, and a composite can declare a floor (metacognition floors at L3) that exceeds its constituents. This is the cleaner answer to "where does metacognition live," and it makes Chapter 6 the chapter that introduces both metacognition and the composition machinery.
 
-**Why a clean break rather than dual kinds.** The same reasoning as the Improver rename (§14): the codebase is at MEAP with no production users, so carrying both the v0.1 per-role kinds and the v0.2 `text` subtypes would mean dual paths in every chapter and test for no benefit. Archives written under v0.1 are migrated on read by mapping each retired kind to `(text, subtype)`. The spec version bumps to 0.2 because the kind enum changed shape.
+**Why a clean break rather than dual kinds.** The same reasoning as the Improver rename (§14): the codebase is pre-release with no production users, so carrying both the v0.1 per-role kinds and the v0.2 `text` subtypes would mean dual paths in every chapter and test for no benefit. Archives written under v0.1 are migrated on read by mapping each retired kind to `(text, subtype)`. The spec version bumps to 0.2 because the kind enum changed shape.
 
 ---
 
@@ -281,7 +278,7 @@ SPEC §16.1 settled "one improver per artifact," and §16.1.4 left a door open f
 
 ## 17. Chapters 5 to 8: decisions from the planning interview (2026-08-23)
 
-The plan for these chapters lives in `chapters/plan_ch05_ch08.md`. This section records why the decisions there came out the way they did, so a later session does not reopen them by accident.
+This section records why the decisions for these chapters came out the way they did, so a later session does not reopen them by accident.
 
 **Why memory entries become archive artifacts, with the tier row keeping an `artifact_ref`.** Nothing in the framework can search a thing that is not an artifact, and Chapter 5 exists to search memory. Rewriting the tiers to store artifacts directly would throw away working SQLite code and the vector-store adapter boundary for no gain. So the tier row stays the retrieval index and points at the archive row, the same shape the procedural tier already uses, and UPSERTs become new versions with a parent.
 

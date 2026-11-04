@@ -1,10 +1,10 @@
 # Chapter 5: Reinforcement learning for memory improvement
 
-Current manuscript: [draft 0.20](chapter5.draft0.20.md). A personal agent creates writing blocks in a local calendar and uses episodic experience to inform later scheduling. The chapter separates valid execution, explicit user acceptance, learned memory values, and evidence of improvement.
+A personal agent creates writing blocks in a local calendar and uses episodic experience to inform later scheduling. The chapter separates valid execution, explicit user acceptance, learned memory values, and evidence of improvement.
 
 ## Run the book's listings
 
-Run from the repository root in the project environment. The three files follow their first appearance in the manuscript. The default walkthrough uses local data with no model downloads or provider calls.
+Run from the repository root in the project environment. The three files follow their first appearance in the chapter. The default walkthrough uses local data with no model downloads or provider calls.
 
 | Listing | Source | What the chapter demonstrates |
 |---------|--------|-------------------------------|
@@ -34,12 +34,7 @@ The final script accepts `--live --model YOUR_MODEL_ID` with that provider's cre
 
 - [Personal calendar data and responder](personal/README.md).
 - [Recorded calendar, trace, and recall audit](personal/recorded/README.md).
-- [Editable draw.io figures](figures/README.md).
-- [Editorial review and pagination evidence](../../docs/editorial/ch05-review-0.16.md).
-- [Measurement-language review, applied in draft 0.17](../../docs/editorial/ch05-measurement-language-0.16.md).
-- [Terminology review against chapters 1 to 4, applied in draft 0.18](../../docs/editorial/ch05-terminology-0.18.md).
-- [Reinforcement-learning concepts for figures 5.4 to 5.7, applied in draft 0.19](../../docs/editorial/ch05-rl-concepts-0.19.md).
 
 The learning rule remains `q_new = q + 0.5 * (credit - q)`. Equal credit, one recalled episode, utility weight `0.35`, recency weight zero, the encoder, and the prompt stay fixed. New episodes start at `0.5`; only earlier recalled entries receive the current request's credit.
 
-The superseded studio example is preserved in [its historical appendix](../../chapter_appendices/ch05_studio_legacy/README.md). The [earlier research examples](../../chapter_appendices/ch05_research_legacy/README.md) and [separate RL primer](../../chapter_appendices/ch05_rl_primer_legacy/README.md) also remain outside the active teaching path. Previous manuscripts and figure revisions remain available for comparison.
+The superseded studio example is preserved in [its historical appendix](../../chapter_appendices/ch05_studio_legacy/README.md). The [earlier research examples](../../chapter_appendices/ch05_research_legacy/README.md) and [separate RL primer](../../chapter_appendices/ch05_rl_primer_legacy/README.md) also remain outside the active teaching path.

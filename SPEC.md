@@ -706,7 +706,7 @@ The framework deliberately does not provide:
 
 ## 13. Open Questions
 
-Items where the spec is provisional and the manuscript decision is pending.
+Items where the spec is provisional and the decision is pending.
 
 **Trajectory storage cost.** Trajectories are large. Long-running deployments accumulate trajectories faster than archives. The spec assumes a TTL plus sampling policy for trajectory persistence, but the policy details depend on Chapter 9's continuous-eval sampling strategy, which is still in design.
 

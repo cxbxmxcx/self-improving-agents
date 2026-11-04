@@ -1,6 +1,6 @@
 # Superseded: chapter 6 as a decision-model scaffold
 
-This was chapter 6's first design, retired on 2026-10-31 when the chapter turned to learning procedural memory that moves a task from System 2 to System 1 (see `chapters/plan_ch06_code.md`, draft 0.2). It is kept, runnable and tested, because the framework pieces it exercises remain in Helix and its live evidence is a useful record.
+This was chapter 6's first design, retired on 2026-10-31 when the chapter turned to learning procedural memory that moves a task from System 2 to System 1. It is kept, runnable and tested, because the framework pieces it exercises remain in Helix and its live evidence is a useful record.
 
 The chapter 5 assistant gains a meta level. A decision model answers typed questions about each run, and a configured policy turns the answers into control: the fast path, the deliberate path, or a question back, a confirmation before a consequential call, a revision of an incomplete answer, and a lesson after a rejection. Chapter 5's memory learning keeps running underneath, unchanged.
 
@@ -81,4 +81,3 @@ The live search overfit: it improved the training score but accepted only 38 hel
 
 - [The assistant's world, tools, stand-in, and evaluation code](assistant/README.md).
 - [The 61 requests with their hidden truth](assistant/requests.md).
-- [The code plan for this chapter](../plan_ch06_code.md).

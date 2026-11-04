@@ -22,7 +22,7 @@ agents/                 example agents (helpdesk, researcher, revenue)
 chapter_appendices/     appendix A (setup), appendix B (RAG), ch3 v0 scaffolding
 ingestion/              PDF -> LanceDB ingestion pipeline
 data/helix_corpus.lance the shipped corpus (built from ingestion/pdfs/)
-docs/architecture/      editable diagram sources (drawio) for the book figures
+docs/architecture/      editable architecture diagram sources (drawio)
 tests/                  spec-conformance tests
 SPEC.md                 architectural specification (source of truth)
 DESIGN_NOTES.md         the why behind the spec

@@ -1,6 +1,6 @@
 # Recorded personal calendar walkthrough
 
-These files were produced and verified while revising Chapter 5 to draft 0.16. The agent loop, tools, memory hooks, stores, and learner execute normally; the model responder and user reviews are scripted. The results demonstrate mechanics rather than language-model performance.
+These files were produced and verified for Chapter 5. The agent loop, tools, memory hooks, stores, and learner execute normally; the model responder and user reviews are scripted. The results demonstrate mechanics rather than language-model performance.
 
 - [calendar.json](calendar.json): four created events, their original times, and observed feedback.
 - [trace.json](trace.json): requests, tool calls, recalled versions, rewards, updates, configuration, and hashes.

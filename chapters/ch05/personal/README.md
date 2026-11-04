@@ -1,6 +1,6 @@
 # Personal calendar agent
 
-The example in [Chapter 5, draft 0.16](../chapter5.draft0.16.md) creates a 45-minute Writing event on the requested date. A local JSON calendar persists the action, while a scripted user review evaluates whether the chosen time suits the user's current work style. Episodic memory retains earlier requests and final reports, including observed feedback.
+The example in Chapter 5 creates a 45-minute Writing event on the requested date. A local JSON calendar persists the action, while a scripted user review evaluates whether the chosen time suits the user's current work style. Episodic memory retains earlier requests and final reports, including observed feedback.
 
 Run `python chapters/ch05/03_memory_learning.py` from the repository root. A fresh output directory contains the calendar, archive, episodic store, trace, and transcript. No external calendar account is accessed.
 

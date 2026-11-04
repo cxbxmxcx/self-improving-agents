@@ -1,6 +1,6 @@
 # Archived Chapter 5 studio walkthrough
 
-This is the support-ticket example used through Chapter 5 draft 0.15. The
+This is the support-ticket example used in an earlier version of Chapter 5. The
 current chapter uses the personal calendar agent instead. Imports in these
 runnable copies point to this archive; their behavior remains unchanged.
 

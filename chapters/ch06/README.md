@@ -1,8 +1,6 @@
 # Chapter 6: Metacognition, learning to think less
 
-Chapter 6 examines metacognition as thinking about thinking, with learning to think less measured through task success and reasoning effort. The current manuscript, [draft 0.10](chapter6.draft0.10.md), cut to 31 Word pages for the 35-page maximum, follows one pattern: chapter 4's context search finds the procedural memory that defines what good looks like, a search over learning mechanisms finds one that reproduces it from experience, and the kept learner runs online in a metacognition loop. [Editable figures and previews](figures/README.md) support the explanations, and the [code plan](../plan_ch06_code.md) and the review notes ([continuity](../../docs/editorial/ch06-review-0.6.md), [figure style](../../docs/editorial/ch06-review-0.7.md), [content](../../docs/editorial/ch06-content-review-0.7.md)) record how earlier drafts developed.
-
-The [Word chapter](../../06_Lanham5_Self-Improving_Agents.docx) contains draft 0.10 in the existing Manning template, and the [versioned Word copy](../../06_Lanham5_Self-Improving_Agents.draft0.10.docx) contains the same text, tables, listings, and eleven figures. The previous Word documents are preserved as [draft 0.9](../../06_Lanham5_Self-Improving_Agents.draft0.9.docx), [draft 0.8](../../06_Lanham5_Self-Improving_Agents.draft0.8.docx), [draft 0.7](../../06_Lanham5_Self-Improving_Agents.draft0.7.docx), [draft 0.6](../../06_Lanham5_Self-Improving_Agents.draft0.6.docx), and [draft 0.5](../../06_Lanham5_Self-Improving_Agents.draft0.5.docx).
+Chapter 6 examines metacognition as thinking about thinking, with learning to think less measured through task success and reasoning effort. The chapter follows one pattern: chapter 4's context search finds the procedural memory that defines what good looks like, a search over learning mechanisms finds one that reproduces it from experience, and the kept learner runs online in a metacognition loop.
 
 ## Code listings: context search, reasoning floor, learning search, generalization, and the online loop
 
@@ -111,7 +109,7 @@ Without a promoted learned file, listing 6.4 tries the learned source saved by l
 
 ## Keeping the earlier experiments
 
-The earlier task designs preserve the evidence used to choose the calendar conventions and callable memory representation. Their results belong to different environments or prompts and should be read as development history. Drafts [0.1](chapter6.draft0.1.md) to [0.9](chapter6.draft0.9.md) retain their original prose and figure references.
+The earlier task designs preserve the evidence used to choose the calendar conventions and callable memory representation. Their results belong to different environments or prompts and should be read as development history.
 
 | Earlier design | Files or recordings | Observed result |
 |---|---|---|
@@ -119,5 +117,5 @@ The earlier task designs preserve the evidence used to choose the calendar conve
 | Recurring team | [generator_recurring_team.py](assistant/generator_recurring_team.py), [team_windows.recurring_team.md](assistant/memories/team_windows.recurring_team.md) | Little room to improve a baseline already solving 15 of 16 tasks at low |
 | Plain calendars | [environment_plain_calendars.py](assistant/environment_plain_calendars.py), [generator_plain_calendars.py](assistant/generator_plain_calendars.py), [reference function](assistant/memories/find_shared_starts.plain_calendars.py) | Callable memory solved all 16 at none, but the contract already described the method |
 | Ambiguous client note | `reasoning_floor.ambiguous_note.jsonl`, `learning_search.ambiguous_note.jsonl` | Exposed misleading crash feedback and an unresolved boundary rule |
-| Hand-written bootstrapped memory | [find_shared_starts.py](assistant/memories/find_shared_starts.py), [floors](runs/reasoning_floor.hand_written.json) | 16 of 16 at every setting; drafts 0.1 to 0.8 used it as the reference |
+| Hand-written bootstrapped memory | [find_shared_starts.py](assistant/memories/find_shared_starts.py), [floors](runs/reasoning_floor.hand_written.json) | 16 of 16 at every setting; earlier versions of the chapter used it as the reference |
 | Decision-model scaffold | [Legacy appendix](../../chapter_appendices/ch06_decision_scaffold_legacy/README.md) | Preserves the retired chapter design |
