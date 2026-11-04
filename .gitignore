@@ -237,8 +237,11 @@ __marimo__/
 
 # Eval harness output, persistent archives, SPO round logs (regenerable)
 chapters/*/runs/
+chapter_appendices/*/runs/
 *.sqlite
 *.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
 
 # Source PDFs are fetched by ingestion/download_corpus.py, not shipped in git
 # (the built index at data/helix_corpus.lance/ ships instead).
@@ -247,6 +250,23 @@ ingestion/pdfs/
 # Book manuscript: prose drafts and figure sources live in the manuscript, not
 # in this companion code repo. Chapter READMEs and the runnable listings stay
 # tracked; the draft prose and the draw.io figure sources do not.
-*.draft.md
+# The *.draft*.md glob also catches versioned drafts like chapter4.draft1.md.
+*.draft*.md
 *.drawio
 chapters/*/figures/_png/
+
+# Word manuscripts and the author's documents stay local, as do manuscript
+# planning, editorial reviews of drafts, research notes, and writing samples.
+*.docx
+~$*.docx
+chapters/plan_*.md
+docs/editorial/
+docs/research/
+lanham-sample-writing-voice/
+.claude/skills/
+
+# Local scratch: review renders, stray exports, and editor settings.
+tmp/
+/-
+lineage_view_standalone.html
+.vscode/settings.json
