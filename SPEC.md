@@ -36,7 +36,7 @@ Artifact:
     version: monotonically increasing integer per id
     parent_id: (id, version) of the artifact this was mutated from, or None for genesis
     kind: enum {text, memory_entry, code, composite}  (search economics; see §1.2)
-    subtype: role within the kind (text -> {prompt, tool_description, skill, rubric, planner, monitor}); None when the kind has no subtypes
+    subtype: role within the kind (text -> {prompt, tool_description, skill, rubric, planner, monitor, reflector}); None when the kind has no subtypes
     content: the artifact's payload (string for text, dict for memory_entry, source string for code, list of constituent refs for composite)
     metadata: open dict for signals, scores, provenance, search method that produced it
     created_at: timestamp
@@ -49,19 +49,19 @@ The framework recognizes a closed set of artifact kinds. A kind encodes how an a
 
 The kinds are:
 
-- **text**: natural language the LLM reads, mutated by text search (SPO, GEPA, reflective mutation). The subtype names the role and is a closed set: `prompt`, `tool_description`, `skill`, `rubric`, `planner`, `monitor`. A prompt and a tool description differ in where they attach to the agent, not in how they are mutated, which is why they share a kind.
+- **text**: natural language the LLM reads, mutated by text search (SPO, GEPA, reflective mutation). The subtype names the role and is a closed set: `prompt`, `tool_description`, `skill`, `rubric`, `planner`, `monitor`, `reflector`. The `reflector` subtype (v0.3) holds the prompt the Reflection signal reads, so the reflector's wording is an artifact under search like any other prompt. A prompt and a tool description differ in where they attach to the agent, not in how they are mutated, which is why they share a kind.
 - **memory_entry**: an episodic or semantic memory record. The storage representation (embeddings, timestamps, retrieval count) is fixed; its content and metadata are the mutable artifact.
 - **code**: executable agent code: a tool implementation, a guardrail, or at the frontier agent code itself. Different economics from text (sandboxed, test-gated), which is why it is its own kind rather than a text subtype.
-- **composite**: an artifact whose content is a set of constituent refs plus a binding descriptor. Unlike text, its subtype set is open: a composite subtype names a blessed composition shape (`metacognition` is the first, §11.5), and new subtypes are added as new coupled patterns appear. It is the unit of joint search and joint deployment for coupled artifacts; see §18.
+- **composite**: an artifact whose content is a set of constituent refs plus a binding descriptor. Unlike text, its subtype set is open: a composite subtype names a blessed composition shape (`metacognition` is the first, §11.6; `harness` is the second, §11.7), and new subtypes are added as new coupled patterns appear. It is the unit of joint search and joint deployment for coupled artifacts; see §18.
 
 The **layer** is a separate property that classifies promotion risk, and it is what the online-safety rule reads (§17.3): online improvers refuse any target at layer 3 or higher. Layer is a function of `(kind, subtype)`, not of kind alone:
 
 | Layer | Members |
 | --- | --- |
-| L1 | text:prompt, text:tool_description, text:skill, text:rubric, text:planner, text:monitor |
+| L1 | text:prompt, text:tool_description, text:skill, text:rubric, text:planner, text:monitor, text:reflector |
 | L2 | memory_entry |
 | L3 | composite:metacognition (and other composite subtypes that declare an L3 floor) |
-| L4 | code |
+| L4 | code; composite:harness once a code constituent is bound (§18.2.1) |
 | derived | composite, whose layer is `max(subtype floor, max over constituents)` (§18) |
 
 A standalone planner or monitor is L1 text: mutating its wording is a low-risk change, mutated and promoted like any prompt. The L3 risk attaches to the `metacognition` composite that binds a planner, a monitor, and the memory/state the agent reasons over, because the danger of self-modifying reasoning is emergent from the combination, not present in any single part. This is the point of the v0.2 consolidation: search economics live on the kind, deploy risk lives on the layer, and a composite can carry a risk floor higher than any of its constituents.
@@ -181,17 +181,18 @@ The protocol accepts a candidate artifact and three optional pieces of context. 
 - Absolute LLM judges use `candidate` and `trajectory`.
 - Pairwise LLM judges use `candidate`, `reference`, and `trajectory`.
 - Environment-reward signals use `trajectory` only.
+- Utility signals use `candidate` (a memory entry) and `trajectory`, and take the outcome measurement through `ground_truth`.
 - Process Reward Models use `trajectory` only and fill the per-step metadata.
 - Reflection signals use `trajectory` only and fill `feedback`.
 - ContrastiveJudge uses `candidate`, `reference`, and `trajectory`, and fills `feedback` with differential critique distinct from generic pairwise feedback.
 
 ### 3.3 The signal families
 
-The book teaches seven families. Each family is an implementation of the Signal protocol and they are interchangeable from the search method's perspective.
+The book teaches ten families. Each family is an implementation of the Signal protocol and they are interchangeable from the search method's perspective.
 
 **Ground-truth.** A labeled answer key, a code execution outcome, a tool grounding check, a web evidence verification. Precise when available, rare or sparse otherwise. Fills `score`.
 
-**LLM-as-Judge absolute.** A model scores a candidate against a rubric. Fills `score`. Subject to position-of-rubric drift over time, which is why Chapter 8 treats the rubric as an artifact that itself decays.
+**LLM-as-Judge absolute.** A model scores a candidate against a rubric. Fills `score`. Subject to position-of-rubric drift over time, which is why Chapter 9 treats the rubric as an artifact that itself decays.
 
 **LLM-as-Judge pairwise.** A model picks between two candidates. Fills `preference` and optionally `feedback`. The engine behind SPO and Bradley-Terry tournaments. Position bias is mitigated by the swap-and-require-agreement protocol, which the framework provides as a wrapper.
 
@@ -199,7 +200,11 @@ The book teaches seven families. Each family is an implementation of the Signal 
 
 **Process Reward Models.** Step-level scoring of a trajectory. Fills `score` (aggregate) and per-step scores in `metadata`. Math-Shepherd, AgentPRM, SWE-PRM are the canonical exemplars.
 
-**Reflection.** A model critiques a trajectory and produces textual feedback for mutation. Fills `feedback`. Used by Reflexion and by reflective branches of GEPA. The framework treats reflection as a signal, not a search method, which is the architectural expression of Chapter 5's "reflection that changes behavior, not just output" test.
+**Reflection.** A model critiques a trajectory and produces textual feedback for mutation. Fills `feedback`. Used by Reflexion and by reflective branches of GEPA. The framework treats reflection as a signal, not a search method, which is the architectural expression of Chapter 6's "reflection that changes behavior, not just output" test.
+
+**Environment reward.** An outcome observed from the environment after a run: a thumbs rating, a task completion flag, a downstream conversion. Fills `score` from the observed outcome and uses `trajectory` only. This is the signal online improvement (§17) spot-checks with, and the outcome the utility family credits from.
+
+**Utility (v0.3).** Credit assigned from an outcome to the memory entries recalled on the way to it. Fills `score`, `raw_value`, and `metadata` per entry; no change to GapMeasurement. MemRL (§4.2) and the Chapter 5 memory loop consume it.
 
 **Formal proof (Schmidhuber limit case).** A theorem prover verifies a property. Fills `score` as 1.0 or 0.0. Treated in the book as a frontier signal that bounds the family from above.
 
@@ -211,7 +216,7 @@ Every signal has a verifiability ceiling. Ground-truth and formal proof have the
 
 ### 3.5 Signals compose
 
-A `CompositeSignal` combines multiple signals into a single GapMeasurement via a configurable aggregator (mean, weighted mean, conservative-min, judge-of-judges). This is what makes Chapter 8's multi-judge ensembles and Chapter 9's confidence routing implementable without changing search methods.
+A `CompositeSignal` combines multiple signals into a single GapMeasurement via a configurable aggregator (mean, weighted mean, conservative-min, judge-of-judges). This is what makes Chapter 9's multi-judge ensembles and Chapter 10's confidence routing implementable without changing search methods.
 
 Child signals must return scores already normalized to `[0, 1]`. The composite's aggregation operates on normalized scores; mixing a raw-token-count signal with a raw judge score without normalization would let one signal dominate the other by raw magnitude. The `SignalThreshold` mechanism in §3.6 provides the normalization step that signals with non-`[0, 1]` natural ranges (metric signals especially) use to satisfy this contract.
 
@@ -245,7 +250,7 @@ Signals with no meaningful threshold (pairwise judges, reflection) omit the data
 
 ## 4. The Search
 
-A Search proposes variants of an artifact and selects among them, guided by a signal. The Search protocol absorbs hill-climbing, pairwise mutation (SPO), genetic-Pareto (GEPA), Bayesian (MIPROv2), MCTS (AFlow), archive evolution (DGM, AlphaEvolve, ShinkaEvolve), Q-learning over memory (MemRL), and group-relative selection (GRPO-style). All are instances of propose-measure-select; Section 4.2.1 explains why the evolutionary / reinforcement-learning distinction dissolves at this level.
+A Search proposes variants of an artifact and selects among them, guided by a signal. The Search protocol absorbs hill-climbing, pairwise mutation (SPO), genetic-Pareto (GEPA), Bayesian (MIPROv2), MCTS (AFlow), archive evolution (DGM, AlphaEvolve, ShinkaEvolve), Q-learning over memory (MemRL), and group-relative selection (GRPO-style). Search adapters expose propose-measure-select without making their underlying algorithms equivalent; Section 4.2.1 distinguishes shared interfaces from learning rules.
 
 ### 4.1 The Search protocol
 
@@ -279,6 +284,8 @@ class Search:
 
 **Hill-climbing.** One candidate per round, accept if better, otherwise reject. Karpathy autoresearch is the canonical exemplar. Cheap, monotonic, captured by local optima. The book's first running example.
 
+**Coordinate threshold search.** `ThresholdSearch` is the hill-climbing form Chapter 6 runs on its thresholds artifact: each candidate moves one named number one step, with no LLM, and the step halves after a full cycle passes without a promotion. Offline every neighbor is measured; online the improver shadow-tests one neighbor per trigger.
+
 **Pairwise mutation (SPO).** Generate a variant, judge it against the current best, accept on win. Pairwise self-supervision is what escapes APE's labeled-data wall. Uses any pairwise signal.
 
 **Genetic-Pareto reflective mutation (GEPA).** Population-based with Pareto-front selection across multiple objectives, reflective mutation guided by textual feedback. ICLR 2026 Oral. Uses pairwise or absolute signals plus reflection.
@@ -289,21 +296,19 @@ class Search:
 
 **Evolutionary archive search.** A population of candidates kept in an archive with quality-diversity selection. DGM, AlphaEvolve, and ShinkaEvolve are the exemplars at different scales. The archive is a separate primitive (Section 5).
 
-**Memory-grounded Q-learning (MemRL).** A search whose artifact is a memory entry and whose signal is utility. The rare layer-bound search method; the archive is the agent's episodic memory itself.
+**Value-based memory learning.** `MemoryLearner` applies the fixed one-step reinforcement learning rule `q_new = q + alpha * (credit - q)` to recalled memory entries, using `UtilitySignal` for outcome credit. `MemRLSearch` adapts that learner to the Search protocol for existing callers; Chapter 5 uses the learner directly. The live episodic index serves the harness's recall, while the shared archive retains immutable entry versions and measurements.
 
-**Group-relative selection (GRPO-style).** Sample a group of N candidate trajectories, score each, compute each candidate's advantage relative to the group mean, and select the above-average candidates. This is the selection mechanic of Group Relative Policy Optimization (the DeepSeek-R1 method), applied external to the model: the "policy update" is artifact promotion, not a weight update. The framework reuses GRPO's group-relative advantage as a Search, not as a fine-tuning step, which keeps it inside the strict-external-to-the-model thesis (Section 12). Uses an absolute signal scored per candidate in the group.
+**Group-relative selection (GRPO-style), `SearchKind.GROUP_RELATIVE`.** Sample a group of N candidates, score each with an absolute signal, compute each candidate's advantage relative to the group mean, and select the above-average candidates. That round shape (N candidates, an absolute signal, advantage over the group mean) is the framework's third round after pairwise and archive, and Chapter 5 demonstrates it on candidate memory insights extracted from one trajectory. This is the selection mechanic of Group Relative Policy Optimization (the DeepSeek-R1 method), applied external to the model: the "policy update" is artifact promotion, not a weight update. The framework reuses GRPO's group-relative advantage as a Search, not as a fine-tuning step, which keeps it inside the strict-external-to-the-model thesis (Section 12). Uses an absolute signal scored per candidate in the group.
 
-**Editable meta-procedure (HyperAgents).** The search method itself is an artifact under search. The framework supports this as a degenerate case where the proposing entity is also a Search artifact, with appropriate guards.
+**Editable meta-procedure (HyperAgents), `SearchKind.EDITABLE_META`.** The search method itself is an artifact under search. The framework supports this as a degenerate case where the proposing entity is also a Search artifact, with appropriate guards; Chapter 8 runs it under a read-only policy (§11.8).
 
-### 4.2.1 Evolutionary search and RL-style search are one pattern
+### 4.2.1 Shared interfaces preserve different learning algorithms
 
-The search families above are conventionally split into camps: evolutionary methods (GEPA, DGM, AlphaEvolve) on one side, reinforcement-learning methods (MemRL, GRPO) on the other. The framework rejects that split. Every method here is the same three-step shape: propose variants, measure them with a Signal, select the winners. What varies is two knobs.
+Evolutionary search, value learning, and group-relative selection can share artifacts, measurements, and history without becoming the same algorithm. Pairwise, population, and archive rounds differ in how they propose, evaluate, and retain candidates. Those interfaces make methods composable, but candidate count and selection rule do not fully describe reinforcement learning.
 
-The first knob is **how many candidates per round**. Hill-climbing and SPO propose one. GEPA proposes a population. GRPO proposes a group. DGM proposes one per round but samples its seed from an unbounded archive. The framework expresses this difference as the *round shape*: pairwise rounds (one reference, one candidate, a pairwise judge), group rounds (N candidates, an absolute signal, group-relative advantage), and archive-evolutionary rounds (sample-from-history, mutate, record). All three are variations of propose-measure-select, not different primitives.
+Chapter 5 teaches value-based memory learning through observed outcomes, assigned credit, and updated usefulness estimates. `MemoryLearner` uses a fixed one-step update with no next-state bootstrap term, while the harness applies the changed values through its configured recall formula. `MemRLSearch` preserves the Search interface as an adapter; its `select()` method is not the running agent's memory retrieval operation.
 
-The second knob is **the selection rule**. SPO accepts on pairwise win. GEPA keeps the Pareto front. GRPO keeps the above-group-mean candidates. DGM keeps everything and re-samples by quality-diversity. These are selection policies over the same measured candidates, not different algorithms in different paradigms.
-
-This is why the book teaches RL-style methods and evolutionary methods in the same chapters with the same primitives. The distinction the literature draws between "evolution" and "reinforcement" is, at the level of this framework, a difference of selection rule and candidate count. The weight-update step that usually accompanies RL is the one thing the framework does not adopt: GRPO's group-relative advantage is a selection signal over artifacts, and the reinforcement it drives is promotion of a better artifact, not a gradient step on model weights.
+The group-relative round evaluates candidate lessons against a group baseline and retains selected content as memory. It borrows group-relative comparison from GRPO but does not implement GRPO's policy-gradient objective or change model weights. Learning terminology therefore describes the demonstrated mechanism, while the shared Helix interfaces describe how it connects to the rest of the system.
 
 ### 4.3 Searches do not know about layers
 
@@ -315,7 +320,7 @@ Composite artifacts (§18) extend the matrix with a second key. A Search registe
 
 ### 4.4 The search budget
 
-Every search runs against a SearchBudget that caps tokens, dollars, wall-clock time, and number of candidates. Budgets are first-class because Chapter 8's cost-envelope discussion and Chapter 11's production realities depend on the framework treating cost as a constraint, not an afterthought.
+Every search runs against a SearchBudget that caps tokens, dollars, wall-clock time, and number of candidates. Budgets are first-class because Chapter 9's cost-envelope discussion and Chapter 12's production realities depend on the framework treating cost as a constraint, not an afterthought.
 
 ---
 
@@ -325,16 +330,16 @@ An Archive is a Pareto-aware store of historical variants with their measurement
 
 ### 5.1 Why a separate primitive
 
-Hill-climbing barely uses an archive (single best). Pairwise methods use it as recent history. GEPA, DGM, AlphaEvolve, and ShinkaEvolve are entirely built on it. Treating the archive as a separate primitive rather than baking it into one search is what lets Chapter 7's frontier survey work with the same archive object the prompt chapters used at smaller scale.
+Hill-climbing barely uses an archive (single best). Pairwise methods use it as recent history. GEPA, DGM, AlphaEvolve, and ShinkaEvolve are entirely built on it. Treating the archive as a separate primitive rather than baking it into one search is what lets Chapter 7's code search and Chapter 8's meta-level search work with the same archive object the prompt chapters used at smaller scale.
 
 ### 5.2 The Archive protocol
 
 ```
 class Archive:
     async def record(self, variant: Variant, measurement: GapMeasurement) -> None: ...
-    async def best(self, k: int = 1, by: str = "score", signal_id: str | None = None) -> list[Variant]: ...
+    async def best(self, k: int = 1, by: str = "score", signal_id: str | None = None, kind: ArtifactKind | None = None, artifact_id: str | None = None) -> list[Variant]: ...
     async def pareto_front(self, objectives: list[str]) -> list[Variant]: ...
-    async def sample(self, strategy: SamplingStrategy) -> Variant: ...
+    async def sample(self, strategy: SamplingStrategy, kind: ArtifactKind | None = None, artifact_id: str | None = None) -> Variant: ...
     async def lineage(self, artifact: Artifact) -> list[Artifact]: ...
     async def descendants(self, artifact: Artifact) -> list[Artifact]: ...
     async def diversity_metrics(self) -> DiversityMetrics: ...
@@ -346,6 +351,8 @@ class Archive:
 The `record` method persists `signal_id`, `signal_version`, `raw_value`, and `triggered` from the GapMeasurement onto the measurement row. The schema's measurement table carries these as nullable columns so existing archives migrate forward without rewrites. New writes populate them; old rows remain valid with nulls.
 
 `best` accepts an optional `signal_id` filter so callers can ask "best under signal X" rather than "best across all measurements." The live champion (§5.5) remains signal-agnostic: it is about which version is deployed, not which signal scored it.
+
+`sample` and `best` also accept optional `kind` and `artifact_id` filters (v0.3). Two searches can then share one archive without cross-sampling: a DGM round over a prompt and a MemRL round over memory entries each draw only from their own lineage.
 
 `measurements_for_signal` is the read path for tooling that needs to recompare candidates under a specific signal configuration: the dashboard's "rescore under signal X" view, the eval subsystem's calibration-drift trend, and any future re-measurement pass that runs when a new signal is added.
 
@@ -364,7 +371,7 @@ Archives support quality-diversity sampling: pick a variant that is good *and* d
 
 ### 5.4 Archives are persistent
 
-An archive survives process restarts. The reference implementation backs onto SQLite for local development and Postgres for production. This matches Chapter 11's drift-detection and rollout discussion, which assumes archives carry history across deployments.
+An archive survives process restarts. The reference implementation backs onto SQLite for local development and Postgres for production. This matches Chapter 12's drift-detection and rollout discussion, which assumes archives carry history across deployments.
 
 ### 5.5 The live champion
 
@@ -446,11 +453,17 @@ The framework defines a fixed set of hook points. Hooks are registered against a
 
 A refusal at PRE_MODEL or PRE_OUTPUT terminates the run immediately with a Refusal result that names the hook (or, for typed wrappers, the artifact id of the guardrail that refused) and a reason string. The framework does not loop back, retry, or rewrite. Refusal is a hard stop. This is what makes the typed Guardrail wrapper (§16.2.1) structurally safe: a misbehaving guardrail cannot be silently bypassed.
 
+A PRE_MODEL hook may also return a `RequestPatch`, which changes the model or the call parameters (a reasoning effort, say) for the coming call only; later patches in registration order override earlier ones. A PRE_TOOL hook may cancel with a reason, `("cancel", reason)`, and the reason returns to the model with the cancellation so it can ask the user rather than retry. Each model call's step records the model, its token counts, and its seconds, which is what cost and latency signals read.
+
 ### 6.3 What hooks become
 
-Memory injection is a PRE_MODEL hook. Reflection is a SESSION_END hook. Behavior-diff drift detection is a POST_ARTIFACT_MUTATION hook. HITL approval gates are PRE_TOOL hooks that may cancel and surface a proposal. Trajectory recording is implicit (the loop writes; hooks read). The metacognitive scaffold of Chapter 5 is three coordinated hooks: PRE_MODEL (Monitor reads), POST_MODEL (Reflector reads), END_OF_TURN (TSM decides).
+Memory injection is a PRE_MODEL hook and memory write-back is a SESSION_END hook. Both are implemented by the constructor-level `MemoryHooks` wrapper (§16.2.3), installed from `Agent(memory_tiers=...)` and retained by improver clones made through `with_artifacts`. Trajectory recording is implicit (the loop writes; hooks read).
 
-This is the architectural payoff for the book's claim that the agent loop does not change. By the end of Chapter 11, HelixAgent has roughly twenty registered hooks. The agent loop is the same eight-line skeleton it was in Chapter 2.
+The metacognitive scaffold of Chapter 6 is coordinated hooks on canonical points, directed by a decision model (§16.2.4): PRE_MODEL (the Router picks the fast path, the deliberate path with the planner, or a question back, and TaskState adds a finish note), PRE_TOOL (the Monitor holds a consequential call for the user's confirmation), END_OF_TURN (TaskState scores progress), PRE_OUTPUT (the Monitor revises an incomplete reply), and SESSION_END (the Reflector writes a lesson). The Reflector runs only at SESSION_END, its feedback is written to memory as a lesson, and the resulting behavior change reaches the next run through the PRE_MODEL memory read. Nothing in the scaffold fires at POST_MODEL.
+
+POST_ARTIFACT_MUTATION fires when the archive records a variant, and behavior-diff drift detection subscribes there. The HITL approval gate is not a hook point: it is a bus subscriber on `CandidateWins` that withholds promotion, publishes `ProposalCreated`, and publishes `ProposalDecided` when the reviewer answers (§9.1). Keeping the gate on the bus rather than in the loop is what lets Chapter 7 add human review without touching the eight-line skeleton.
+
+This is the architectural payoff for the book's claim that the agent loop does not change. By the end of Chapter 12, HelixAgent has roughly twenty registered hooks. The agent loop is the same eight-line skeleton it was in Chapter 2.
 
 ---
 
@@ -473,11 +486,11 @@ class MemoryTier:
 
 **Working memory.** What is currently in the model's context window. Storage is the messages array. Read returns relevant slices; write appends; evict is context-window management; consolidate is the summarization pass that compresses old turns. Cheapest tier, smallest, highest impact on every turn.
 
-**Episodic memory.** Events and trajectories indexed for retrieval. Storage is a vector database plus structured metadata. The artifact under search at this tier is the episodic entry: its schema, its embedding choice, its summarization. MemRL operates here.
+**Episodic memory.** Events and trajectories indexed for retrieval, with structured metadata and archived entry versions. Chapter 5 updates entry utility through `MemoryLearner` and maintains content through configured operators. The entry schema, embedding choice, recall formula, and hook implementation remain fixed during the demonstration.
 
 **Semantic memory.** Facts learned about the world: user preferences, organization policies, domain constants. Storage is a key-value store with optional vector index. The artifact under search is the semantic entry's content and its scoring function.
 
-**Procedural memory.** Skills with provenance and reuse. Storage is the skill registry. The artifact under search is the skill file itself, which is the canonical Chapter 6 subject.
+**Procedural memory.** Skills with provenance and reuse. Storage is the skill registry. The artifact under search is the skill file itself, which is the canonical Chapter 7 subject.
 
 ### 7.3 Memory entries are artifacts
 
@@ -489,13 +502,13 @@ Each tier may run a consolidate pass. Working memory consolidates by summarizing
 
 ### 7.5 Scope and access control
 
-Every memory tier supports three scopes: per-user, per-organization, global. The access-control surface is part of the contract: a query carries a scope, a write carries a scope, and the framework guarantees cross-scope leakage cannot happen by mistake. This is the architectural expression of Chapter 3's multi-tenant boundary.
+Every memory tier supports four scopes: per-session, per-user, per-organization, global. `Scope.SESSION` (v0.3) is keyed to one conversation and is what working memory and per-session episodic writes use; the repository already carries it. The access-control surface is part of the contract: a query carries a scope, a write carries a scope, and the framework guarantees cross-scope leakage cannot happen by mistake, which is the multi-tenant boundary Chapter 5 states when memory entries become artifacts.
 
 ---
 
 ## 8. The Evaluation Subsystem
 
-Eval is its own primitive, not just "call signal a lot." Chapter 8's argument is that eval itself is an artifact that decays, and the framework has to support eval-of-eval, drift detection, and bias mitigation as first-class concerns.
+Eval is its own primitive, not just "call signal a lot." Chapter 9's argument is that eval itself is an artifact that decays, and the framework has to support eval-of-eval, drift detection, and bias mitigation as first-class concerns.
 
 ### 8.1 The Eval protocol
 
@@ -535,13 +548,17 @@ The eval subsystem maintains a calibration set: a fixed corpus of `(input, expec
 
 ### 8.5 Continuous eval
 
-The eval subsystem runs continuously against production traffic samples. The sampling strategy (importance, stratified, random) is configurable. Sampled trajectories feed into the archive with their scores, which feeds back into the next search round. This is the closed loop of Chapter 8 expressed in primitive terms.
+The eval subsystem runs continuously against production traffic samples. The sampling strategy (importance, stratified, random) is configurable. Sampled trajectories feed into the archive with their scores, which feeds back into the next search round. This is the closed loop of Chapter 9 expressed in primitive terms.
+
+### 8.6 Paired runs
+
+Some variants change only which path a run takes. `PairedRuns` runs each request once down every path, with the route and the confirmation verdict pinned, and records the state each decision would have read; a routing variant is then scored by asking the decision model its questions again on those states and reading the result of the path it picks, one decision call per request instead of an agent run. Variants that change what happens on a path (a planner, a reflector, or the questions of hooks the runs already decided) need new runs, and the cache refuses to score them.
 
 ---
 
 ## 9. Human-in-the-Loop Primitives
 
-HITL is a hook-based capability with three primitives: the approval gate, the proposal, and the decision.
+HITL is a bus-based capability with three primitives: the approval gate, the proposal, and the decision. The gate subscribes to `CandidateWins` rather than registering on a hook point (§6.3), so the agent loop never learns that review exists.
 
 ### 9.1 The approval gate
 
@@ -552,7 +569,7 @@ async def approval_gate(
 ) -> Decision
 ```
 
-An approval gate pauses execution, persists the proposal, surfaces it to a reviewer through whatever UI is wired up, and returns a Decision when the reviewer responds. Gates can also auto-approve based on policy (low-risk artifacts, well-trusted search methods, sandboxed scopes).
+An approval gate pauses execution, persists the proposal, surfaces it to a reviewer through whatever UI is wired up, and returns a Decision when the reviewer responds. Gates can also auto-approve based on policy (low-risk artifacts, well-trusted search methods, sandboxed scopes). Chapter 7 ships the minimal form: `Proposal`, `Decision`, a flat `ApprovalPolicy`, behavior diffs from replayed trajectories, and rollback as promotion of the parent; the ladder and the drift queue below wait for Chapter 10.
 
 ### 9.2 The proposal
 
@@ -571,11 +588,11 @@ The behavior_diffs field is critical. A reviewer who sees only "old prompt → n
 
 ### 9.3 The four-tier ladder
 
-The approval policy supports Chapter 9's four-tier ladder: read-only (every change reviewed), suggest (changes proposed, applied on approval), supervise (changes auto-applied but reviewer can roll back within a window), autonomous (no review, scheduled audit only). The tier is a property of the artifact kind plus the search method plus the change risk, and policies are themselves artifacts that can be versioned and reviewed.
+The approval policy supports Chapter 10's four-tier ladder: read-only (every change reviewed), suggest (changes proposed, applied on approval), supervise (changes auto-applied but reviewer can roll back within a window), autonomous (no review, scheduled audit only). The tier is a property of the artifact kind plus the search method plus the change risk, and policies are themselves artifacts that can be versioned and reviewed.
 
 ### 9.4 Drift review queue
 
-Rejected proposals, auto-approved changes that later regressed, and changes flagged by drift detection feed into a drift review queue. The queue is sampled by the reviewer weekly with cluster-level summaries. This is the architectural backbone of Chapter 9's inoculation review pattern.
+Rejected proposals, auto-approved changes that later regressed, and changes flagged by drift detection feed into a drift review queue. The queue is sampled by the reviewer weekly with cluster-level summaries. This is the architectural backbone of Chapter 10's inoculation review pattern.
 
 ---
 
@@ -591,18 +608,23 @@ ArtifactDuplicate(artifact, canonical_version, search_method)
 ArtifactMeasured(artifact, signal, measurement, cost)
 SearchStarted(search, seed, budget)
 SearchCompleted(search, winner, candidates_evaluated, cost)
-HookFired(hook, point, trajectory_id)
+HookFired(point, trajectory_id, wrapper, verdict, detail)
 TrajectoryStarted(trajectory)
 TrajectoryStepRecorded(trajectory, step)
 TrajectoryCompleted(trajectory, outcome)
 ProposalCreated(proposal)
 ProposalDecided(proposal, decision, reviewer)
 DriftDetected(artifact, drift_kind, severity)
+MemoryRead(trajectory_id, tier, scope, entries)
+MemoryWritten(trajectory_id, tier, scope, entry, operator)
+Consolidated(tier, scope, report)
 ```
+
+The three memory events (v0.3) are what make the memory layer observable: `MemoryRead` names the entries recalled for a turn so utility credit can be attributed, `MemoryWritten` names the ExpeL operator that produced a new entry version, and `Consolidated` carries the `ConsolidationReport` of a 3 AM pass (§7.4).
 
 ### 10.2 Consumers
 
-Drift detection (Chapter 11) is a consumer of `ArtifactMeasured` events that trends scores over time. The multi-loop CI/CD orchestration (Chapter 8) is a consumer of `SearchCompleted` events. Cost dashboards are consumers of the `cost` fields on `ArtifactMeasured` and `SearchCompleted`. The reward-hacking runbook (Chapter 11) is a consumer of `TrajectoryCompleted` events with anomaly detection on the outcome distribution.
+Drift detection (Chapter 12) is a consumer of `ArtifactMeasured` events that trends scores over time. The multi-loop CI/CD orchestration (Chapter 9) is a consumer of `SearchCompleted` events. Cost dashboards are consumers of the `cost` fields on `ArtifactMeasured` and `SearchCompleted`. The reward-hacking runbook (Chapter 12) is a consumer of `TrajectoryCompleted` events with anomaly detection on the outcome distribution.
 
 ### 10.3 The bus is the integration surface
 
@@ -622,33 +644,51 @@ An Agent is composed of: a system prompt (Artifact kind=text, subtype=prompt), z
 
 The minimal agent plus an Improver (§15) wrapping a Signal (LLM-as-Judge pairwise) and a Search (SPO) aimed at the system prompt artifact. The search produces variants, the signal measures them, the archive records them, and the next run reads the live champion from the archive. In offline mode (the Ch 2 default), a human promotes a candidate to live champion via `archive.promote()`; in online mode, the auto-promotion hook does it. This is the entire self-improvement loop at minimal complexity.
 
-### 11.3 The evolutionary-search agent (Chapter 3, HelixAgent v2)
+### 11.3 The measured agent (Chapter 3, HelixAgent v2)
 
-Widens the Chapter 2 loop along all three axes: the search methods grow to GEPA (population, reflective mutation, Pareto selection) and DGM (persistent archive, quality-diversity sampling), the artifact kinds grow to tool_description, and the signal becomes deterministic ground-truth task success on a checkable multi-tool task. Tool descriptions come under search via `TextDescriptionTool` (§16.2.2): the implementation stays a plain callable while the description artifact is mutated. The multi-improver pattern (§16.1) and the escalating StrategyChain run several searches against one artifact through the same shared archive.
+Keeps the Chapter 2 search and widens the signal side: the signal families of §3.3 enter as interchangeable implementations, the judge is calibrated against a fixed anchor set (§8.4), and a ground-truth checker and the formal-proof limit case bound the family from above (§3.4). The proof gate is the Gödel Machine's rule applied to promotion: a candidate is promoted only when a signal with a high enough verifiability ceiling says so. Ground truth and signals compose here because every family returns one GapMeasurement, and reflection enters as a Signal (§13), not a Search.
 
-### 11.4 The memory-and-online agent (Chapter 4, HelixAgent v3)
+### 11.4 The evolutionary-search agent (Chapter 4, HelixAgent v3)
 
-Adds episodic and semantic memory tiers behind the memory contract, with a PRE_MODEL hook that injects relevant entries and a SESSION_END hook that writes the trajectory back. Memory entries are artifacts, which makes them searchable: MemRL is a Search whose artifact is the episodic memory entry, whose signal is utility, and whose archive is the episodic memory itself, with ExpeL's four operators as the mutations. GRPO-style group-relative selection joins as a sibling Search (§4.2.1), and the OnlineImprover (§17) auto-promotes on the online-safe layers with no human gate.
+Widens the Chapter 2 loop on the search axis: the search methods grow to GEPA (population, reflective mutation, Pareto selection) and DGM (persistent archive, quality-diversity sampling), and the signal is deterministic ground-truth task success on a checkable multi-tool task. The multi-improver pattern (§16.1) and the escalating StrategyChain run several searches against one artifact through the same shared archive, and the Observatory (a consumer outside `helix/`, §12) renders the lineage. The artifact under search is still the system prompt; tool descriptions are not searched in this chapter, and first come under search in Chapter 7 (§11.7).
 
-### 11.5 The metacognitive agent (Chapter 5, HelixAgent v4)
+### 11.5 The memory-and-online agent (Chapter 5, HelixAgent v4)
 
-Adds the Planner/Monitor/Reflector/TSM scaffold as three coordinated hooks plus a state object that survives the run. The Reflector is a Reflection Signal applied to the trajectory at SESSION_END, with its output written to semantic memory as a learned-lesson artifact. Reflection-theater diagnostic is a behavior-diff Signal: it compares the trajectory before and after reflection and demands measurable divergence.
+Memory is a component of the agent harness, installed through `Agent(memory_tiers=...)` and applied by `MemoryHooks`. `PRE_MODEL` supplies scoped context once per run, and `SESSION_END` writes back the completed interaction. Persistent storage and the supplied identity let that same mechanism apply learning within a session, across sessions, or in another agent connected to the store.
 
-The scaffold is the framework's first composite artifact: a `composite` with subtype `metacognition` (§18.2.1) that binds the planner (L1 text), the monitor (L1 text), and the memory/state the agent reasons over (L2) into one L3 artifact. This is why Chapter 5 is where artifact composition (§18) enters the book: metacognition is the case that needs joint search and joint deployment, so the chapter that teaches it drives the composite code. The planner and monitor remain L1 text in isolation; the L3 deploy risk is a property of the metacognition composite, not of its text constituents.
+`MemoryLearner` performs value-based reinforcement learning with the fixed one-step rule `q_new = q + alpha * (credit - q)`. `OnlineMemoryImprover` requires the learner to target the same tier installed on its agent and awaits the update at `SESSION_END`; the learner also requires that tier to share its archive. Entry utility and content can change, while the learning algorithm, learning rate, credit rule, retrieval weight, scope filtering, context formatting, and hook timing stay configured throughout the chapter's runs.
 
-### 11.6 The self-modifying-skills agent (Chapter 6, HelixAgent v5)
+The archive records parent versions, credit, the learning rate, and the learning algorithm so each update can be inspected. `MemRLSearch` remains a compatible Search adapter, while group-relative lesson selection and consolidation are separate configured operations over the memory store. Automatic L2 updates are demonstrated on controlled replay traffic; their layer alone does not establish that broader online deployment or cross-agent sharing is safe.
 
-Aims existing searches at skill artifacts; tool_description artifacts came under search in Chapter 3. A tool under improvement at this layer has only its description mutated; the implementation is still a plain Python callable. When the implementation also comes under improvement (Ch 11/12), the tool becomes a `ToolFromArtifact` (§16.2.2) backed by a CODE artifact for the implementation and a TOOL_DESCRIPTION artifact for the description, each with its own improver. Adds the HITL approval gate as a PRE_OUTPUT hook on the archive's record path: any skill or tool_description mutation surfaces a Proposal before commit. Behavior diffs in the proposal are computed by replaying recent trajectories against the candidate skill.
+Chapter 5 also provides a fictional studio helpdesk as an application of the same harness, with approved Markdown runbooks, simulated support actions, and an executable episode walkthrough. Its fixed local lexical encoder is passed through the optional `EpisodicMemory(embedding_fn=...)` configuration; omitting that argument retains the default embedding model. The caller must reopen a store with the same encoder, and the learning process does not modify the encoder or retrieval formula.
 
-### 11.7 The frontier survey (Chapter 7, HelixAgent thought experiment)
+### 11.6 The metacognitive agent (Chapter 6, HelixAgent v5)
 
-Composition stays the same; the artifact kind expands to `code` and the HITL policy tightens to read-only. The chapter's thought experiments show what each frontier system (DGM, AlphaEvolve, HyperAgents) would compose differently, but the primitives are the same. This is the architectural payoff for treating frontier systems as data, not code, in the search-by-signal grid.
+Adds the metacognitive scaffold as hook wrappers on canonical points (§6.3, §16.2.3): a Router, a Monitor, TaskState, and a Reflector, directed by a decision model (§16.2.4) that answers the typed questions a configuration artifact defines. The Reflector applies reflection at SESSION_END, turning a run that fell short into a lesson the PRE_MODEL memory read carries into the next run, and the reflection-theater diagnostic is a behavior-diff Signal that demands measurable divergence between two trajectories. The dual-process router is the Router itself, which picks the fast path, the deliberate path, or a clarifying question from the decision model's answers.
 
-### 11.8 The production agent (Chapters 8 through 11, HelixAgent v6 through v8)
+The scaffold is the framework's first composite artifact: a `composite` with subtype `metacognition` (§18.2.1) that binds the planner, the monitor, the reflector (all L1 text), and the memory the agent reasons over (L2) into one L3 artifact. This is why Chapter 6 is where artifact composition (§18) enters the book: metacognition is the case that needs joint search and joint deployment, so the chapter that teaches it drives the composite code and `ComposedSearch` (§18.4). The planner and monitor remain L1 text in isolation; the L3 deploy risk is a property of the metacognition composite, not of its text constituents.
 
-Eval subsystem replaces the ad-hoc signal calls of earlier chapters with tournament eval, calibration drift detection, and continuous eval against production sampling. HITL ladder is configured per artifact kind. Multi-agent (Chapter 10) is composition: an Agent's tools list may contain other Agents, and the framework treats sub-agent calls as tool calls. Drift detection (Chapter 11) is an observability bus consumer. Reward-hacking runbook is a set of alerting rules on bus events.
+Task state splits in two. Runtime task state lives in `trajectory.metadata`, is written at END_OF_TURN and read at PRE_MODEL, and is state rather than artifact, so it sits outside search (§1.5). What the composite binds is the L2 `memory_entry` that persists the lesson across runs.
 
-By Chapter 11 the framework has not grown new primitives. It has accumulated implementations, hooks, and consumers, all within the ten shapes defined here.
+As built in Chapter 6, the composite binds the decision configuration (`text:monitor`), the planner, and the reflector, while the routing thresholds stay outside it as a standalone L1 artifact an online improver may tune. Whether the composite should also bind the persisted lesson entry, which Chapter 5's learner updates online, is an open question (§13).
+
+Chapter 6 measures the scaffold with five signals, each returning a `GapMeasurement`: the outcome reward, safety (any consequential call run without the user's confirmation triggers it), the run's dollars and the seconds the user waited, routing regret against the hindsight-best path, and the behavior diff that exposes reflection theater. `MetacognitionObjective` folds outcome, safety, dollars, and seconds into one score, with safety as a filter rather than a trade, and keeps the four apart in its metadata for Pareto selection. Calibration of the decision model's confidences is a batch metric of the evaluation harness, not a per-run signal.
+
+### 11.7 The harness agent (Chapter 7, HelixAgent v6)
+
+Aims search at the whole harness of a coding agent. Skill files (`text:skill`, read from procedural memory into the prompt) and tool descriptions (via `TextDescriptionTool`, §16.2.2, which keeps the implementation a plain callable) come under the existing text searches. Tool and planner code come under search as CODE artifacts through a swappable `ToolFromArtifact` (§16.2.2), executed in a subprocess sandbox with a timeout and promoted only when a ground-truth test signal passes; DGM aimed at code, with unified diffs as the mutation representation, is the frontier frame AlphaEvolve and ShinkaEvolve share (§13).
+
+Adds the minimal HITL gate as a bus subscriber on `CandidateWins` (§6.3, §9.1), not a hook point: any harness mutation surfaces a Proposal whose behavior diffs replay recent trajectories against the candidate, and rollback is promotion of the parent. The `harness` composite (§18.2.1) binds prompt, skills, tool descriptions, tool code, and guardrails so the whole harness can be searched and deployed as one L4 unit.
+
+### 11.8 Improving the improver (Chapter 8, HelixAgent v7)
+
+Composition stays the same; the artifact under search becomes the search method itself. `SearchKind.EDITABLE_META` (§4.2) holds the mutator prompt, the selection rule, and the round shape as text artifacts, scored by how much the inner loop improves, which is HyperAgents' move. The HITL policy tightens to read-only at this level, and the chapter's thought experiments show what DGM, AlphaEvolve, ShinkaEvolve, and HyperAgents would each compose differently with the same primitives.
+
+### 11.9 The production agent (Chapters 9 through 12, HelixAgent v8)
+
+Eval subsystem replaces the ad-hoc signal calls of earlier chapters with tournament eval, calibration drift detection, and continuous eval against production sampling (Chapter 9). HITL ladder is configured per artifact kind, with confidence routing and the drift review queue (Chapter 10). Multi-agent (Chapter 11) is composition: an Agent's tools list may contain other Agents, and the framework treats sub-agent calls as tool calls. Drift detection (Chapter 12) is an observability bus consumer, and the reward-hacking runbook is a set of alerting rules on bus events.
+
+By Chapter 12 the framework has not grown new primitives. It has accumulated implementations, hooks, and consumers, all within the ten shapes defined here. The version labels v2 through v7 were reassigned one per chapter in v0.3 when the measurement chapter and the HyperAgents chapter were split out; v0 and v1 are unchanged.
 
 ---
 
@@ -668,25 +708,55 @@ The framework deliberately does not provide:
 
 Items where the spec is provisional and the manuscript decision is pending.
 
-**Trajectory storage cost.** Trajectories are large. Long-running deployments accumulate trajectories faster than archives. The spec assumes a TTL plus sampling policy for trajectory persistence, but the policy details depend on Chapter 8's continuous-eval sampling strategy, which is still in design.
+**Trajectory storage cost.** Trajectories are large. Long-running deployments accumulate trajectories faster than archives. The spec assumes a TTL plus sampling policy for trajectory persistence, but the policy details depend on Chapter 9's continuous-eval sampling strategy, which is still in design.
 
-**Multi-agent composition shape.** Section 11.8 treats sub-agents as tools, and §16.1 covers the multi-artifact pattern for a single agent. Chapter 10 still needs to validate whether sub-agents-as-tools handles orchestrator-worker and group-chat patterns cleanly, or whether a richer composition primitive is needed. Provisionally settled by §16.1 + sub-agents-as-tools; open pending Chapter 10 drafting.
+**Multi-agent composition shape.** Section 11.9 treats sub-agents as tools, and §16.1 covers the multi-artifact pattern for a single agent. Chapter 11 still needs to validate whether sub-agents-as-tools handles orchestrator-worker and group-chat patterns cleanly, or whether a richer composition primitive is needed. Provisionally settled by §16.1 + sub-agents-as-tools; open pending Chapter 11 drafting.
 
-**Planner as artifact kind.** Resolved in v0.2. A planner and a monitor are `text` artifacts with subtypes `planner` and `monitor`, and standalone they are L1 (§1.2). Metacognition is not a primitive kind but a `composite` with subtype `metacognition` (§18.2.1) that binds a planner, a monitor, and memory/state into one L3 artifact; the L3 deploy risk is emergent from the composition, not a property of the text constituents. This is the resolution the earlier "metacognition is a composition" note was reaching for, now made concrete by the composite kind.
+**Planner as artifact kind.** Resolved in v0.2. A planner and a monitor are `text` artifacts with subtypes `planner` and `monitor`, and standalone they are L1 (§1.2). Metacognition is not a primitive kind but a `composite` with subtype `metacognition` (§18.2.1) that binds a planner, a monitor, and memory/state into one L3 artifact; the L3 deploy risk is emergent from the composition, not a property of the text constituents. This is the resolution the earlier "metacognition is a composition" note was reaching for, now made concrete by the composite kind. One addition in v0.3: Chapter 7 may hold a planner as a CODE artifact (L4) when the planner is a function rather than a prompt, and the layer then follows the kind.
 
-**Code as an artifact kind.** Section 1.2 lists `code` as a recognized kind. The spec does not specify the execution sandbox or the diff representation for code artifacts. These are Chapter 7 frontier territory and deliberately under-specified.
+**Memory inside the metacognition composite.** §11.6 and §18.2.1 bind the persisted lesson entry into the composite, but the Chapter 6 build leaves memory out: lessons are many entries rather than one, and Chapter 5's learner moves their values online, which a composite searched and promoted offline would freeze. The build binds the decision configuration, the planner, and the reflector, keeps the thresholds outside as an L1 artifact, and leaves this question open for the author while Chapter 6 is drafted.
 
-**Reflection as Signal versus Search.** The spec puts Reflection in the Signal family (Section 3.3). An alternative is to treat Reflexion specifically as a Search that consumes its own Signal output. The current placement makes the composition cleaner; Chapter 5 will validate or revise.
+**Code as an artifact kind.** Section 1.2 lists `code` as a recognized kind. Specified by Chapter 7 (v0.3): a subprocess sandbox with a timeout executes code artifacts, the mutation representation is a unified diff carried in artifact metadata, and promotion is refused without a passing ground-truth test signal. Nested composites and the exact sandbox isolation level remain open.
 
-**Eval subsystem as primitive versus composition.** Section 8 makes Eval a primitive, but it could be expressed as a Signal-plus-Archive composition with a calibration Signal layered on. Treating it as primitive is pedagogically cleaner; treating it as composition is architecturally cleaner. Decision pending Chapter 8 drafting.
+**Reflection as Signal versus Search.** Closed in v0.3 as Signal (Section 3.3). Chapter 6 validates the placement: the Reflector fires at SESSION_END, writes its feedback to memory as a lesson, and behavior change arrives in the next run through the PRE_MODEL memory read (§6.3), so a reflection that never changes behavior is measurable as reflection theater.
+
+**Eval subsystem as primitive versus composition.** Section 8 makes Eval a primitive, but it could be expressed as a Signal-plus-Archive composition with a calibration Signal layered on. Treating it as primitive is pedagogically cleaner; treating it as composition is architecturally cleaner. Decision pending Chapter 9 drafting.
 
 ---
 
 ## 14. Versioning and Stability
 
-This spec is versioned. The current version is 0.2. Breaking changes between book chapters are not allowed: any chapter that builds on a primitive defined here can assume the protocol shape is stable. Additive changes (new artifact kinds, new signal families, new hook points) are permitted between chapters.
+This spec is versioned. The current version is 0.3. Breaking changes between book chapters are not allowed: any chapter that builds on a primitive defined here can assume the protocol shape is stable. Additive changes (new artifact kinds, new signal families, new hook points) are permitted between chapters.
 
 Version 0.2 consolidated the per-role artifact kinds of v0.1 into the layer-shaped `text` kind with subtypes (§1.2) and added artifact composition (§18). The kind-enum change is breaking, taken under the author's clean-break policy (no production users yet, the same call recorded in DESIGN_NOTES §14 for the Improver rename); the repository migrates v0.1 archives on read. Spec changes that fold or rename existing shapes bump the minor version and ship a migration, while purely additive changes do not.
+
+Version 0.3 is additive and renumbers §11 to the twelve-chapter table of contents (measurement in Chapter 3, HyperAgents in Chapter 8). Its amendments are:
+
+- §1.2: `reflector` joins the text subtypes at L1.
+- §3.3: the ENVIRONMENT_REWARD and UTILITY families are listed; the family count is ten.
+- §4.2: group-relative selection is `SearchKind.GROUP_RELATIVE` with its round shape stated; the editable meta-procedure is `SearchKind.EDITABLE_META`.
+- §5.2: `sample` and `best` gain optional `kind` and `artifact_id` filters.
+- §6.3: memory hooks are constructor-declared wrappers; the Reflector fires at SESSION_END only; the HITL gate is a bus subscriber, not a hook point; POST_ARTIFACT_MUTATION fires on archive record.
+- §7.5: `Scope.SESSION` is recorded; episodic retrieval may fold learned utility into its ranking (a configured recall weight, off by default and not learned).
+- §10.1: `MemoryRead`, `MemoryWritten`, and `Consolidated` events.
+- §11.6: runtime task state is outside search; the composite binds the persisted L2 entry.
+- §13: reflection closed as Signal; sandbox and diff representation specified by Chapter 7; planner may be CODE in Chapter 7.
+- §15.3 and §17.3: planner and monitor are L1 standalone; the L3 guard applies to the metacognition composite.
+- §16.2: scaffold wrappers documented; `ToolFromArtifact` becomes swappable by `with_artifacts` in Chapter 7.
+- §18.2.1: the `harness` composite subtype is registered.
+
+Chapter 6 adds to v0.3 without breaking it:
+
+- §4.2: `ThresholdSearch`; GEPA scores absolute signals, selects on a Pareto front with safety as a filter, accepts an evaluator, and discards proposals that fail validation.
+- §6.2: a PRE_MODEL `RequestPatch` may change the model and call parameters; a PRE_TOOL cancel may carry a reason; model-call steps record model, tokens, and seconds.
+- §6.3, §11.6, §16.2.3: the scaffold is a Router, a Monitor, TaskState, and a Reflector directed by a decision model, registered from `Agent(scaffold=...)`.
+- §8.6: paired runs score routing variants without agent runs.
+- §10.1: `HookFired` names the wrapper and its verdict.
+- §11.6: outcome, safety, cost, routing-regret, and behavior-diff signals and the `MetacognitionObjective` measure the scaffold.
+- §13: whether the metacognition composite binds memory is open.
+- §16.2.4: decision models are adapters beside the LLM client, not a primitive.
+- §17.2: shadow runs reuse the request's memory context, read memory without writing it, and may run over a forked environment; an improver follows a redeployed agent, and a winning candidate that repeats earlier content promotes the earlier version.
+- §18.4, §18.6: composed variants record constituent refs, and improvers expand composite candidates.
 
 The companion repository tracks the spec version. The repo's README declares which spec version it implements. Readers reading the book and running the repo should be able to align by version number.
 
@@ -700,7 +770,7 @@ The framework defines two improver classes: `OfflineImprover` (§15) and `Online
 
 OfflineImprover is a long-running, per-artifact optimization driver. It owns its own loop and tests candidates against a labeled `EvalSource`. The agent it improves does not need to be serving traffic; the agent is a definition the improver clones to test variants.
 
-OfflineImprover is the right shape when: improvement happens against a stable labeled set, when human review gates promotion, when L3/L4 artifacts (planner, monitor, code) need offline-only safety. It is the Ch 2 default.
+OfflineImprover is the right shape when: improvement happens against a stable labeled set, when human review gates promotion, when L3/L4 artifacts (the metacognition composite, code) need offline-only safety. It is the Ch 2 default.
 
 ### 15.1 The OfflineImprover constructor
 
@@ -746,7 +816,7 @@ This replaces the older "factory function" pattern with a method on Agent itself
 
 ### 15.3 Layer-based safety
 
-OfflineImprover accepts any artifact kind, including L3 (planner, monitor) and L4 (code). Offline is the safe mode for those layers because promotion is gated on human review. The class places no layer restrictions on construction; OnlineImprover (§17) is what carries the L1/L2 restriction.
+OfflineImprover accepts any artifact kind, including L3 (the metacognition composite) and L4 (code). A standalone planner or monitor is L1 text (§1.2); the L3 guard attaches to the composite that binds them. Offline is the safe mode for those layers because promotion is gated on human review. The class places no layer restrictions on construction; OnlineImprover (§17) is what carries the L1/L2 restriction.
 
 ### 15.4 The round
 
@@ -843,7 +913,7 @@ Each per-artifact improver should use an eval source that is at least partially 
 
 ### 16.2 Agent-side artifact wrappers
 
-Most artifacts feed into an agent as configuration. Two artifact kinds, guardrails (CODE at L4) and tools (CODE at L4 paired with TOOL_DESCRIPTION at L1), bolt onto the agent's lifecycle in structured ways. The framework provides two convenience wrappers that turn artifacts into typed agent inputs: `Guardrail` and `ToolFromArtifact`. Neither is a new primitive; both are agent-side adapters.
+Most artifacts feed into an agent as configuration. Three groups of artifacts bolt onto the agent's lifecycle in structured ways: guardrails (CODE at L4), tools (CODE at L4 paired with TOOL_DESCRIPTION at L1), and the scaffold's artifacts (the decision configuration, thresholds, planner, and reflector, each L1 text). The framework provides convenience wrappers that turn artifacts into typed agent inputs: `Guardrail`, `ToolFromArtifact`, and the scaffold wrappers of §16.2.3. None is a new primitive; all are agent-side adapters.
 
 #### 16.2.1 Guardrail
 
@@ -904,7 +974,19 @@ class ToolFromArtifact:
 
 Both refs are recorded in `Trajectory.artifacts_used` on every invocation, so lineage tracks both artifacts independently. This is what enables the dual-improver pattern: the L1 improver for the description (online-eligible, mutated by SPO) and the L4 improver for the implementation (offline-only, mutated by CodeEvolution) operate on the same logical tool without coordinating.
 
-Plain-callable tools remain supported. `ToolFromArtifact` is for the case where the tool itself is under improvement. Chapter 2 and Chapter 3 agents use plain callables; the L4 chapter introduces `ToolFromArtifact` as the bridge.
+Plain-callable tools remain supported. `ToolFromArtifact` is for the case where the tool itself is under improvement. Chapters 2 through 6 use plain callables; Chapter 7 introduces `ToolFromArtifact` as the bridge, at which point `with_artifacts` (§15.2) rebuilds the wrapper when its code artifact is swapped, so a code candidate actually runs inside the improver's clone.
+
+#### 16.2.3 Scaffold wrappers
+
+The scaffold wrappers (`Router`, `Monitor`, `TaskState`, `Reflector`) are modeled on `Guardrail`: they register their own hooks at Agent construction and re-register on clone, so an improver's `with_artifacts` copy behaves like the original. One `MetacognitiveScaffold`, passed as `Agent(scaffold=...)`, holds what they read: a decision model (§16.2.4), the decision configuration and the thresholds (both `text:monitor` JSON), the planner and reflector prompts, and the models of the fast and deliberate paths. The `Router` registers at PRE_MODEL and applies the planner on the deliberate path, `TaskState` at END_OF_TURN and PRE_MODEL, the `Monitor` at PRE_TOOL and PRE_OUTPUT, and the `Reflector` at SESSION_END (§6.3), all after any guardrails, so a refusal or a guardrail's patch takes precedence.
+
+The configuration names the typed questions each hook asks and the rules that turn answers into actions, and a schema check decides whether a proposed configuration is usable. A rule's threshold is a fixed number or the name of an entry in the thresholds artifact, the only numbers online tuning may move, and a confirmation rule may not name one, so no online change can relax a confirmation. The configuration, planner, and reflector are bound in the `metacognition` composite (§18.2.1), while the thresholds stay a standalone L1 artifact.
+
+Each wrapper records the artifacts it read in `Trajectory.artifacts_used`, its per-question decisions and the decision model's per-call cost in `trajectory.metadata["metacognition"]`, and its verdict in a `HookFired` event (§10.1). Swapping a constituent through `with_artifacts` rebinds the composite as a derived child version, so the composite always names what runs. The memory injection and write-back hooks of §6.3 follow the same constructor-declared shape.
+
+#### 16.2.4 Decision models
+
+A decision model is the second kind of model a harness can call, beside the LLM: it reads a state and answers named, typed questions (a choice among described options, a position on ordered levels, or the probability that a statement holds) with confidences and no prose. `helix/deciders` defines the `Decider` protocol with adapters for TypeSafe's Jev, OpenAI's Decisions API, an LLM answering without reasoning, and recorded replay, and provider code lives only in the adapters. It is not a primitive: the scaffold wrappers of §16.2.3 call it from their hooks, and the questions and rules they ask belong to a configuration artifact that search improves (Chapter 6).
 
 ---
 
@@ -945,11 +1027,15 @@ Each agent request completes with a trajectory. The OnlineImprover's `SESSION_EN
 4. The candidate proposal runs `search.propose(...)` to get one candidate, then shadow-evaluates the candidate against the next `policy.shadow_sample` real requests by running both reference and candidate on each (the candidate's run does not affect what the user sees; it is logged only).
 5. If the candidate beats the reference on the shadow sample by `policy.promote_threshold_win_rate`, the improver publishes `CandidateWins(mode="online", auto_promote=True)`. The default promotion handler chain (§10 in DESIGN_NOTES) writes `archive.promote()`. The next agent request reads the new live champion.
 
+Shadow runs must not act on the live world. Each one reuses the live request's memory context and reads memory without writing it; when the agent's tools have side effects, the improver's `shadow_factory` builds the candidate clone over a forked environment instead of `with_artifacts`. Chapter 6's assistant supplies such a factory because its tools book events and send email.
+
+A promotion takes effect when the deployment builds the next agent from the live champion, and `follow(agent)` moves the improver's subscription to that agent. A winning candidate whose content an earlier version already holds collapses onto that version (§1.3), and that is the version the improver promotes.
+
 The agent is never blocked by the improver. Spot-check and propose work happen in the background; the user's response goes out as soon as the agent's `SESSION_END` fires.
 
 ### 17.3 Layer-based safety
 
-OnlineImprover's constructor refuses to target an artifact at layer ≥ 3 (planner, monitor, code). Online auto-promotes; L3/L4 changes need a deploy gate. The constructor raises at construction time, the earliest possible failure. This is what makes the safety rule structural rather than advisory.
+OnlineImprover's constructor refuses to target an artifact at layer ≥ 3 (the metacognition composite, any composite with a code constituent, code itself). A standalone planner or monitor is L1 and passes the guard (§1.2, §15.3). Online auto-promotes; L3/L4 changes need a deploy gate. The constructor raises at construction time, the earliest possible failure. This is what makes the safety rule structural rather than advisory.
 
 ### 17.4 Cost shape
 
@@ -983,7 +1069,9 @@ A composite's layer is `max(subtype floor, max over constituent layers)`. The co
 
 A composite's subtype names a blessed composition shape, and unlike the closed text-subtype set the composite-subtype set is open. A subtype binds four things: a constituent signature (which kinds and subtypes it composes), a layer floor (the emergent-risk floor above), a default composed search, and a default composite signal. Anonymous composites (subtype `None`) are still legal and are identified by their shape key (§4.3); a subtype is what you register once a shape is common enough to deserve a name, a default search, and a risk classification.
 
-`metacognition` is the first composite subtype and the worked example the book introduces in Chapter 5 (§11.5). It binds a planner, a monitor, and the memory/state the agent reasons over into one L3 artifact, so the metacognitive scaffold is searched and deployed as a unit and is barred from online auto-promotion. The chapter that teaches metacognition is therefore the chapter that motivates and drives the composition machinery; Chapter 6's skill-in-memory composite reuses it.
+`metacognition` is the first composite subtype and the worked example the book introduces in Chapter 6 (§11.6). It binds a planner, a monitor, a reflector, and the persisted memory entry the agent reasons over into one L3 artifact, so the metacognitive scaffold is searched and deployed as a unit and is barred from online auto-promotion. The chapter that teaches metacognition is therefore the chapter that motivates and drives the composition machinery.
+
+`harness` is the second composite subtype, registered in v0.3 for Chapter 7 (§11.7). It binds a system prompt, skill files, tool descriptions, tool code, and guardrails; it declares no floor of its own, so its layer derives to L4 as soon as a code constituent is bound and stays at L1 for a text-only harness. The `harness` and `metacognition` composites are disjoint, an artifact belongs to at most one of them, and nesting one inside the other remains out of scope (§18.2).
 
 ### 18.3 The composition graph
 
@@ -1011,6 +1099,8 @@ The composed search measures with exactly one Signal, as every Search does (§4.
 ### 18.6 Composite as the unit of deployment
 
 Because a composite is a real artifact, it has a live champion (§5.5), and that champion is the unit the agent deploys: resolving the agent's artifacts expands the composite champion into the exact constituent versions it bound. This closes the gap §16.1.3 names, that per-artifact improvement does not guarantee the deployed combination was ever evaluated as a unit. With a composite champion the deployed combination is, by construction, a combination that was measured as a unit, promotion of a composite is atomic over its constituents, and a rollback is the promotion of an earlier composite version (§5.5).
+
+`expand_composite` performs that resolution from the archive, and an OfflineImprover applies it to every composite candidate it clones, so the clone runs the exact combination being measured. `ComposedSearch` puts each proposed constituent in the archive and names it by ref in the variant's metadata, which keeps the variant recordable.
 
 ### 18.7 Replace, enforced at construction
 

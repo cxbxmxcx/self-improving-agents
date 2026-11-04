@@ -21,8 +21,9 @@ Three ideas distinguish DGM (SPEC section 4.2):
      varies.
 
 The paper applies this to code (the agent edits its own implementation).
-The framework reuses the same class for L1 text artifacts (Chapter 3, tool
-descriptions) and L4 code artifacts (Chapters 11/12). The artifact kind and
+The framework reuses the same class for L1 text artifacts (Chapter 4 on the
+system prompt, Chapter 7 on tool descriptions) and L4 code artifacts (Chapter
+7, DGM aimed at code). The artifact kind and
 the mutator change; the archive-evolutionary loop does not.
 """
 

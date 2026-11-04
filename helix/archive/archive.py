@@ -83,7 +83,13 @@ class Archive(Protocol):
         k: int = 1,
         by: str = "score",
         signal_id: str | None = None,
-    ) -> list[Variant]: ...
+        kind: Any | None = None,
+        artifact_id: str | None = None,
+    ) -> list[Variant]:
+        """Top-k variants by latest score. `kind` and `artifact_id` narrow the
+        pool so two searches can share one archive without cross-sampling
+        (SPEC §5.2, v0.3)."""
+        ...
 
     async def measurements_for_signal(
         self,
@@ -93,7 +99,12 @@ class Archive(Protocol):
 
     async def pareto_front(self, objectives: list[str]) -> list[Variant]: ...
 
-    async def sample(self, strategy: SamplingStrategy) -> Variant: ...
+    async def sample(
+        self,
+        strategy: SamplingStrategy,
+        kind: Any | None = None,
+        artifact_id: str | None = None,
+    ) -> Variant: ...
 
     async def lineage(self, artifact: Artifact) -> list[Artifact]: ...
 

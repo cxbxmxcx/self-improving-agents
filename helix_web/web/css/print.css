@@ -1,0 +1,15 @@
+/* Print: white background, no chrome, figures that survive a book page. */
+
+@media print {
+  :root {
+    --bg: #FFFFFF;
+    --bg-panel: #FFFFFF;
+    --bg-inset: #F5F4F0;
+  }
+  header.topbar, nav.sidebar, #toasts, #drawer, #drawer-backdrop { display: none !important; }
+  #app { grid-template: "main" 1fr / 1fr; }
+  main#panel { padding: 0; overflow: visible; }
+  .card, table.data, .tile { break-inside: avoid; }
+  button.btn { display: none !important; }
+  svg { max-width: 100%; }
+}

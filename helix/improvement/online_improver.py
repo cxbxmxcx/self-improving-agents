@@ -22,10 +22,12 @@ The agent is never blocked by the improver. Spot-check and propose work
 happens in the background after SESSION_END fires; the user's response
 goes out as soon as the agent's loop completes.
 
-Layer safety: the constructor refuses target artifacts at layer ≥ 3.
-Online auto-promotes; L3 (planner/monitor) and L4 (code) need a deploy
-gate. The check happens at construction time, the earliest possible
-failure.
+Layer safety: the constructor refuses target artifacts at layer >= 3 and
+any composite. Online auto-promotes, which the layer rule allows for L1
+(prompts, standalone planner and monitor prompts) and L2 (memory entries,
+Chapter 5). L3 (the metacognition composite, Chapter 6) and L4 (code,
+Chapter 7) need a deploy gate. The check happens at construction time, the
+earliest possible failure.
 """
 
 from __future__ import annotations
@@ -89,6 +91,7 @@ class OnlineImprover:
         policy: ImproverPolicy | None = None,
         improver_id: str | None = None,
         bus: EventBus | None = None,
+        shadow_factory=None,            # Callable[[Agent, dict[str, Artifact]], Agent] | None
     ) -> None:
         self.agent = agent
         self.target_artifact_id = target_artifact_id
@@ -98,6 +101,11 @@ class OnlineImprover:
         self.policy = policy or ImproverPolicy()
         self.improver_id = improver_id or f"online-{uuid.uuid4().hex[:8]}"
         self.bus = bus or get_bus()
+        # A shadow run is measured, never seen, so it must not act on the live
+        # world. Agents whose tools have side effects (a calendar, an outbox)
+        # supply a factory that builds the candidate clone over a forked
+        # environment; without one the clone is agent.with_artifacts(...).
+        self.shadow_factory = shadow_factory
 
         # Layer safety: online auto-promotes; L3/L4 need a deploy gate.
         # Resolve the target artifact wherever it is bound on the agent (not
@@ -161,8 +169,25 @@ class OnlineImprover:
         compose without double-registering on a stop/start cycle."""
         if self._subscribed:
             return
-        self.agent.hooks.register(HookPoint.SESSION_END, self._on_session_end)
+        agent = self.agent
+
+        async def on_session_end(trajectory: Trajectory, **kwargs: Any) -> None:
+            # Runs of an agent this improver no longer follows are not its traffic.
+            if agent is self.agent:
+                await self._on_session_end(trajectory, **kwargs)
+
+        agent.hooks.register(HookPoint.SESSION_END, on_session_end)
         self._subscribed = True
+
+    def follow(self, agent) -> None:
+        """Serve a redeployed agent. A promotion takes effect when the
+        deployment builds a new agent from the live champion, and the
+        improver moves its SESSION_END subscription to that agent."""
+        if agent is self.agent:
+            return
+        self.agent = agent
+        self._subscribed = False
+        self._ensure_subscribed()
 
     def on_attached(self) -> None:
         """The wiring step (SPEC §17.1): agent.attach_improver calls this to
@@ -306,11 +331,27 @@ class OnlineImprover:
         if ref_score is not None:
             self._shadow_ref_scores.append(ref_score)
 
-        # Run the candidate against the same task and score it.
-        clone = self.agent.with_artifacts({self.target_artifact_id: candidate_prompt})
+        # Run the candidate against the same task, under the same memory
+        # context as the live request, and score it. The clone reads memory
+        # but never writes it: a shadow episode would contaminate what later
+        # live requests recall.
+        from helix.memory.hooks import context_from_trajectory  # local import: avoid circular
+
+        overrides = {self.target_artifact_id: candidate_prompt}
+        if self.shadow_factory is not None:
+            clone = self.shadow_factory(self.agent, overrides)
+        else:
+            clone = self.agent.with_artifacts(overrides)
+        if getattr(clone, "memory_hooks", None) is not None:
+            clone.memory_hooks.read_only = True
+        context = context_from_trajectory(trajectory)
+        scoped = any((context.session_id, context.user_id, context.org_id))
         cand_score: float | None = None
         try:
-            answer, cand_traj = await clone.run(trajectory.task)
+            if scoped:
+                answer, cand_traj = await clone.run(trajectory.task, context)
+            else:
+                answer, cand_traj = await clone.run(trajectory.task)
         except Exception as exc:  # noqa: BLE001
             self._last_error = f"shadow run failed: {type(exc).__name__}: {exc}"
             cand_traj = None
@@ -379,7 +420,11 @@ class OnlineImprover:
                 "improver_id": self.improver_id,
             },
         )
-        await self.archive.record(candidate_variant, cand_measurement)
+        recorded = await self.archive.record(candidate_variant, cand_measurement)
+        # A candidate whose content an earlier version already holds collapses
+        # onto that version (SPEC §1.3), and that is the version to promote.
+        canonical = getattr(recorded, "canonical_ref", None)
+        candidate_version = canonical[1] if canonical else candidate_variant.artifact.version
         ref_variant = Variant(
             artifact=reference,
             parent=reference,
@@ -411,7 +456,7 @@ class OnlineImprover:
         await self.bus.publish(CandidateWins(
             improver_id=self.improver_id,
             target_artifact_id=self.target_artifact_id,
-            candidate_version=candidate_variant.artifact.version,
+            candidate_version=candidate_version,
             reference_version=reference.version,
             candidate_score=cand_avg,
             reference_score=ref_avg,

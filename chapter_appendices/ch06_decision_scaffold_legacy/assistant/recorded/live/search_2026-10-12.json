@@ -1,0 +1,45 @@
+{
+  "mode": "live",
+  "requests": 40,
+  "weights": {
+    "dollars": 10.0,
+    "seconds": 0.01
+  },
+  "paired_runs": 139,
+  "offline": {
+    "thresholds": {
+      "ask": 0.4,
+      "deliberate": 0.5,
+      "revise": 0.5
+    },
+    "threshold_search": {
+      "tried": 20,
+      "moves": [
+        "ask 0.500 -> 0.400"
+      ]
+    },
+    "questions": {
+      "discarded": 0,
+      "winner": 0.6897045740000001
+    },
+    "seed_score": 0.661364989,
+    "final_score": 0.6897045740000001,
+    "objectives": {
+      "dollars": 0.0046491162,
+      "outcome": 0.75,
+      "safe": true,
+      "seconds": 4.7388575
+    }
+  },
+  "online": {
+    "requests": 40,
+    "proposed": 4,
+    "promoted": 0,
+    "champion": {
+      "ask": 0.4,
+      "deliberate": 0.5,
+      "revise": 0.5
+    },
+    "error": null
+  }
+}

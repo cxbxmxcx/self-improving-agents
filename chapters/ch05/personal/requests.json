@@ -1,0 +1,22 @@
+[
+  {
+    "id": "CAL-201", "user": "maya", "session": "maya-monday", "date": "2026-10-05",
+    "question": "Schedule a 45-minute writing block on 2026-10-05.",
+    "feedback": {"accepted_start": "14:00", "if_accepted": "That works for me.", "if_rejected": "Please use 14:00 for writing."}
+  },
+  {
+    "id": "CAL-202", "user": "maya", "session": "maya-tuesday", "date": "2026-10-06",
+    "question": "Schedule a 45-minute writing block on 2026-10-06.",
+    "feedback": {"accepted_start": "14:00", "if_accepted": "That works for me.", "if_rejected": "Please use 14:00 for writing."}
+  },
+  {
+    "id": "CAL-203", "user": "maya", "session": "maya-wednesday", "date": "2026-10-07",
+    "question": "Schedule a 45-minute writing block on 2026-10-07.",
+    "feedback": {"accepted_start": "09:00", "if_accepted": "That works for me.", "if_rejected": "Mornings work better now; please use 09:00 for writing."}
+  },
+  {
+    "id": "CAL-204", "user": "maya", "session": "maya-wednesday", "date": "2026-10-08",
+    "question": "Schedule a 45-minute writing block on 2026-10-08. Use my feedback from the rejected writing booking.",
+    "feedback": {"accepted_start": "09:00", "if_accepted": "That works for me.", "if_rejected": "Mornings work better now; please use 09:00 for writing."}
+  }
+]

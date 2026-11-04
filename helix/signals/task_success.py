@@ -4,7 +4,7 @@ Where an LLM-as-judge asks a model "which answer is better," a task agent can be
 graded against the world: did it book a flight matching the request, a hotel
 under budget, the activities asked for? This signal runs a candidate artifact
 against a fixed set of scenarios and averages a deterministic per-scenario score.
-It is the ground-truth signal Chapter 3 uses to drive evolutionary search over
+It is the ground-truth signal Chapter 7 uses to drive evolutionary search over
 tool descriptions, optionally composited with a judge via CompositeSignal (§3.5).
 
 The signal is domain-agnostic. The caller supplies a `score_scenario(candidate,

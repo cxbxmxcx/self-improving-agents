@@ -8,7 +8,8 @@ or a signal being measured.
 Wiring:
 - system_prompt is an Artifact (kind=prompt); read once at session start.
 - tools is a list of Tool objects (helix.tools).
-- memory_tiers is a dict of {tier_name: MemoryTier}. Working memory is built
+- memory_tiers installs memory as a harness component through MemoryHooks.
+  It is a dict of {tier_name: MemoryTier}. Working memory is built
   per-run; episodic/semantic/procedural are supplied by the caller and shared
   across runs.
 - Each Agent.run() takes an optional MemoryContext (session_id, user_id,
@@ -18,6 +19,7 @@ Wiring:
 from __future__ import annotations
 
 import json
+import time
 import uuid
 from datetime import datetime, timezone
 from typing import Any
@@ -25,15 +27,9 @@ from typing import Any
 from helix._caching import cacheable_system_message
 from helix.llm_call import acompletion as helix_acompletion
 from helix.artifact import Artifact
-from helix.hooks import HookPoint, HookRegistry, Refusal
-from helix.memory.base import (
-    MemoryContext,
-    MemoryEntry,
-    MemoryQuery,
-    MemoryTier,
-    Scope,
-    ScopeKey,
-)
+from helix.hooks import HookPoint, HookRegistry, Refusal, RequestPatch
+from helix.memory.base import MemoryContext, MemoryTier
+from helix.memory.hooks import MemoryHooks
 from helix.memory.working import WorkingMemory
 from helix.observability import span
 from helix.observability.bus import EventBus, get_bus
@@ -44,12 +40,6 @@ from helix.observability.events import (
 )
 from helix.tools import Tool
 from helix.trajectory import Outcome, StepKind, Trajectory
-
-
-# How many episodic memories to retrieve and inject at the start of a run.
-_EPISODIC_K = 3
-# How many semantic facts to surface in the system context.
-_SEMANTIC_K = 6
 
 
 def _first_refusal(hook_results: list[Any]) -> Refusal | None:
@@ -69,6 +59,65 @@ def _first_output_patch(hook_results: list[Any]) -> Any:
     for r in hook_results:
         if isinstance(r, tuple) and len(r) == 2 and r[0] == "patched":
             return r[1]
+    return None
+
+
+def _patched_call(model: str, params: dict[str, Any], hook_results: list[Any]) -> tuple[str, dict[str, Any]]:
+    """The model and call parameters after any PRE_MODEL RequestPatch. SPEC §6.2.
+
+    Patches apply in registration order, so a later hook can refine an earlier
+    one; the agent's own settings stay untouched for the next call.
+    """
+    call_model, call_params = model, dict(params)
+    for r in hook_results:
+        if isinstance(r, RequestPatch):
+            call_model = r.model or call_model
+            call_params.update(r.params)
+    return call_model, call_params
+
+
+def _usage_of(response: Any) -> dict[str, int] | None:
+    """Token counts from a model response, when the provider reports them.
+
+    Only plain integers are kept, so a test double's placeholder attributes
+    never leak into a trajectory that will be serialized.
+    """
+    usage = getattr(response, "usage", None)
+    if usage is None:
+        return None
+    counts: dict[str, int] = {}
+    for key, aliases in (("prompt_tokens", ("prompt_tokens", "input_tokens")),
+                         ("completion_tokens", ("completion_tokens", "output_tokens"))):
+        for alias in aliases:
+            value = getattr(usage, alias, None)
+            if isinstance(value, int) and not isinstance(value, bool):
+                counts[key] = value
+                break
+    if not counts:
+        return None
+    counts["total_tokens"] = counts.get("prompt_tokens", 0) + counts.get("completion_tokens", 0)
+    # Reasoning tokens are part of the completion; chapter 6 measures them on
+    # their own, because learned memory is meant to replace exactly that work.
+    # Cached prompt tokens are priced lower, so they are kept apart too.
+    for key, details, field_name in (
+        ("reasoning_tokens", ("completion_tokens_details", "output_tokens_details"), "reasoning_tokens"),
+        ("cached_tokens", ("prompt_tokens_details", "input_tokens_details"), "cached_tokens"),
+    ):
+        for name in details:
+            value = getattr(getattr(usage, name, None), field_name, None)
+            if isinstance(value, int) and not isinstance(value, bool):
+                counts[key] = value
+                break
+    return counts
+
+
+def _cancel_reason(hook_results: list[Any]) -> str | None:
+    """None when no PRE_TOOL hook cancelled; otherwise the reason ('' if none was given)."""
+    for r in hook_results:
+        if r == "cancel":
+            return ""
+        if isinstance(r, tuple) and len(r) == 2 and r[0] == "cancel":
+            return str(r[1])
     return None
 
 
@@ -106,6 +155,7 @@ class Agent:
         memory_tiers: dict[str, MemoryTier] | None = None,
         guardrails: list | None = None,  # list[Guardrail], avoid circular import
         composites: list[Artifact] | None = None,
+        scaffold=None,  # MetacognitiveScaffold, avoid circular import
     ) -> None:
         if not isinstance(system_prompt.content, str):
             raise TypeError("system_prompt artifact must have string content")
@@ -131,8 +181,20 @@ class Agent:
         # Persistent memory tiers, supplied by the caller. Working memory is
         # built per-run; episodic/semantic/procedural are shared instances.
         self.memory: dict[str, MemoryTier] = dict(memory_tiers or {})
-        # Improvers registered on this agent. They are not invoked inline by
-        # the hot path. They consume trajectories via the event bus.
+        # Memory is a hook pair, not a loop branch (SPEC §6.3): PRE_MODEL
+        # recall and SESSION_END write-back, packaged like a Guardrail so a
+        # clone built by with_artifacts re-registers them in this same line.
+        self.memory_hooks: MemoryHooks | None = None
+        if self.memory:
+            self.memory_hooks = MemoryHooks(
+                tiers=self.memory,
+                bus=self.bus,
+                model=self.model,
+                system_prompt_ref=self.system_prompt.ref,
+            )
+            self.memory_hooks.register(self.hooks)
+        # Attached improvers use their registered hooks or event subscribers.
+        # The memory improver's SESSION_END update is awaited by the harness.
         self.improvers: list = []  # type: list[Improver] but avoid circular import
         # Guardrails (SPEC §16.2.1). Each wraps a CODE artifact and registers
         # itself as a PRE_MODEL or PRE_OUTPUT hook at construction. The list
@@ -140,6 +202,15 @@ class Agent:
         self.guardrails: list = list(guardrails or [])
         for g in self.guardrails:
             self.hooks.register(g.hook_point, g.make_hook_handler())
+        # The metacognitive scaffold (chapter 6) registers after guardrails,
+        # so a refusal or a guardrail's patch takes precedence over its own.
+        # Declaring its composite opts the composite's members out of solo
+        # improvement (SPEC §18.7); its thresholds stay improvable online.
+        self.scaffold = scaffold
+        if scaffold is not None:
+            if scaffold.composite is not None:
+                self.composites[scaffold.composite.id] = scaffold.composite
+            scaffold.register(self)
 
     def with_artifacts(self, overrides: dict[str, Artifact]) -> "Agent":
         """Return a new Agent with the given artifacts swapped in. SPEC §15.2.
@@ -153,10 +224,12 @@ class Agent:
         Dispatch by artifact:
           - `system_prompt`: swapped when an override's id matches.
           - tool descriptions: a TextDescriptionTool whose description artifact
-            id matches an override gets a fresh description (Ch 3). Plain Tools
+            id matches an override gets a fresh description (Chapter 7). Plain Tools
             and ToolFromArtifact instances carry over unchanged.
           - `guardrails`: each guardrail whose artifact id matches an override
             is rebuilt with the new artifact. Other guardrails carry over.
+          - `scaffold`: rebuilt with any overridden configuration, thresholds,
+            planner, reflector, or metacognition composite (chapter 6).
 
         The clone gets a fresh HookRegistry. Hooks registered on the original
         do not carry over (each Agent owns its own hook state). Guardrails are
@@ -210,6 +283,7 @@ class Agent:
         new_composites = [
             overrides.get(c.id, c) for c in self.composites.values()
         ]
+        new_scaffold = self.scaffold.with_overrides(overrides) if self.scaffold is not None else None
 
         return Agent(
             system_prompt=new_system_prompt,
@@ -223,13 +297,15 @@ class Agent:
             memory_tiers=dict(self.memory),
             guardrails=new_guardrails,
             composites=new_composites,
+            scaffold=new_scaffold,
         )
 
     def find_artifact(self, artifact_id: str) -> Artifact | None:
         """Resolve an artifact id to the Artifact bound on this agent, or None.
 
-        Searches the system prompt, tool code/description artifacts, and
-        guardrail artifacts. Improvers use this to classify a target's layer for
+        Searches the system prompt, tool code/description artifacts, guardrail
+        artifacts, the scaffold's artifacts, and declared composites. Improvers
+        use this to classify a target's layer for
         the online-safety check (SPEC §17.3) regardless of which slot it fills.
         """
         for art in self._bound_artifacts():
@@ -248,6 +324,8 @@ class Agent:
             a = getattr(g, "artifact", None)
             if isinstance(a, Artifact):
                 arts.append(a)
+        if self.scaffold is not None:
+            arts.extend(self.scaffold.artifacts())
         arts.extend(self.composites.values())
         return arts
 
@@ -321,21 +399,19 @@ class Agent:
             context = MemoryContext()
         trajectory = Trajectory(task=task)
 
-        # Build the system prompt: artifact content + memory-augmented context.
-        system_text = await self._build_system_prompt(self.system_prompt.content, task, context)
-
-        # The system prompt is the same across every question in a round
-        # (the reference artifact, or the candidate artifact). Mark it
-        # cacheable so Anthropic prompt caching kicks in on repeated runs.
+        # The system prompt is the artifact's content and nothing else; the
+        # memory hooks append what the tiers recall at PRE_MODEL. It is the
+        # same across every question in a round (the reference artifact, or
+        # the candidate artifact), so mark it cacheable for Anthropic.
         memory = WorkingMemory(
             initial=[
-                cacheable_system_message(system_text, self.model),
+                cacheable_system_message(self.system_prompt.content, self.model),
                 {"role": "user", "content": task},
             ]
         )
         trajectory.record_artifact(0, self.system_prompt.ref)
-        # Stash the context on the trajectory so SESSION_END hooks (including
-        # episodic-write below) can read it.
+        # Stash the context on the trajectory so the memory hooks (PRE_MODEL
+        # recall, SESSION_END write-back) can read it.
         trajectory.metadata["memory_context"] = {
             "session_id": context.session_id,
             "user_id": context.user_id,
@@ -386,12 +462,15 @@ class Agent:
                 extra: dict[str, Any] = {}
                 if self.temperature is not None:
                     extra["temperature"] = self.temperature
+                call_model, call_params = _patched_call(self.model, extra, pre_model_results)
+                started = time.perf_counter()
                 response = await helix_acompletion(
-                    model=self.model,
+                    model=call_model,
                     messages=memory.messages(),
                     tools=tool_specs,
-                    **extra,
+                    **call_params,
                 )
+                seconds = time.perf_counter() - started
                 msg = response.choices[0].message
                 assistant_entry: dict[str, Any] = {"role": "assistant", "content": msg.content or ""}
                 if msg.tool_calls:
@@ -404,7 +483,15 @@ class Agent:
                         for tc in msg.tool_calls
                     ]
                 memory.append(assistant_entry)
-                trajectory.append(StepKind.MODEL_CALL, {"response": assistant_entry})
+                # Model, tokens, and seconds make each call's cost measurable,
+                # which chapter 6 needs to show metacognition paying for itself.
+                trajectory.append(StepKind.MODEL_CALL, {
+                    "response": assistant_entry,
+                    "model": call_model,
+                    "params": {k: v for k, v in call_params.items() if isinstance(v, (str, int, float, bool))},
+                    "usage": _usage_of(response),
+                    "seconds": round(seconds, 4),
+                })
 
                 await self.hooks.fire(
                     HookPoint.POST_MODEL, response=msg, trajectory=trajectory
@@ -432,7 +519,6 @@ class Agent:
                             output = patched.answer
                     trajectory.complete(output, Outcome.COMPLETED)
                     await self.hooks.fire(HookPoint.SESSION_END, trajectory=trajectory)
-                    await self._write_to_episodic(task, output, trajectory, context)
                     await self.bus.publish(
                         TrajectoryCompleted(
                             trajectory_id=trajectory.id,
@@ -473,8 +559,9 @@ class Agent:
                         arguments=args,
                         trajectory=trajectory,
                     )
-                    if "cancel" in cancel_results:
-                        result: Any = {"cancelled": True}
+                    reason = _cancel_reason(cancel_results)
+                    if reason is not None:
+                        result: Any = {"cancelled": True, **({"reason": reason} if reason else {})}
                     else:
                         tool = self.tools.get(tc.function.name)
                         if tool is None:
@@ -516,7 +603,6 @@ class Agent:
 
             trajectory.complete(None, Outcome.TIMED_OUT)
             await self.hooks.fire(HookPoint.SESSION_END, trajectory=trajectory)
-            await self._write_to_episodic(task, None, trajectory, context)
             await self.bus.publish(
                 TrajectoryCompleted(
                     trajectory_id=trajectory.id,
@@ -527,116 +613,3 @@ class Agent:
                 )
             )
             return None, trajectory
-
-    # ---------------- memory-augmentation helpers ----------------
-
-    async def _build_system_prompt(
-        self,
-        base: str,
-        task: str,
-        context: MemoryContext,
-    ) -> str:
-        """Compose the system prompt: base + semantic facts + episodic recall.
-
-        Order is deliberate. The artifact's base prompt comes first (it is
-        the artifact under improvement). Semantic facts come next as a
-        compact "what we know about this user/org" section. Episodic recall
-        comes last as "recent similar interactions you handled." The model
-        sees the artifact-as-policy first, then the per-interaction context.
-        """
-        sections: list[str] = [base.rstrip()]
-
-        # Semantic facts: any scope visible to this context.
-        sem = self.memory.get("semantic")
-        if sem is not None and (context.user_id or context.org_id):
-            try:
-                facts = await sem.read(
-                    MemoryQuery(text=task, k=_SEMANTIC_K),
-                    context,
-                )
-            except Exception:
-                facts = []
-            if facts:
-                lines = ["", "## Known facts about this user / organization"]
-                for f in facts:
-                    k = f.content.get("key", "")
-                    v = f.content.get("value", "")
-                    if k and v:
-                        lines.append(f"- {k}: {v}")
-                if len(lines) > 2:
-                    sections.append("\n".join(lines))
-
-        # Episodic recall: relevant past trajectories from visible scopes.
-        epi = self.memory.get("episodic")
-        if epi is not None:
-            try:
-                memories = await epi.read(
-                    MemoryQuery(text=task, k=_EPISODIC_K),
-                    context,
-                )
-            except Exception:
-                memories = []
-            if memories:
-                lines = ["", "## Relevant past interactions"]
-                for m in memories:
-                    q = m.content.get("user_message") or m.content.get("task") or "(prior task)"
-                    a = m.content.get("final_output") or m.content.get("answer") or ""
-                    snippet_q = str(q)[:200]
-                    snippet_a = str(a)[:300]
-                    lines.append(f"- Asked: {snippet_q}")
-                    if snippet_a:
-                        lines.append(f"  Answered: {snippet_a}")
-                if len(lines) > 2:
-                    sections.append("\n".join(lines))
-
-        return "\n".join(sections)
-
-    async def _write_to_episodic(
-        self,
-        task: str,
-        output: str | None,
-        trajectory: Trajectory,
-        context: MemoryContext,
-    ) -> None:
-        """Persist the completed trajectory to episodic memory.
-
-        Writes at the most-specific available scope: session if session_id
-        is set, otherwise user, otherwise nothing. Per-org / global writes
-        are intentionally NOT done automatically; the caller must do those
-        deliberately to avoid scope leakage.
-        """
-        epi = self.memory.get("episodic")
-        if epi is None:
-            return
-
-        # Pick the most-specific scope. Skip if no scope available.
-        scope_key: ScopeKey | None = None
-        if context.session_id:
-            scope_key = ScopeKey(Scope.SESSION, context.session_id)
-        elif context.user_id:
-            scope_key = ScopeKey(Scope.USER, context.user_id)
-        else:
-            return
-
-        entry = MemoryEntry(
-            id=str(uuid.uuid4()),
-            scope_key=scope_key,
-            content={
-                "trajectory_id": trajectory.id,
-                "user_message": task,
-                "final_output": output or "",
-                "outcome": trajectory.outcome.value,
-                "num_steps": len(trajectory.steps),
-            },
-            metadata={
-                "model": self.model,
-                "system_prompt_ref": list(self.system_prompt.ref),
-                "user_id": context.user_id,
-                "org_id": context.org_id,
-            },
-        )
-        try:
-            await epi.write(entry)
-        except Exception:
-            # Memory write failures must never break the hot path.
-            pass

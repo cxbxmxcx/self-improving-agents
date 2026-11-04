@@ -8,7 +8,8 @@ Strategy:
 2. Merge consecutive short paragraphs until we're near the target lower bound.
 3. Split any paragraph that exceeds the ceiling by sentence (naive period-split).
 
-This is the v0 chunker. Better chunking (semantic, structural) is a Ch 3 topic.
+This is the v0 chunker. Better chunking (semantic, structural) is not scheduled
+for a chapter; the chunker stays fixed.
 """
 
 from __future__ import annotations

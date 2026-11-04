@@ -20,7 +20,9 @@ new champion on its next request.
 
 from helix.improvement.improver import OfflineImprover, ImproverStatus
 from helix.improvement.online_improver import OnlineImprover, OnlineImproverStatus
+from helix.improvement.online_memory import OnlineMemoryImprover, OnlineMemoryImproverStatus
 from helix.improvement.policy import ImproverMode, ImproverPolicy, Schedule
+from helix.improvement.group_round import GroupRoundResult, group_advantages, run_group_round
 from helix.improvement.round import RoundResult, run_improvement_round
 
 __all__ = [
@@ -28,9 +30,14 @@ __all__ = [
     "OnlineImprover",
     "ImproverStatus",
     "OnlineImproverStatus",
+    "OnlineMemoryImprover",
+    "OnlineMemoryImproverStatus",
     "ImproverMode",
     "ImproverPolicy",
     "Schedule",
     "RoundResult",
     "run_improvement_round",
+    "GroupRoundResult",
+    "group_advantages",
+    "run_group_round",
 ]

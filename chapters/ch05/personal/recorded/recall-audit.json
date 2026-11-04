@@ -1,0 +1,24 @@
+{
+  "query": "Schedule a 45-minute writing block on 2026-10-08. Use my feedback from the rejected writing booking.",
+  "candidates_before_fourth_request": [
+    {
+      "episode": "E1",
+      "relevance": 0.6826865934977611,
+      "utility": 0.375,
+      "recall_score": 0.5749962857735447
+    },
+    {
+      "episode": "E2",
+      "relevance": 0.6826865934977611,
+      "utility": 0.5,
+      "recall_score": 0.6187462857735446
+    },
+    {
+      "episode": "E3",
+      "relevance": 0.7143236033593557,
+      "utility": 0.5,
+      "recall_score": 0.6393103421835813
+    }
+  ],
+  "limitation": "Bare generic scheduling request without reference to rejection selected E2 in the initial trial; this demonstration uses an explicit reference to prior feedback, not the new preferred time."
+}

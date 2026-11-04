@@ -32,6 +32,10 @@ class SignalKind(str, Enum):
     FORMAL_PROOF = "formal_proof"
     METRIC = "metric"
     COMPOSITE = "composite"
+    # Credit assigned from an outcome to the memory entries recalled on the
+    # way to it (SPEC §3.3, v0.3). Scores an entry's contribution, not an
+    # answer's correctness, which is why it is not ENVIRONMENT_REWARD.
+    UTILITY = "utility"
 
 
 class Preference(str, Enum):

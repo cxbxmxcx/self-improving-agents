@@ -1,4 +1,4 @@
-"""Chapter 3: the improvement loop with GEPA on the revenue task.
+"""Chapter 4: the improvement loop with GEPA on the revenue task.
 
 Same loop, different Search. Where SPO mutates blindly from the outcome score and
 plateaus at 0.63, GEPA does three things SPO does not:
@@ -39,6 +39,11 @@ from agents.revenue import (
 )
 
 load_env()
+
+# Proposed prompts may contain characters a Windows console cannot encode;
+# printing a result must never be able to crash a finished run.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 AGENT_MODEL = "claude-sonnet-4-5"      # runs the task; temperature 0 -> deterministic scoring
 REFLECTOR_MODEL = "claude-sonnet-4-5"  # diagnoses the trajectory (same mid-tier as SPO's proposer)
@@ -112,60 +117,110 @@ async def crossover(a: str, b: str) -> str:
     return await _llm(CROSSOVER_SYS, f"Prompt A:\n{a}\n\nPrompt B:\n{b}", PROPOSER_MODEL)
 
 
+ROUNDS_LOG = ARCHIVE_PATH.parent / f"{ARCHIVE_PATH.stem}_rounds.jsonl"
+
+
 def _fresh_archive() -> SQLiteArchive:
     for ext in ("", "-wal", "-shm"):
         p = Path(str(ARCHIVE_PATH) + ext)
         if p.exists():
             p.unlink()
+    if ROUNDS_LOG.exists():
+        ROUNDS_LOG.unlink()
     ARCHIVE_PATH.parent.mkdir(parents=True, exist_ok=True)
     return SQLiteArchive(ARCHIVE_PATH)
+
+
+def _log_round(row: dict) -> None:
+    """One JSON line per generation, so the dashboard can replay the population."""
+    with ROUNDS_LOG.open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps(row) + "\n")
 
 
 async def improve_gepa(rounds: int, pop: int):
     archive = _fresh_archive()
     seed = build_revenue_policy(POLICY_GENESIS)
 
-    s0, _, traj0 = await measure_full(POLICY_GENESIS)
+    s0, fb0, traj0 = await measure_full(POLICY_GENESIS)
     print(f"genesis: score={s0:.2f}")
     # Record the genesis with its score so the lineage tree has a ranked root.
+    # Feedback and the trajectory persist too, so the score stays auditable.
     await archive.record(
         Variant(artifact=seed, parent=seed, search_method="human"),
-        GapMeasurement(score=s0),
+        GapMeasurement(score=s0, feedback=fb0),
+    )
+    await archive.store_trajectory(
+        seed, "revenue", traj0, answer=getattr(traj0, "final_output", None)
     )
     # population entries: (artifact, content, score, trajectory)
     population = [(seed, POLICY_GENESIS, s0, traj0)]
 
     for r in range(rounds):
         parents = sorted(population, key=lambda x: x[2], reverse=True)[: max(2, pop // 2)]
+        # The living population at breeding time, stamped onto every child so
+        # the lineage view can show what the search could see when it bred.
+        pool_versions = [art.version for art, _, _, _ in population]
 
         # Reflective mutation: diagnose each parent's trajectory, then mutate.
+        # Each proposal carries its second parent, None except for crossover.
         async def make_child(par):
             diagnosis = await reflect(par[1], par[3])
-            return par[0], await mutate(par[1], diagnosis)
+            return par[0], await mutate(par[1], diagnosis), None
 
         jobs = [make_child(p) for p in parents]
         if len(parents) >= 2:  # one crossover of the top two
             async def make_cross():
-                return parents[0][0], await crossover(parents[0][1], parents[1][1])
+                merged = await crossover(parents[0][1], parents[1][1])
+                return parents[0][0], merged, parents[1][0]
             jobs.append(make_cross())
         proposed = await asyncio.gather(*jobs)
 
         # Evaluate offspring (concurrently), record to the archive with lineage.
-        async def eval_child(parent_art, content):
-            sc, _, traj = await measure_full(content)
+        async def eval_child(parent_art, content, other_parent):
+            sc, fb, traj = await measure_full(content)
             nv = await archive.next_version(parent_art.id) if hasattr(archive, "next_version") else parent_art.version + 1
-            child = parent_art.mutate(new_content=content, created_by="gepa", version=nv)
+            # parent_id holds a single ref, so a crossover child files its
+            # second parent in metadata; the lineage tree draws it as a
+            # dashed edge from that breadcrumb.
+            meta = (
+                {"other_parent_id": other_parent.id,
+                 "other_parent_version": other_parent.version}
+                if other_parent is not None else None
+            )
+            created_by = "gepa_crossover" if other_parent is not None else "gepa_mutation"
+            child = parent_art.mutate(
+                new_content=content, created_by=created_by, metadata=meta, version=nv
+            )
             # Record with lineage + measurement so the dashboard can color and rank it.
             await archive.record(
-                Variant(artifact=child, parent=parent_art, search_method="gepa"),
-                GapMeasurement(score=sc),
+                Variant(
+                    artifact=child,
+                    parent=parent_art,
+                    search_method="gepa",
+                    metadata={"round": r, "bred_from_pool": pool_versions},
+                ),
+                GapMeasurement(score=sc, feedback=fb),
+            )
+            await archive.store_trajectory(
+                child, "revenue", traj, answer=getattr(traj, "final_output", None)
             )
             return child, content, sc, traj
 
-        evaluated = await asyncio.gather(*[eval_child(pa, c) for pa, c in proposed])
+        evaluated = await asyncio.gather(*[eval_child(pa, c, op) for pa, c, op in proposed])
         population.extend(evaluated)
         population = sorted(population, key=lambda x: x[2], reverse=True)[:pop]
         print(f"gen {r}: best={population[0][2]:.2f}   (population: {[round(x[2], 2) for x in population]})")
+        _log_round({
+            "round": r,
+            "best_score": population[0][2],
+            "mean_score": sum(x[2] for x in population) / len(population),
+            "population": [art.version for art, _, _, _ in population],
+        })
+        # A ground-truth signal knows its own ceiling: a perfect check means the
+        # task is solved, so every call after it would be pure waste.
+        if population[0][2] >= 1.0:
+            print(f"ceiling reached at gen {r}: ground truth reports a perfect answer, stopping")
+            break
 
     best = max(population, key=lambda x: x[2])
     print(f"\nGEPA best score={best[2]:.2f}\nbest prompt:\n{best[1]}")

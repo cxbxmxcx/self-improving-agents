@@ -1,4 +1,4 @@
-"""Chapter 3: the improvement loop with DGM on the revenue task.
+"""Chapter 4: the improvement loop with DGM on the revenue task.
 
 DGM (a Darwin-Godel-Machine-style search) keeps an ACCUMULATING archive that never
 discards a candidate, and samples parents by quality AND diversity rather than only
@@ -38,6 +38,11 @@ from agents.revenue import (
 )
 
 load_env()
+
+# Proposed prompts may contain characters a Windows console cannot encode;
+# printing a result must never be able to crash a finished run.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 AGENT_MODEL = "claude-sonnet-4-5"
 REFLECTOR_MODEL = "claude-sonnet-4-5"
@@ -102,11 +107,15 @@ def sample_parent(archive: list):
     """Quality-diversity sampling: usually exploit a top candidate, but with
     probability 1-EXPLOIT_P explore a random archive member (including lower-scoring,
     structurally different ones). This is what keeps DGM from collapsing onto one
-    line the way a small population does."""
+    line the way a small population does. Returns the pick and which move it was,
+    so the record can show exploration happening."""
     ranked = sorted(archive, key=lambda e: e["score"], reverse=True)
     if random.random() < EXPLOIT_P:
-        return random.choice(ranked[: min(3, len(ranked))])
-    return random.choice(archive)
+        return random.choice(ranked[: min(3, len(ranked))]), "exploit"
+    return random.choice(archive), "explore"
+
+
+ROUNDS_LOG = ARCHIVE_PATH.parent / f"{ARCHIVE_PATH.stem}_rounds.jsonl"
 
 
 def _fresh_archive() -> SQLiteArchive:
@@ -114,8 +123,16 @@ def _fresh_archive() -> SQLiteArchive:
         p = Path(str(ARCHIVE_PATH) + ext)
         if p.exists():
             p.unlink()
+    if ROUNDS_LOG.exists():
+        ROUNDS_LOG.unlink()
     ARCHIVE_PATH.parent.mkdir(parents=True, exist_ok=True)
     return SQLiteArchive(ARCHIVE_PATH)
+
+
+def _log_round(row: dict) -> None:
+    """One JSON line per iteration, so the dashboard can replay the search."""
+    with ROUNDS_LOG.open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps(row) + "\n")
 
 
 async def improve_dgm(iters: int):
@@ -123,31 +140,64 @@ async def improve_dgm(iters: int):
     store = _fresh_archive()
     seed = build_revenue_policy(POLICY_GENESIS)
 
-    s0, _, traj0 = await measure_full(POLICY_GENESIS)
+    s0, fb0, traj0 = await measure_full(POLICY_GENESIS)
     print(f"genesis: score={s0:.2f}")
     # Record the genesis with its score so the lineage tree has a ranked root.
+    # Feedback and the trajectory persist too, so the score stays auditable.
     await store.record(
         Variant(artifact=seed, parent=seed, search_method="human"),
-        GapMeasurement(score=s0),
+        GapMeasurement(score=s0, feedback=fb0),
+    )
+    await store.store_trajectory(
+        seed, "revenue", traj0, answer=getattr(traj0, "final_output", None)
     )
     archive = [{"art": seed, "content": POLICY_GENESIS, "score": s0, "traj": traj0}]
     best = s0
 
     for it in range(iters):
-        parent = sample_parent(archive)
+        parent, mode = sample_parent(archive)
         diagnosis = await reflect(parent["content"], parent["traj"])
         child_content = await mutate(parent["content"], diagnosis)
-        sc, _, traj = await measure_full(child_content)
+        sc, fb, traj = await measure_full(child_content)
         nv = await store.next_version(parent["art"].id) if hasattr(store, "next_version") else parent["art"].version + 1
         child_art = parent["art"].mutate(new_content=child_content, created_by="dgm", version=nv)
-        # Record with lineage + measurement so the dashboard can color and rank it.
+        # Record with lineage + measurement so the dashboard can color and rank
+        # it; the metadata stamps which archive member was bred from and why.
         await store.record(
-            Variant(artifact=child_art, parent=parent["art"], search_method="dgm"),
-            GapMeasurement(score=sc),
+            Variant(
+                artifact=child_art,
+                parent=parent["art"],
+                search_method="dgm",
+                metadata={
+                    "iter": it,
+                    "mode": mode,
+                    "sampled_parent_version": parent["art"].version,
+                    "bred_from_pool": [e["art"].version for e in archive],
+                },
+            ),
+            GapMeasurement(score=sc, feedback=fb),
+        )
+        await store.store_trajectory(
+            child_art, "revenue", traj, answer=getattr(traj, "final_output", None)
         )
         archive.append({"art": child_art, "content": child_content, "score": sc, "traj": traj})  # never discard
         best = max(best, sc)
-        print(f"iter {it}: candidate={sc:.2f}  best={best:.2f}  archive={len(archive)}  (from parent {parent['score']:.2f})")
+        print(f"iter {it}: candidate={sc:.2f}  best={best:.2f}  archive={len(archive)}  ({mode} from parent {parent['score']:.2f})")
+        _log_round({
+            "round": it,
+            "candidate_version": nv,
+            "score": sc,
+            "best_score": best,
+            "mean_score": sc,
+            "mode": mode,
+            "sampled_parent": parent["art"].version,
+            "archive_size": len(archive),
+        })
+        # A ground-truth signal knows its own ceiling: a perfect check means the
+        # task is solved, so every call after it would be pure waste.
+        if best >= 1.0:
+            print(f"ceiling reached at iter {it}: ground truth reports a perfect answer, stopping")
+            break
 
     winner = max(archive, key=lambda e: e["score"])
     print(f"\nDGM best score={winner['score']:.2f}\nbest prompt:\n{winner['content']}")

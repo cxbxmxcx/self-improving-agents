@@ -2,7 +2,7 @@
 
 Loads JSONL run files produced by the eval harness and renders trajectories
 human-readably. Counterfactual replay against alternate prompts (Flavor B)
-is deferred to Ch 3+ when memory makes the cost savings matter.
+is deferred to Chapter 5, when memory makes the cost savings matter.
 
 SPEC section 2.2 makes the architectural claim that trajectories are
 replayable; this module is the most basic form of that promise.

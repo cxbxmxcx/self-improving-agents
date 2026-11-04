@@ -12,9 +12,24 @@ the end of the book HelixAgent has ~20 registered hooks. The loop is unchanged.
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
+
+
+@dataclass(frozen=True)
+class RequestPatch:
+    """A PRE_MODEL hook's change to the coming model call. SPEC §6.2.
+
+    The spec lets PRE_MODEL patch the request payload; this is that payload.
+    `model` replaces the agent's model for this call and `params` adds call
+    parameters such as a reasoning effort. Chapter 6's router returns one on
+    every call to keep a run on the fast or the deliberate path; later
+    patches in registration order override earlier ones.
+    """
+    model: str | None = None
+    params: dict[str, Any] = field(default_factory=dict)
+    source: str = ""
 
 
 @dataclass(frozen=True)
@@ -65,11 +80,14 @@ class HookRegistry:
 
         Short-circuit semantics (SPEC §6.2):
           - A hook returning the sentinel string "cancel" at PRE_TOOL signals
-            the loop to skip that tool call.
+            the loop to skip that tool call; ("cancel", reason) also tells the
+            model why, so it can ask the user instead of retrying.
           - A hook returning a Refusal at PRE_MODEL or PRE_OUTPUT signals the
             loop to terminate the run with that refusal.
           - A hook returning ("patched", <payload>) at PRE_MODEL or PRE_OUTPUT
             signals the loop to use the patched payload for the rest of the turn.
+          - A hook returning a RequestPatch at PRE_MODEL changes the model or
+            the call parameters for that model call.
 
         Other return values are passed through for the caller to interpret.
         """

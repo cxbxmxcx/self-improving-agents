@@ -479,12 +479,16 @@ class SQLiteArchive:
         k: int = 1,
         by: str = "score",
         signal_id: str | None = None,
+        kind: ArtifactKind | str | None = None,
+        artifact_id: str | None = None,
     ) -> list[Variant]:
         """Return the top-k variants by latest measurement score.
 
         Ties are broken by latest measurement timestamp (newer wins).
         When `signal_id` is given, only measurements taken under that signal
-        configuration are considered. SPEC §5.2.1.
+        configuration are considered. SPEC §5.2.1. `kind` and `artifact_id`
+        restrict the pool (SPEC §5.2, v0.3): a MemRL search over memory
+        entries must never pick up the system prompt, and vice versa.
         """
         if by != "score":
             raise NotImplementedError(f"Sorting by '{by}' not yet supported")
@@ -492,7 +496,10 @@ class SQLiteArchive:
         # GROUP BY still collapses by (artifact_id, version) so each variant
         # contributes its latest matching measurement.
         signal_filter = "WHERE signal_id = ?" if signal_id is not None else ""
-        params: tuple[Any, ...] = ((signal_id,) if signal_id is not None else ()) + (k,)
+        outer_clauses, outer_params = self._pool_filter(kind, artifact_id, alias="a")
+        params: tuple[Any, ...] = (
+            ((signal_id,) if signal_id is not None else ()) + tuple(outer_params) + (k,)
+        )
         rows = self._conn.execute(
             f"""
             SELECT a.*, m.score AS latest_score, m.preference AS latest_pref,
@@ -506,7 +513,7 @@ class SQLiteArchive:
                 GROUP BY artifact_id, version
             ) m ON a.artifact_id = m.artifact_id AND a.version = m.version
             LEFT JOIN variants v ON a.artifact_id = v.artifact_id AND a.version = v.version
-            WHERE m.score IS NOT NULL
+            WHERE m.score IS NOT NULL{outer_clauses}
             ORDER BY m.score DESC, m.latest_row DESC
             LIMIT ?
             """,
@@ -514,6 +521,23 @@ class SQLiteArchive:
         ).fetchall()
 
         return [self._row_to_variant(row, signal_id=signal_id) for row in rows]
+
+    @staticmethod
+    def _pool_filter(
+        kind: ArtifactKind | str | None,
+        artifact_id: str | None,
+        alias: str = "a",
+    ) -> tuple[str, list[Any]]:
+        """Extra WHERE clauses (prefixed with AND) for the kind and id filters."""
+        clauses: list[str] = []
+        params: list[Any] = []
+        if kind is not None:
+            clauses.append(f" AND {alias}.kind = ?")
+            params.append(kind.value if isinstance(kind, ArtifactKind) else str(kind))
+        if artifact_id is not None:
+            clauses.append(f" AND {alias}.artifact_id = ?")
+            params.append(artifact_id)
+        return "".join(clauses), params
 
     async def measurements_for_signal(
         self,
@@ -633,25 +657,44 @@ class SQLiteArchive:
                 front.append(cand)
         return front
 
-    async def _all_variants_with_measurements(self) -> list[Variant]:
+    async def _all_variants_with_measurements(
+        self,
+        kind: ArtifactKind | str | None = None,
+        artifact_id: str | None = None,
+    ) -> list[Variant]:
+        clauses, params = self._pool_filter(kind, artifact_id, alias="a")
         rows = self._conn.execute(
-            """
+            f"""
             SELECT a.*, v.search_method, v.variant_metadata
             FROM artifacts a
             LEFT JOIN variants v ON a.artifact_id = v.artifact_id AND a.version = v.version
-            """
+            WHERE 1 = 1{clauses}
+            """,
+            params,
         ).fetchall()
         return [self._row_to_variant(row) for row in rows]
 
-    async def sample(self, strategy: SamplingStrategy) -> Variant:
-        variants = await self._all_variants_with_measurements()
+    async def sample(
+        self,
+        strategy: SamplingStrategy,
+        kind: ArtifactKind | str | None = None,
+        artifact_id: str | None = None,
+    ) -> Variant:
+        """Draw one variant from the archive, optionally within a pool.
+
+        The pool filters keep a memory search and a prompt search that share
+        one archive from sampling each other's rows (SPEC §5.2, v0.3).
+        """
+        variants = await self._all_variants_with_measurements(kind, artifact_id)
         if not variants:
             raise ValueError("Archive is empty; cannot sample")
 
         if strategy == SamplingStrategy.RANDOM:
             return random.choice(variants)
         if strategy == SamplingStrategy.BEST:
-            best = await self.best(k=1)
+            best = await self.best(k=1, kind=kind, artifact_id=artifact_id)
+            if not best:
+                return random.choice(variants)
             return best[0]
         if strategy == SamplingStrategy.WEIGHTED_BY_SCORE:
             scored = [(v, v.measurement.score) for v in variants if v.measurement and v.measurement.score is not None]
@@ -820,28 +863,9 @@ class SQLiteArchive:
             """,
             (artifact_id, version),
         ).fetchall()
-        out: list[GapMeasurement] = []
-        from helix.signal import Cost, Preference
-        for r in rows:
-            rubric_id = None
-            if r["rubric_id"] is not None:
-                rubric_id = (r["rubric_id"], int(r["rubric_version"]))
-            out.append(
-                GapMeasurement(
-                    score=r["score"],
-                    preference=Preference(r["preference"]),
-                    feedback=r["feedback"],
-                    confidence=float(r["confidence"]),
-                    rubric_id=rubric_id,
-                    cost=Cost(
-                        tokens=int(r["cost_tokens"]),
-                        dollars=float(r["cost_dollars"]),
-                        wall_clock_sec=float(r["cost_wall_sec"]),
-                    ),
-                    metadata=json.loads(r["measurement_metadata"]),
-                )
-            )
-        return out
+        # One row mapper for every read path, so signal_id, raw_value, and
+        # triggered survive the trip (utility readers rely on them).
+        return [m for m in (self._measurement_from_row(r) for r in rows) if m is not None]
 
     async def lineage_tree(self) -> list[dict]:
         """Return a forest of artifacts as nested {artifact, children, measurement} dicts.

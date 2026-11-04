@@ -1,4 +1,4 @@
-"""Tests for DGMSearch (SPEC section 4.2, Ch 3)."""
+"""Tests for DGMSearch (SPEC section 4.2, Chapter 4)."""
 
 from __future__ import annotations
 

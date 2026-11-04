@@ -16,10 +16,19 @@ from helix.memory.base import (
     Scope,
     ScopeKey,
 )
+from helix.memory.consolidation import (
+    ConsolidationPolicy,
+    consolidate_episodic,
+    schedule_consolidation,
+    stop_consolidation,
+)
 from helix.memory.episodic import EpisodicMemory
+from helix.memory.hooks import MemoryHooks
+from helix.memory.operators import Operator, add, downvote, edit, evict_below, upvote
 from helix.memory.procedural import ProceduralMemory
 from helix.memory.semantic import SemanticMemory
 from helix.memory.working import WorkingMemory
+from helix.memory.learning import MemoryLearner
 
 __all__ = [
     "ConsolidationReport",
@@ -35,4 +44,16 @@ __all__ = [
     "ProceduralMemory",
     "SemanticMemory",
     "WorkingMemory",
+    "MemoryHooks",
+    "MemoryLearner",
+    "Operator",
+    "add",
+    "upvote",
+    "downvote",
+    "edit",
+    "evict_below",
+    "ConsolidationPolicy",
+    "consolidate_episodic",
+    "schedule_consolidation",
+    "stop_consolidation",
 ]

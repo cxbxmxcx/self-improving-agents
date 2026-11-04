@@ -1,0 +1,48 @@
+{
+  "events": [
+    {
+      "event_id": "23ce863c-a707-43f0-a216-aeac6974d068",
+      "user": "maya",
+      "date": "2026-10-05",
+      "title": "Writing",
+      "start": "14:00",
+      "duration_minutes": 45,
+      "valid": true,
+      "accepted": true,
+      "feedback": "That works for me."
+    },
+    {
+      "event_id": "8edf09a8-8e68-4f5c-a76b-1c62f8378dd2",
+      "user": "maya",
+      "date": "2026-10-06",
+      "title": "Writing",
+      "start": "14:00",
+      "duration_minutes": 45,
+      "valid": true,
+      "accepted": true,
+      "feedback": "That works for me."
+    },
+    {
+      "event_id": "50817f8c-db62-4082-99ed-7ef1ac14a3d0",
+      "user": "maya",
+      "date": "2026-10-07",
+      "title": "Writing",
+      "start": "14:00",
+      "duration_minutes": 45,
+      "valid": true,
+      "accepted": false,
+      "feedback": "Mornings work better now; please use 09:00 for writing."
+    },
+    {
+      "event_id": "b7be7f77-c08f-4f68-a97f-40912b1a222d",
+      "user": "maya",
+      "date": "2026-10-08",
+      "title": "Writing",
+      "start": "09:00",
+      "duration_minutes": 45,
+      "valid": true,
+      "accepted": true,
+      "feedback": "That works for me."
+    }
+  ]
+}

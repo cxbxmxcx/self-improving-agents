@@ -160,6 +160,36 @@ def _get_procedural() -> ProceduralMemory:
 # build() — the contract every spec exports
 # ---------------------------------------------------------------------------
 
+def build_memory_tiers(
+    memory_dir: Path | str,
+    archive=None,
+    *,
+    tiers: tuple[str, ...] = ("episodic", "semantic", "procedural"),
+    utility_weight: float = 0.0,
+) -> dict:
+    """Fresh memory tiers under one directory, optionally archive-backed.
+
+    Chapter scripts use this instead of the process-wide singletons so a
+    recorded run owns its memory and every entry is a MEMORY_ENTRY artifact
+    in the run's archive (SPEC §7.3). Pass a str ":memory:" directory for
+    throwaway tiers.
+    """
+    if str(memory_dir) == ":memory:":
+        paths = {t: ":memory:" for t in tiers}
+    else:
+        d = Path(memory_dir)
+        d.mkdir(parents=True, exist_ok=True)
+        paths = {t: d / f"{t}.sqlite" for t in tiers}
+    built: dict = {}
+    if "episodic" in tiers:
+        built["episodic"] = EpisodicMemory(paths["episodic"], check_same_thread=False, archive=archive, utility_weight=utility_weight)
+    if "semantic" in tiers:
+        built["semantic"] = SemanticMemory(paths["semantic"], check_same_thread=False, archive=archive)
+    if "procedural" in tiers:
+        built["procedural"] = ProceduralMemory(paths["procedural"], check_same_thread=False, archive=archive)
+    return built
+
+
 def build(
     system_prompt: Artifact | None = None,
     *,
@@ -167,6 +197,7 @@ def build(
     max_iterations: int = 10,
     max_tool_calls: int = 20,
     skip_memory: bool = False,
+    memory_tiers: dict | None = None,
     **overrides,
 ) -> Agent:
     """Construct a fresh helpdesk Agent.
@@ -189,11 +220,14 @@ def build(
     if system_prompt is None:
         system_prompt = build_genesis_prompt()
 
-    memory_tiers = {} if skip_memory else {
-        "episodic": _get_episodic(),
-        "semantic": _get_semantic(),
-        "procedural": _get_procedural(),
-    }
+    # An explicit tier dict (chapter scripts, tests) wins; otherwise the
+    # shared singletons the chat app relies on, or none for offline eval.
+    if memory_tiers is None:
+        memory_tiers = {} if skip_memory else {
+            "episodic": _get_episodic(),
+            "semantic": _get_semantic(),
+            "procedural": _get_procedural(),
+        }
 
     return Agent(
         system_prompt=system_prompt,
@@ -222,9 +256,9 @@ DEFAULT_IMPROVER_QUESTIONS_PER_ROUND = 4
 def list_improvable_artifacts(agent: Agent) -> list[Artifact]:
     """Artifacts on this agent that can be put under improvement.
 
-    Helpdesk v1 exposes one improvable artifact: the system prompt. Later
-    chapters that introduce per-tool descriptions or skill-library entries
-    will append those here. Each entry's id + kind appears in the chat UI's
+    Helpdesk v1 exposes one improvable artifact: the system prompt. Chapter 5
+    (memory entries) and Chapter 7 (tool descriptions and skill-library
+    entries) append those here. Each entry's id + kind appears in the chat UI's
     "Attach improver" dropdown so a user can target any of them.
     """
     return [agent.system_prompt]

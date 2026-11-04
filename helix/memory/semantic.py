@@ -26,6 +26,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from helix.memory.archive_bridge import (
+    latest_artifact,
+    memory_artifact_content,
+    record_genesis,
+    record_version,
+)
 from helix.memory.base import (
     ConsolidationReport,
     EntryId,
@@ -35,6 +41,8 @@ from helix.memory.base import (
     MemoryQuery,
     Scope,
     ScopeKey,
+    ref_from_str,
+    ref_to_str,
 )
 from helix.memory.episodic import _cosine, _embed
 
@@ -53,6 +61,7 @@ CREATE TABLE IF NOT EXISTS semantic_facts (
     created_at TEXT NOT NULL,
     last_accessed_at TEXT,
     access_count INTEGER NOT NULL DEFAULT 0,
+    artifact_ref TEXT,
     UNIQUE(scope, scope_key, fact_key)
 );
 CREATE INDEX IF NOT EXISTS idx_semantic_scope ON semantic_facts(scope, scope_key);
@@ -70,11 +79,23 @@ class SemanticMemory:
 
     tier_name: str = "semantic"
 
-    def __init__(self, path: str | Path = ":memory:", check_same_thread: bool = True) -> None:
+    def __init__(
+        self,
+        path: str | Path = ":memory:",
+        check_same_thread: bool = True,
+        archive: Any | None = None,
+    ) -> None:
         self.path = str(path)
+        # With an archive, every fact is a MEMORY_ENTRY artifact and every
+        # update of a fact is a child version, never an in-place overwrite
+        # (SPEC §7.3, non-negotiable 1). The table stays the live index.
+        self.archive = archive
         self._conn = sqlite3.connect(self.path, check_same_thread=check_same_thread)
         self._conn.row_factory = sqlite3.Row
         self._conn.executescript(_SCHEMA)
+        cols = {r["name"] for r in self._conn.execute("PRAGMA table_info(semantic_facts)")}
+        if "artifact_ref" not in cols:
+            self._conn.execute("ALTER TABLE semantic_facts ADD COLUMN artifact_ref TEXT")
         self._conn.commit()
 
     # ---------------- direct fact API ----------------
@@ -87,26 +108,54 @@ class SemanticMemory:
         description: str | None = None,
         metadata: dict[str, Any] | None = None,
     ) -> EntryId:
-        """Upsert (scope_key, fact_key) -> value. Convenience wrapper around write()."""
+        """Upsert (scope_key, fact_key) -> value. Convenience wrapper around write().
+
+        The index row is replaced; under an archive the fact's artifact gains
+        a child version instead (an EDIT), so its history survives.
+        """
         embedding = None
         if description:
             vectors = _embed([description])
             embedding = vectors[0] if vectors else None
 
-        entry_id = str(uuid.uuid4())
+        existing = self._conn.execute(
+            "SELECT id, artifact_ref FROM semantic_facts WHERE scope = ? AND scope_key = ? AND fact_key = ?",
+            (scope_key.scope.value, scope_key.key, key),
+        ).fetchone()
+        entry_id = existing["id"] if existing is not None else str(uuid.uuid4())
+        ref = ref_from_str(existing["artifact_ref"]) if existing is not None else None
+        if self.archive is not None:
+            entry = MemoryEntry(
+                id=entry_id,
+                scope_key=scope_key,
+                content={"key": key, "value": value, "description": description},
+                metadata=dict(metadata or {}),
+            )
+            parent = await latest_artifact(self.archive, ref[0]) if ref else None
+            if parent is None:
+                ref = await record_genesis(self.archive, self.tier_name, entry)
+            else:
+                ref = await record_version(
+                    self.archive,
+                    parent,
+                    memory_artifact_content(self.tier_name, entry),
+                    created_by=str((metadata or {}).get("created_by") or "agent"),
+                    operator="edit",
+                )
         self._conn.execute(
             """
             INSERT INTO semantic_facts
             (id, scope, scope_key, fact_key, fact_value, description,
              embedding_json, score, metadata_json, created_at,
-             last_accessed_at, access_count)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             last_accessed_at, access_count, artifact_ref)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(scope, scope_key, fact_key) DO UPDATE SET
                 fact_value = excluded.fact_value,
                 description = excluded.description,
                 embedding_json = excluded.embedding_json,
                 metadata_json = excluded.metadata_json,
-                last_accessed_at = excluded.created_at
+                last_accessed_at = excluded.created_at,
+                artifact_ref = excluded.artifact_ref
             """,
             (
                 entry_id,
@@ -121,6 +170,7 @@ class SemanticMemory:
                 datetime.now(timezone.utc).isoformat(),
                 None,
                 0,
+                ref_to_str(ref),
             ),
         )
         self._conn.commit()
@@ -166,6 +216,7 @@ class SemanticMemory:
             created_at=datetime.fromisoformat(row["created_at"]),
             last_accessed_at=datetime.fromisoformat(row["last_accessed_at"]) if row["last_accessed_at"] else None,
             access_count=int(row["access_count"]),
+            artifact_ref=ref_from_str(row["artifact_ref"]) if "artifact_ref" in row.keys() else None,
         )
 
     # ---------------- MemoryTier contract ----------------

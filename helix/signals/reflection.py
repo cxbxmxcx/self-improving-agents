@@ -3,7 +3,7 @@
 A model critiques a trajectory and produces textual feedback. Reflection is a
 Signal in the framework, not a Search method. SPEC section 3.3 locks this in:
 the architectural payoff is that GEPA's reflective mutation, Reflexion's
-verbal reinforcement, and the metacognitive Reflector of Chapter 5 all consume
+verbal reinforcement, and the metacognitive Reflector of Chapter 6 all consume
 the same Signal output.
 
 This implementation reads the candidate Artifact and its produced Trajectory,

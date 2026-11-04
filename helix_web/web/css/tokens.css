@@ -1,0 +1,70 @@
+/* Design tokens for the Helix Observatory.
+   The surface theme is "first edition": cream laid paper, sepia ink, and a
+   gilt accent, after the plates in a Victorian natural-history volume. The
+   data encodings underneath stay on the book's NPG palette (DESIGN_NOTES
+   section 7) plus the dashboard's two additions: DGM brown and champion gold. */
+
+@font-face {
+  font-family: "EB Garamond";
+  font-style: normal;
+  font-weight: 400 800;
+  src: url("/fonts/EBGaramond-var.woff2") format("woff2");
+}
+@font-face {
+  font-family: "EB Garamond";
+  font-style: italic;
+  font-weight: 400 800;
+  src: url("/fonts/EBGaramond-italic-var.woff2") format("woff2");
+}
+
+:root {
+  /* NPG accents: data encodings, never restyled */
+  --npg-vermillion: #E64B35;
+  --npg-slate: #3C5488;
+  --npg-teal: #00A087;
+  --npg-cyan: #4DBBD5;
+  --npg-salmon: #F39B7F;
+  --dgm-brown: #7E6148;
+  --gold: #FFD700;
+  --c-unknown: #888888;
+
+  /* the paper: warm cream surfaces, sepia ink, parchment rules */
+  --bg: #F5F1E4;
+  --bg-panel: #FCFAF0;
+  --bg-inset: #F0EAD6;
+  --fg: #2E2820;
+  --fg-muted: #6B5F49;
+  --fg-faint: #97876A;
+  --border: #DED4B8;
+  --border-strong: #B7A67F;
+  --sepia: #4A3B28;
+  --gilt: #B08D2E;
+  --focus-ring: #B08D2E;
+
+  /* status */
+  --ok: var(--npg-teal);
+  --warn: #B8860B;
+  --err: var(--npg-vermillion);
+
+  /* diff */
+  --diff-add-bg: #E3EFD9;
+  --diff-del-bg: #F6DFD2;
+  --diff-chg-bg: #F6EDC8;
+
+  /* chart */
+  --chart-grid: #E6DDC4;
+
+  /* space scale */
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 24px; --sp-6: 32px;
+
+  /* square-shouldered corners, like a bound plate */
+  --radius-sm: 2px;
+  --radius-md: 3px;
+
+  --font-serif: "EB Garamond", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  --font-sans: var(--font-serif);
+  --font-mono: "Cascadia Code", Consolas, "Courier New", monospace;
+
+  /* the serif runs a touch larger than the old grotesque at the same size */
+  --fs-xs: 12px; --fs-sm: 13.5px; --fs-md: 15px; --fs-lg: 18px; --fs-xl: 23px;
+}

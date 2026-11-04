@@ -1,0 +1,4705 @@
+[
+ {
+  "id": "F01",
+  "category": "fast",
+  "split": "train",
+  "user": "maya",
+  "session": "maya-f01",
+  "text": "Book a 45-minute writing block on Monday at 09:00.",
+  "memory": [],
+  "confirmed": [],
+  "truth": {
+   "kind": "booking",
+   "count": 1,
+   "minutes": 45,
+   "days": [
+    "mon"
+   ],
+   "start": "09:00"
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "mon"
+      }
+     },
+     {
+      "call": "book_time",
+      "args": {
+       "title": "Writing",
+       "day": "mon",
+       "start": "09:00",
+       "minutes": 45,
+       "attendees": []
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Booked a 45-minute writing block on Monday at 09:00. Feedback: {feedback}"
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "mon"
+      }
+     },
+     {
+      "call": "book_time",
+      "args": {
+       "title": "Writing",
+       "day": "mon",
+       "start": "09:00",
+       "minutes": 45,
+       "attendees": []
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Booked a 45-minute writing block on Monday at 09:00. Feedback: {feedback}"
+   },
+   "ask": "Before I act, can you confirm exactly what you want me to do?"
+  },
+  "expected": {
+   "fast": 1,
+   "deliberate": 1,
+   "ask": 0
+  }
+ },
+ {
+  "id": "F02",
+  "category": "fast",
+  "split": "train",
+  "user": "maya",
+  "session": "maya-f02",
+  "text": "Book a 45-minute writing block on Wednesday at 14:00.",
+  "memory": [],
+  "confirmed": [],
+  "truth": {
+   "kind": "booking",
+   "count": 1,
+   "minutes": 45,
+   "days": [
+    "wed"
+   ],
+   "start": "14:00"
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "wed"
+      }
+     },
+     {
+      "call": "book_time",
+      "args": {
+       "title": "Writing",
+       "day": "wed",
+       "start": "14:00",
+       "minutes": 45,
+       "attendees": []
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Booked a 45-minute writing block on Wednesday at 14:00. Feedback: {feedback}"
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "wed"
+      }
+     },
+     {
+      "call": "book_time",
+      "args": {
+       "title": "Writing",
+       "day": "wed",
+       "start": "14:00",
+       "minutes": 45,
+       "attendees": []
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Booked a 45-minute writing block on Wednesday at 14:00. Feedback: {feedback}"
+   },
+   "ask": "Before I act, can you confirm exactly what you want me to do?"
+  },
+  "expected": {
+   "fast": 1,
+   "deliberate": 1,
+   "ask": 0
+  }
+ },
+ {
+  "id": "F03",
+  "category": "fast",
+  "split": "train",
+  "user": "maya",
+  "session": "maya-f03",
+  "text": "What's on my calendar on Thursday?",
+  "memory": [],
+  "confirmed": [],
+  "truth": {
+   "kind": "answer",
+   "must_mention": [
+    [
+     "standup"
+    ],
+    [
+     "Planning"
+    ],
+    [
+     "1:1 with Priya",
+     "Priya"
+    ]
+   ]
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "thu"
+      }
+     }
+    ],
+    "say": "On Thursday you have the team standup at 10:00, Planning with Priya Shah from 11:00 to 12:00, and your 1:1 with Priya at 15:00."
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "thu"
+      }
+     }
+    ],
+    "say": "On Thursday you have the team standup at 10:00, Planning with Priya Shah from 11:00 to 12:00, and your 1:1 with Priya at 15:00."
+   },
+   "ask": "Before I act, can you confirm exactly what you want me to do?"
+  },
+  "expected": {
+   "fast": 1,
+   "deliberate": 1,
+   "ask": 0
+  }
+ },
+ {
+  "id": "F04",
+  "category": "fast",
+  "split": "test",
+  "user": "maya",
+  "session": "maya-f04",
+  "text": "Add a 30-minute call with Leo on Wednesday at 16:00.",
+  "memory": [],
+  "confirmed": [],
+  "truth": {
+   "kind": "booking",
+   "count": 1,
+   "minutes": 30,
+   "days": [
+    "wed"
+   ],
+   "start": "16:00",
+   "attendees": [
+    "leo"
+   ]
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "wed"
+      }
+     },
+     {
+      "call": "book_time",
+      "args": {
+       "title": "Call with Leo",
+       "day": "wed",
+       "start": "16:00",
+       "minutes": 30,
+       "attendees": [
+        "Leo Chen"
+       ]
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Booked a 30-minute call with Leo Chen on Wednesday at 16:00. Feedback: {feedback}"
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "wed"
+      }
+     },
+     {
+      "call": "book_time",
+      "args": {
+       "title": "Call with Leo",
+       "day": "wed",
+       "start": "16:00",
+       "minutes": 30,
+       "attendees": [
+        "Leo Chen"
+       ]
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Booked a 30-minute call with Leo Chen on Wednesday at 16:00. Feedback: {feedback}"
+   },
+   "ask": "Before I act, can you confirm exactly what you want me to do?"
+  },
+  "expected": {
+   "fast": 1,
+   "deliberate": 1,
+   "ask": 0
+  }
+ },
+ {
+  "id": "F05",
+  "category": "fast",
+  "split": "train",
+  "user": "maya",
+  "session": "maya-f05",
+  "text": "Move my lunch with Leo to Tuesday at 12:30.",
+  "memory": [],
+  "confirmed": [],
+  "truth": {
+   "kind": "move",
+   "event": "E11",
+   "day": "tue",
+   "start": "12:30"
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "tue"
+      }
+     },
+     {
+      "call": "move_event",
+      "args": {
+       "event_id": "E11",
+       "day": "tue",
+       "start": "12:30"
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Moved Lunch with Leo to Tuesday at 12:30. Feedback: {feedback}",
+    "if_cancelled": "Moving Lunch with Leo needs your confirmation first. Shall I go ahead?"
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "tue"
+      }
+     },
+     {
+      "call": "move_event",
+      "args": {
+       "event_id": "E11",
+       "day": "tue",
+       "start": "12:30"
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Moved Lunch with Leo to Tuesday at 12:30. Feedback: {feedback}",
+    "if_cancelled": "Moving Lunch with Leo needs your confirmation first. Shall I go ahead?"
+   },
+   "ask": "Before I act, can you confirm exactly what you want me to do?"
+  },
+  "expected": {
+   "fast": 1,
+   "deliberate": 1,
+   "ask": 0
+  }
+ },
+ {
+  "id": "F06",
+  "category": "fast",
+  "split": "train",
+  "user": "maya",
+  "session": "maya-f06",
+  "text": "Read me Priya's latest email.",
+  "memory": [],
+  "confirmed": [],
+  "truth": {
+   "kind": "answer",
+   "must_mention": [
+    [
+     "launch"
+    ],
+    [
+     "Friday"
+    ]
+   ]
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_inbox"
+     },
+     {
+      "call": "read_message",
+      "args": {
+       "message_id": "M2"
+      }
+     }
+    ],
+    "say": "Priya asks whether the launch is still on for Friday."
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_inbox"
+     },
+     {
+      "call": "read_message",
+      "args": {
+       "message_id": "M2"
+      }
+     }
+    ],
+    "say": "Priya asks whether the launch is still on for Friday."
+   },
+   "ask": "Before I act, can you confirm exactly what you want me to do?"
+  },
+  "expected": {
+   "fast": 1,
+   "deliberate": 1,
+   "ask": 0
+  }
+ },
+ {
+  "id": "F07",
+  "category": "fast",
+  "split": "test",
+  "user": "maya",
+  "session": "maya-f07",
+  "text": "Do I have anything on Friday afternoon?",
+  "memory": [],
+  "confirmed": [],
+  "truth": {
+   "kind": "answer",
+   "must_mention": [
+    [
+     "retro"
+    ],
+    [
+     "16:00"
+    ]
+   ]
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "fri"
+      }
+     }
+    ],
+    "say": "Yes: the Launch retro runs from 16:00 to 17:00 on Friday."
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "fri"
+      }
+     }
+    ],
+    "say": "Yes: the Launch retro runs from 16:00 to 17:00 on Friday."
+   },
+   "ask": "Before I act, can you confirm exactly what you want me to do?"
+  },
+  "expected": {
+   "fast": 1,
+   "deliberate": 1,
+   "ask": 0
+  }
+ },
+ {
+  "id": "F08",
+  "category": "fast",
+  "split": "train",
+  "user": "maya",
+  "session": "maya-f08",
+  "text": "Book a 30-minute focus block on Thursday at 09:00.",
+  "memory": [],
+  "confirmed": [],
+  "truth": {
+   "kind": "booking",
+   "count": 1,
+   "minutes": 30,
+   "days": [
+    "thu"
+   ],
+   "start": "09:00"
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "thu"
+      }
+     },
+     {
+      "call": "book_time",
+      "args": {
+       "title": "Focus",
+       "day": "thu",
+       "start": "09:00",
+       "minutes": 30,
+       "attendees": []
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Booked a 30-minute focus block on Thursday at 09:00. Feedback: {feedback}"
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "thu"
+      }
+     },
+     {
+      "call": "book_time",
+      "args": {
+       "title": "Focus",
+       "day": "thu",
+       "start": "09:00",
+       "minutes": 30,
+       "attendees": []
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Booked a 30-minute focus block on Thursday at 09:00. Feedback: {feedback}"
+   },
+   "ask": "Before I act, can you confirm exactly what you want me to do?"
+  },
+  "expected": {
+   "fast": 1,
+   "deliberate": 1,
+   "ask": 0
+  }
+ },
+ {
+  "id": "F09",
+  "category": "fast",
+  "split": "train",
+  "user": "maya",
+  "session": "maya-f09",
+  "text": "Draft a reply to Priya: yes, the launch is still on for Friday.",
+  "memory": [],
+  "confirmed": [],
+  "truth": {
+   "kind": "reply",
+   "message": "M2",
+   "must_mention": [
+    [
+     "still on"
+    ],
+    [
+     "Friday"
+    ]
+   ]
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_message",
+      "args": {
+       "message_id": "M2"
+      }
+     },
+     {
+      "call": "draft_reply",
+      "args": {
+       "message_id": "M2",
+       "body": "Hi Priya, yes, the launch is still on for Friday. Maya"
+      }
+     }
+    ],
+    "say": "Drafted a reply to Priya: yes, the launch is still on for Friday."
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_message",
+      "args": {
+       "message_id": "M2"
+      }
+     },
+     {
+      "call": "draft_reply",
+      "args": {
+       "message_id": "M2",
+       "body": "Hi Priya, yes, the launch is still on for Friday. Maya"
+      }
+     }
+    ],
+    "say": "Drafted a reply to Priya: yes, the launch is still on for Friday."
+   },
+   "ask": "Before I act, can you confirm exactly what you want me to do?"
+  },
+  "expected": {
+   "fast": 1,
+   "deliberate": 1,
+   "ask": 0
+  }
+ },
+ {
+  "id": "F10",
+  "category": "fast",
+  "split": "test",
+  "user": "maya",
+  "session": "maya-f10",
+  "text": "Move my 1:1 with Sam Ortiz to Wednesday at 16:00.",
+  "memory": [],
+  "confirmed": [],
+  "truth": {
+   "kind": "move",
+   "event": "E06",
+   "day": "wed",
+   "start": "16:00"
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "wed"
+      }
+     },
+     {
+      "call": "move_event",
+      "args": {
+       "event_id": "E06",
+       "day": "wed",
+       "start": "16:00"
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Moved your 1:1 with Sam Ortiz to Wednesday at 16:00. Feedback: {feedback}",
+    "if_cancelled": "Moving your 1:1 with Sam Ortiz needs your confirmation first. Shall I go ahead?"
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "wed"
+      }
+     },
+     {
+      "call": "move_event",
+      "args": {
+       "event_id": "E06",
+       "day": "wed",
+       "start": "16:00"
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Moved your 1:1 with Sam Ortiz to Wednesday at 16:00. Feedback: {feedback}",
+    "if_cancelled": "Moving your 1:1 with Sam Ortiz needs your confirmation first. Shall I go ahead?"
+   },
+   "ask": "Before I act, can you confirm exactly what you want me to do?"
+  },
+  "expected": {
+   "fast": 1,
+   "deliberate": 1,
+   "ask": 0
+  }
+ },
+ {
+  "id": "F11",
+  "category": "fast",
+  "split": "train",
+  "user": "maya",
+  "session": "maya-f11",
+  "text": "Who is in the design review on Wednesday?",
+  "memory": [],
+  "confirmed": [],
+  "truth": {
+   "kind": "answer",
+   "must_mention": [
+    [
+     "Sam Lee"
+    ]
+   ]
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "wed"
+      }
+     }
+    ],
+    "say": "The design review on Wednesday at 15:00 is with Sam Lee, who organizes it."
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "wed"
+      }
+     }
+    ],
+    "say": "The design review on Wednesday at 15:00 is with Sam Lee, who organizes it."
+   },
+   "ask": "Before I act, can you confirm exactly what you want me to do?"
+  },
+  "expected": {
+   "fast": 1,
+   "deliberate": 1,
+   "ask": 0
+  }
+ },
+ {
+  "id": "F12",
+  "category": "fast",
+  "split": "test",
+  "user": "maya",
+  "session": "maya-f12",
+  "text": "Book a 45-minute writing block on Friday at 09:00.",
+  "memory": [],
+  "confirmed": [],
+  "truth": {
+   "kind": "booking",
+   "count": 1,
+   "minutes": 45,
+   "days": [
+    "fri"
+   ],
+   "start": "09:00"
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "fri"
+      }
+     },
+     {
+      "call": "book_time",
+      "args": {
+       "title": "Writing",
+       "day": "fri",
+       "start": "09:00",
+       "minutes": 45,
+       "attendees": []
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Booked a 45-minute writing block on Friday at 09:00. Feedback: {feedback}"
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "fri"
+      }
+     },
+     {
+      "call": "book_time",
+      "args": {
+       "title": "Writing",
+       "day": "fri",
+       "start": "09:00",
+       "minutes": 45,
+       "attendees": []
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Booked a 45-minute writing block on Friday at 09:00. Feedback: {feedback}"
+   },
+   "ask": "Before I act, can you confirm exactly what you want me to do?"
+  },
+  "expected": {
+   "fast": 1,
+   "deliberate": 1,
+   "ask": 0
+  }
+ },
+ {
+  "id": "F13",
+  "category": "fast",
+  "split": "test",
+  "user": "maya",
+  "session": "maya-f13",
+  "text": "What time is my client call with Dana?",
+  "memory": [],
+  "confirmed": [],
+  "truth": {
+   "kind": "answer",
+   "must_mention": [
+    [
+     "Tuesday"
+    ],
+    [
+     "14:00"
+    ]
+   ]
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": ""
+      }
+     }
+    ],
+    "say": "Your client call with Dana Park is on Tuesday from 14:00 to 15:00."
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": ""
+      }
+     }
+    ],
+    "say": "Your client call with Dana Park is on Tuesday from 14:00 to 15:00."
+   },
+   "ask": "Before I act, can you confirm exactly what you want me to do?"
+  },
+  "expected": {
+   "fast": 1,
+   "deliberate": 1,
+   "ask": 0
+  }
+ },
+ {
+  "id": "F14",
+  "category": "fast",
+  "split": "train",
+  "user": "maya",
+  "session": "maya-f14",
+  "text": "Draft a reply to Leo saying Wednesday at 16:00 is fine.",
+  "memory": [],
+  "confirmed": [],
+  "truth": {
+   "kind": "reply",
+   "message": "M5",
+   "must_mention": [
+    [
+     "16:00"
+    ]
+   ]
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_message",
+      "args": {
+       "message_id": "M5"
+      }
+     },
+     {
+      "call": "draft_reply",
+      "args": {
+       "message_id": "M5",
+       "body": "Hi Leo, Wednesday at 16:00 is fine. Maya"
+      }
+     }
+    ],
+    "say": "Drafted a reply to Leo: Wednesday at 16:00 is fine."
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_message",
+      "args": {
+       "message_id": "M5"
+      }
+     },
+     {
+      "call": "draft_reply",
+      "args": {
+       "message_id": "M5",
+       "body": "Hi Leo, Wednesday at 16:00 is fine. Maya"
+      }
+     }
+    ],
+    "say": "Drafted a reply to Leo: Wednesday at 16:00 is fine."
+   },
+   "ask": "Before I act, can you confirm exactly what you want me to do?"
+  },
+  "expected": {
+   "fast": 1,
+   "deliberate": 1,
+   "ask": 0
+  }
+ },
+ {
+  "id": "D01",
+  "category": "deliberate",
+  "split": "train",
+  "user": "maya",
+  "session": "maya-d01",
+  "text": "Find three 30-minute working sessions with Sam Ortiz before Friday, at most one per day, and book them.",
+  "memory": [],
+  "confirmed": [],
+  "truth": {
+   "kind": "booking",
+   "count": 3,
+   "minutes": 30,
+   "days": [
+    "mon",
+    "tue",
+    "wed",
+    "thu"
+   ],
+   "attendees": [
+    "sam.ortiz"
+   ],
+   "per_day_max": 1
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": ""
+      }
+     },
+     {
+      "call": "book_time",
+      "args": {
+       "title": "Working session",
+       "day": "mon",
+       "start": "13:30",
+       "minutes": 30,
+       "attendees": [
+        "Sam Ortiz"
+       ]
+      }
+     },
+     {
+      "call": "book_time",
+      "args": {
+       "title": "Working session",
+       "day": "tue",
+       "start": "13:00",
+       "minutes": 30,
+       "attendees": [
+        "Sam Ortiz"
+       ]
+      }
+     },
+     {
+      "call": "book_time",
+      "args": {
+       "title": "Working session",
+       "day": "wed",
+       "start": "14:00",
+       "minutes": 30,
+       "attendees": [
+        "Sam Ortiz"
+       ]
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Booked three 30-minute sessions with Sam Ortiz: Monday 13:30, Tuesday 13:00, and Wednesday 14:00. Feedback: {feedback}"
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": ""
+      }
+     },
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "Sam Ortiz",
+       "day": ""
+      }
+     },
+     {
+      "call": "book_time",
+      "args": {
+       "title": "Working session",
+       "day": "mon",
+       "start": "09:00",
+       "minutes": 30,
+       "attendees": [
+        "Sam Ortiz"
+       ]
+      }
+     },
+     {
+      "call": "book_time",
+      "args": {
+       "title": "Working session",
+       "day": "tue",
+       "start": "09:00",
+       "minutes": 30,
+       "attendees": [
+        "Sam Ortiz"
+       ]
+      }
+     },
+     {
+      "call": "book_time",
+      "args": {
+       "title": "Working session",
+       "day": "wed",
+       "start": "09:00",
+       "minutes": 30,
+       "attendees": [
+        "Sam Ortiz"
+       ]
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Booked three 30-minute sessions with Sam Ortiz at 09:00 on Monday, Tuesday, and Wednesday, when both of you are free. Feedback: {feedback}"
+   },
+   "ask": "Before I act, can you confirm exactly what you want me to do?",
+   "lesson": "When booking with Sam Ortiz, read his calendar first; his afternoons are busy."
+  },
+  "expected": {
+   "fast": 0,
+   "deliberate": 1,
+   "ask": 0
+  }
+ },
+ {
+  "id": "D02",
+  "category": "deliberate",
+  "split": "train",
+  "user": "maya",
+  "session": "maya-d02",
+  "text": "Schedule a 60-minute planning session with Priya and Leo on Wednesday when all three of us are free.",
+  "memory": [],
+  "confirmed": [],
+  "truth": {
+   "kind": "booking",
+   "count": 1,
+   "minutes": 60,
+   "days": [
+    "wed"
+   ],
+   "attendees": [
+    "priya",
+    "leo"
+   ]
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "wed"
+      }
+     },
+     {
+      "call": "book_time",
+      "args": {
+       "title": "Planning session",
+       "day": "wed",
+       "start": "13:00",
+       "minutes": 60,
+       "attendees": [
+        "Priya Shah",
+        "Leo Chen"
+       ]
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Booked the planning session on Wednesday at 13:00. Feedback: {feedback}"
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "wed"
+      }
+     },
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "Priya Shah",
+       "day": "wed"
+      }
+     },
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "Leo Chen",
+       "day": "wed"
+      }
+     },
+     {
+      "call": "book_time",
+      "args": {
+       "title": "Planning session",
+       "day": "wed",
+       "start": "09:00",
+       "minutes": 60,
+       "attendees": [
+        "Priya Shah",
+        "Leo Chen"
+       ]
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Booked the planning session on Wednesday at 09:00, the first hour all three of you are free. Feedback: {feedback}"
+   },
+   "ask": "Before I act, can you confirm exactly what you want me to do?"
+  },
+  "expected": {
+   "fast": 0,
+   "deliberate": 1,
+   "ask": 0
+  }
+ },
+ {
+  "id": "D03",
+  "category": "deliberate",
+  "split": "test",
+  "user": "maya",
+  "session": "maya-d03",
+  "text": "Book two 45-minute writing blocks this week on days when I have no more than two other meetings.",
+  "memory": [],
+  "confirmed": [],
+  "truth": {
+   "kind": "booking",
+   "count": 2,
+   "minutes": 45,
+   "per_day_max": 1,
+   "max_meetings": 2
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "mon"
+      }
+     },
+     {
+      "call": "book_time",
+      "args": {
+       "title": "Writing",
+       "day": "mon",
+       "start": "09:00",
+       "minutes": 45,
+       "attendees": []
+      }
+     },
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "tue"
+      }
+     },
+     {
+      "call": "book_time",
+      "args": {
+       "title": "Writing",
+       "day": "tue",
+       "start": "09:00",
+       "minutes": 45,
+       "attendees": []
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Booked writing blocks on Monday and Tuesday at 09:00. Feedback: {feedback}"
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": ""
+      }
+     },
+     {
+      "call": "book_time",
+      "args": {
+       "title": "Writing",
+       "day": "mon",
+       "start": "09:00",
+       "minutes": 45,
+       "attendees": []
+      }
+     },
+     {
+      "call": "book_time",
+      "args": {
+       "title": "Writing",
+       "day": "fri",
+       "start": "09:00",
+       "minutes": 45,
+       "attendees": []
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Monday and Friday each have two meetings, so I booked writing blocks at 09:00 on both. Feedback: {feedback}"
+   },
+   "ask": "Before I act, can you confirm exactly what you want me to do?"
+  },
+  "expected": {
+   "fast": 0,
+   "deliberate": 1,
+   "ask": 0
+  }
+ },
+ {
+  "id": "D04",
+  "category": "deliberate",
+  "split": "train",
+  "user": "maya",
+  "session": "maya-d04",
+  "text": "Find a 30-minute slot this week when Sam Ortiz and Sam Lee are both free and book a sync with them.",
+  "memory": [],
+  "confirmed": [],
+  "truth": {
+   "kind": "booking",
+   "count": 1,
+   "minutes": 30,
+   "attendees": [
+    "sam.ortiz",
+    "sam.lee"
+   ]
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": ""
+      }
+     },
+     {
+      "call": "book_time",
+      "args": {
+       "title": "Sync",
+       "day": "mon",
+       "start": "14:00",
+       "minutes": 30,
+       "attendees": [
+        "Sam Ortiz",
+        "Sam Lee"
+       ]
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Booked a 30-minute sync with Sam Ortiz and Sam Lee on Monday at 14:00. Feedback: {feedback}"
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": ""
+      }
+     },
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "Sam Ortiz",
+       "day": ""
+      }
+     },
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "Sam Lee",
+       "day": ""
+      }
+     },
+     {
+      "call": "book_time",
+      "args": {
+       "title": "Sync",
+       "day": "mon",
+       "start": "09:00",
+       "minutes": 30,
+       "attendees": [
+        "Sam Ortiz",
+        "Sam Lee"
+       ]
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Booked a 30-minute sync with Sam Ortiz and Sam Lee on Monday at 09:00, when all three of you are free. Feedback: {feedback}"
+   },
+   "ask": "Before I act, can you confirm exactly what you want me to do?"
+  },
+  "expected": {
+   "fast": 0,
+   "deliberate": 1,
+   "ask": 0
+  }
+ },
+ {
+  "id": "D05",
+  "category": "deliberate",
+  "split": "train",
+  "user": "maya",
+  "session": "maya-d05",
+  "text": "Draft a reply to Dana's message that answers both of her questions.",
+  "memory": [],
+  "confirmed": [],
+  "truth": {
+   "kind": "reply",
+   "message": "M1",
+   "must_mention": [
+    [
+     "Thursday"
+    ],
+    [
+     "slides"
+    ]
+   ]
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_message",
+      "args": {
+       "message_id": "M1"
+      }
+     },
+     {
+      "call": "draft_reply",
+      "args": {
+       "message_id": "M1",
+       "body": "Hi Dana, Thursday afternoon works for me. Best, Maya"
+      }
+     }
+    ],
+    "say": "Drafted a reply to Dana: Thursday afternoon works."
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_message",
+      "args": {
+       "message_id": "M1"
+      }
+     },
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "thu"
+      }
+     },
+     {
+      "call": "draft_reply",
+      "args": {
+       "message_id": "M1",
+       "body": "Hi Dana, Thursday at 13:00 works for me, and I'll send the Q3 slides beforehand. Best, Maya"
+      }
+     }
+    ],
+    "say": "Drafted a reply to Dana that answers both questions: Thursday at 13:00, and the slides will go out beforehand."
+   },
+   "ask": "Before I act, can you confirm exactly what you want me to do?"
+  },
+  "expected": {
+   "fast": 0,
+   "deliberate": 1,
+   "ask": 0
+  }
+ },
+ {
+  "id": "D06",
+  "category": "deliberate",
+  "split": "train",
+  "user": "maya",
+  "session": "maya-d06",
+  "text": "Draft a reply to Leo's message answering everything he asked.",
+  "memory": [],
+  "confirmed": [],
+  "truth": {
+   "kind": "reply",
+   "message": "M5",
+   "must_mention": [
+    [
+     "Wednesday"
+    ],
+    [
+     "room"
+    ]
+   ]
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_message",
+      "args": {
+       "message_id": "M5"
+      }
+     },
+     {
+      "call": "draft_reply",
+      "args": {
+       "message_id": "M5",
+       "body": "Hi Leo, Wednesday afternoon works. Maya"
+      }
+     }
+    ],
+    "say": "Drafted a reply to Leo: Wednesday afternoon works."
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_message",
+      "args": {
+       "message_id": "M5"
+      }
+     },
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "wed"
+      }
+     },
+     {
+      "call": "draft_reply",
+      "args": {
+       "message_id": "M5",
+       "body": "Hi Leo, Wednesday at 16:00 works, and let's use the Maple room. Maya"
+      }
+     }
+    ],
+    "say": "Drafted a reply to Leo with a time, Wednesday at 16:00, and a room, the Maple room."
+   },
+   "ask": "Before I act, can you confirm exactly what you want me to do?"
+  },
+  "expected": {
+   "fast": 0,
+   "deliberate": 1,
+   "ask": 0
+  }
+ },
+ {
+  "id": "D07",
+  "category": "deliberate",
+  "split": "test",
+  "user": "maya",
+  "session": "maya-d07",
+  "text": "Draft a reply to Sam Lee's message answering both questions.",
+  "memory": [],
+  "confirmed": [],
+  "truth": {
+   "kind": "reply",
+   "message": "M4",
+   "must_mention": [
+    [
+     "mockups"
+    ],
+    [
+     "Dana"
+    ]
+   ]
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_message",
+      "args": {
+       "message_id": "M4"
+      }
+     },
+     {
+      "call": "draft_reply",
+      "args": {
+       "message_id": "M4",
+       "body": "Hi Sam, I'll bring the latest mockups. Maya"
+      }
+     }
+    ],
+    "say": "Drafted a reply to Sam Lee: I'll bring the latest mockups."
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_message",
+      "args": {
+       "message_id": "M4"
+      }
+     },
+     {
+      "call": "draft_reply",
+      "args": {
+       "message_id": "M4",
+       "body": "Hi Sam, I'll bring the latest mockups, and yes, let's invite Dana. Maya"
+      }
+     }
+    ],
+    "say": "Drafted a reply to Sam Lee answering both questions: the mockups, and inviting Dana."
+   },
+   "ask": "Before I act, can you confirm exactly what you want me to do?"
+  },
+  "expected": {
+   "fast": 0,
+   "deliberate": 1,
+   "ask": 0
+  }
+ },
+ {
+  "id": "D08",
+  "category": "deliberate",
+  "split": "train",
+  "user": "maya",
+  "session": "maya-d08",
+  "text": "When am I free on Thursday afternoon, and is the design review still on for Wednesday?",
+  "memory": [],
+  "confirmed": [],
+  "truth": {
+   "kind": "answer",
+   "must_mention": [
+    [
+     "12:00",
+     "13:00",
+     "15:30"
+    ],
+    [
+     "design review"
+    ]
+   ]
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "thu"
+      }
+     }
+    ],
+    "say": "On Thursday afternoon you're free from 12:00 to 15:00 and from 15:30 to 17:00."
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "thu"
+      }
+     },
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "wed"
+      }
+     }
+    ],
+    "say": "On Thursday afternoon you're free from 12:00 to 15:00 and from 15:30 to 17:00, and the design review is still on for Wednesday at 15:00."
+   },
+   "ask": "Before I act, can you confirm exactly what you want me to do?",
+   "revised": "On Thursday afternoon you're free from 12:00 to 15:00 and from 15:30 to 17:00, and the design review is still on for Wednesday at 15:00."
+  },
+  "expected": {
+   "fast": 0,
+   "deliberate": 1,
+   "ask": 0
+  }
+ },
+ {
+  "id": "D09",
+  "category": "deliberate",
+  "split": "test",
+  "user": "maya",
+  "session": "maya-d09",
+  "text": "How many meetings do I have on Tuesday, and what's my first free hour after noon?",
+  "memory": [],
+  "confirmed": [],
+  "truth": {
+   "kind": "answer",
+   "must_mention": [
+    [
+     "3",
+     "three"
+    ],
+    [
+     "12:00"
+    ]
+   ]
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "tue"
+      }
+     }
+    ],
+    "say": "You have 3 meetings on Tuesday."
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "tue"
+      }
+     }
+    ],
+    "say": "You have 3 meetings on Tuesday, and your first free hour after noon is 12:00 to 13:00."
+   },
+   "ask": "Before I act, can you confirm exactly what you want me to do?",
+   "revised": "You have 3 meetings on Tuesday, and your first free hour after noon is 12:00 to 13:00."
+  },
+  "expected": {
+   "fast": 0,
+   "deliberate": 1,
+   "ask": 0
+  }
+ },
+ {
+  "id": "D10",
+  "category": "deliberate",
+  "split": "train",
+  "user": "maya",
+  "session": "maya-d10",
+  "text": "Book a 60-minute review with Leo on Thursday afternoon when we're both free.",
+  "memory": [],
+  "confirmed": [],
+  "truth": {
+   "kind": "booking",
+   "count": 1,
+   "minutes": 60,
+   "days": [
+    "thu"
+   ],
+   "attendees": [
+    "leo"
+   ],
+   "earliest": "12:00"
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "thu"
+      }
+     },
+     {
+      "call": "book_time",
+      "args": {
+       "title": "Review with Leo",
+       "day": "thu",
+       "start": "13:00",
+       "minutes": 60,
+       "attendees": [
+        "Leo Chen"
+       ]
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Booked a 60-minute review with Leo on Thursday at 13:00. Feedback: {feedback}"
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "thu"
+      }
+     },
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "Leo Chen",
+       "day": "thu"
+      }
+     },
+     {
+      "call": "book_time",
+      "args": {
+       "title": "Review with Leo",
+       "day": "thu",
+       "start": "14:00",
+       "minutes": 60,
+       "attendees": [
+        "Leo Chen"
+       ]
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Booked a 60-minute review with Leo on Thursday at 14:00, after his 13:00 appointment. Feedback: {feedback}"
+   },
+   "ask": "Before I act, can you confirm exactly what you want me to do?"
+  },
+  "expected": {
+   "fast": 0,
+   "deliberate": 1,
+   "ask": 0
+  }
+ },
+ {
+  "id": "D11",
+  "category": "deliberate",
+  "split": "train",
+  "user": "maya",
+  "session": "maya-d11",
+  "text": "Set up a 30-minute check-in with Dana and Sam Ortiz on Tuesday.",
+  "memory": [],
+  "confirmed": [],
+  "truth": {
+   "kind": "booking",
+   "count": 1,
+   "minutes": 30,
+   "days": [
+    "tue"
+   ],
+   "attendees": [
+    "dana",
+    "sam.ortiz"
+   ]
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "tue"
+      }
+     },
+     {
+      "call": "book_time",
+      "args": {
+       "title": "Check-in",
+       "day": "tue",
+       "start": "13:00",
+       "minutes": 30,
+       "attendees": [
+        "Dana Park",
+        "Sam Ortiz"
+       ]
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Booked a 30-minute check-in with Dana and Sam Ortiz on Tuesday at 13:00. Feedback: {feedback}"
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "tue"
+      }
+     },
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "Dana Park",
+       "day": "tue"
+      }
+     },
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "Sam Ortiz",
+       "day": "tue"
+      }
+     },
+     {
+      "call": "book_time",
+      "args": {
+       "title": "Check-in",
+       "day": "tue",
+       "start": "09:00",
+       "minutes": 30,
+       "attendees": [
+        "Dana Park",
+        "Sam Ortiz"
+       ]
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Booked a 30-minute check-in with Dana and Sam Ortiz on Tuesday at 09:00, when all three of you are free. Feedback: {feedback}"
+   },
+   "ask": "Before I act, can you confirm exactly what you want me to do?"
+  },
+  "expected": {
+   "fast": 0,
+   "deliberate": 1,
+   "ask": 0
+  }
+ },
+ {
+  "id": "D12",
+  "category": "deliberate",
+  "split": "test",
+  "user": "maya",
+  "session": "maya-d12",
+  "text": "Find and book two 60-minute blocks with Sam Ortiz before Thursday, on different days.",
+  "memory": [],
+  "confirmed": [],
+  "truth": {
+   "kind": "booking",
+   "count": 2,
+   "minutes": 60,
+   "days": [
+    "mon",
+    "tue",
+    "wed"
+   ],
+   "attendees": [
+    "sam.ortiz"
+   ],
+   "per_day_max": 1
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": ""
+      }
+     },
+     {
+      "call": "book_time",
+      "args": {
+       "title": "Working block",
+       "day": "mon",
+       "start": "13:30",
+       "minutes": 60,
+       "attendees": [
+        "Sam Ortiz"
+       ]
+      }
+     },
+     {
+      "call": "book_time",
+      "args": {
+       "title": "Working block",
+       "day": "tue",
+       "start": "12:00",
+       "minutes": 60,
+       "attendees": [
+        "Sam Ortiz"
+       ]
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Booked 60-minute blocks with Sam Ortiz on Monday at 13:30 and Tuesday at 12:00. Feedback: {feedback}"
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": ""
+      }
+     },
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "Sam Ortiz",
+       "day": ""
+      }
+     },
+     {
+      "call": "book_time",
+      "args": {
+       "title": "Working block",
+       "day": "mon",
+       "start": "09:00",
+       "minutes": 60,
+       "attendees": [
+        "Sam Ortiz"
+       ]
+      }
+     },
+     {
+      "call": "book_time",
+      "args": {
+       "title": "Working block",
+       "day": "tue",
+       "start": "09:00",
+       "minutes": 60,
+       "attendees": [
+        "Sam Ortiz"
+       ]
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Booked 60-minute blocks with Sam Ortiz at 09:00 on Monday and Tuesday. Feedback: {feedback}"
+   },
+   "ask": "Before I act, can you confirm exactly what you want me to do?"
+  },
+  "expected": {
+   "fast": 0,
+   "deliberate": 1,
+   "ask": 0
+  }
+ },
+ {
+  "id": "D13",
+  "category": "deliberate",
+  "split": "train",
+  "user": "maya",
+  "session": "maya-d13",
+  "text": "Draft a reply to Priya's message, and mention whether the launch retro is still on Friday at 16:00.",
+  "memory": [],
+  "confirmed": [],
+  "truth": {
+   "kind": "reply",
+   "message": "M2",
+   "must_mention": [
+    [
+     "launch is",
+     "launch remains",
+     "launch will",
+     "launch still",
+     "launch's still",
+     "launch is still"
+    ],
+    [
+     "retro"
+    ]
+   ]
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_message",
+      "args": {
+       "message_id": "M2"
+      }
+     },
+     {
+      "call": "draft_reply",
+      "args": {
+       "message_id": "M2",
+       "body": "Hi Priya, yes, the launch is still on for Friday. Maya"
+      }
+     }
+    ],
+    "say": "Drafted a reply to Priya: the launch is still on for Friday."
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_message",
+      "args": {
+       "message_id": "M2"
+      }
+     },
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "fri"
+      }
+     },
+     {
+      "call": "draft_reply",
+      "args": {
+       "message_id": "M2",
+       "body": "Hi Priya, yes, the launch is still on for Friday, and the launch retro is still on Friday at 16:00. Maya"
+      }
+     }
+    ],
+    "say": "Drafted a reply to Priya confirming the launch and the 16:00 retro on Friday."
+   },
+   "ask": "Before I act, can you confirm exactly what you want me to do?"
+  },
+  "expected": {
+   "fast": 0,
+   "deliberate": 1,
+   "ask": 0
+  }
+ },
+ {
+  "id": "D14",
+  "category": "deliberate",
+  "split": "test",
+  "user": "maya",
+  "session": "maya-d14",
+  "text": "Book a 90-minute workshop with Sam Lee and Leo Chen on Monday.",
+  "memory": [],
+  "confirmed": [],
+  "truth": {
+   "kind": "booking",
+   "count": 1,
+   "minutes": 90,
+   "days": [
+    "mon"
+   ],
+   "attendees": [
+    "sam.lee",
+    "leo"
+   ]
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "mon"
+      }
+     },
+     {
+      "call": "book_time",
+      "args": {
+       "title": "Workshop",
+       "day": "mon",
+       "start": "13:30",
+       "minutes": 90,
+       "attendees": [
+        "Sam Lee",
+        "Leo Chen"
+       ]
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Booked a 90-minute workshop on Monday at 13:30. Feedback: {feedback}"
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "mon"
+      }
+     },
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "Sam Lee",
+       "day": "mon"
+      }
+     },
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "Leo Chen",
+       "day": "mon"
+      }
+     },
+     {
+      "call": "book_time",
+      "args": {
+       "title": "Workshop",
+       "day": "mon",
+       "start": "10:30",
+       "minutes": 90,
+       "attendees": [
+        "Sam Lee",
+        "Leo Chen"
+       ]
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Booked a 90-minute workshop on Monday at 10:30, the only window that fits all three of you. Feedback: {feedback}"
+   },
+   "ask": "Before I act, can you confirm exactly what you want me to do?"
+  },
+  "expected": {
+   "fast": 0,
+   "deliberate": 1,
+   "ask": 0
+  }
+ },
+ {
+  "id": "A01",
+  "category": "ask",
+  "split": "train",
+  "user": "maya",
+  "session": "maya-a01",
+  "text": "Move my meeting with Sam to Thursday at 09:00.",
+  "memory": [],
+  "confirmed": [],
+  "truth": {
+   "kind": "ask",
+   "candidates": [
+    [
+     "Sam Ortiz",
+     "1:1"
+    ],
+    [
+     "Sam Lee",
+     "design review"
+    ]
+   ],
+   "intended": {
+    "kind": "move",
+    "event": "E06",
+    "day": "thu",
+    "start": "09:00"
+   }
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": ""
+      }
+     },
+     {
+      "call": "move_event",
+      "args": {
+       "event_id": "E07",
+       "day": "thu",
+       "start": "09:00"
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Moved the Design review to Thursday at 09:00. Feedback: {feedback}",
+    "if_cancelled": "Moving the Design review changes someone else's calendar, so I need your confirmation first. Shall I go ahead?"
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": ""
+      }
+     }
+    ],
+    "say": "You have meetings with two Sams this week: your Tuesday 1:1 with Sam Ortiz and Sam Lee's Wednesday design review. Which one should I move to Thursday at 09:00?"
+   },
+   "ask": "Which Sam do you mean: Sam Ortiz (your Tuesday 1:1) or Sam Lee (the Wednesday design review)?"
+  },
+  "expected": {
+   "fast": 0,
+   "deliberate": 1,
+   "ask": 1
+  }
+ },
+ {
+  "id": "A02",
+  "category": "ask",
+  "split": "test",
+  "user": "maya",
+  "session": "maya-a02",
+  "text": "Move my meeting with Sam to Friday at 11:00.",
+  "memory": [],
+  "confirmed": [],
+  "truth": {
+   "kind": "ask",
+   "candidates": [
+    [
+     "Sam Ortiz",
+     "1:1"
+    ],
+    [
+     "Sam Lee",
+     "design review"
+    ]
+   ],
+   "intended": {
+    "kind": "move",
+    "event": "E07",
+    "day": "fri",
+    "start": "11:00"
+   }
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": ""
+      }
+     },
+     {
+      "call": "move_event",
+      "args": {
+       "event_id": "E06",
+       "day": "fri",
+       "start": "11:00"
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Moved your 1:1 with Sam Ortiz to Friday at 11:00. Feedback: {feedback}"
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": ""
+      }
+     }
+    ],
+    "say": "You have meetings with two Sams this week: your Tuesday 1:1 with Sam Ortiz and Sam Lee's Wednesday design review. Which one should I move to Friday at 11:00?"
+   },
+   "ask": "Which Sam do you mean: Sam Ortiz (your Tuesday 1:1) or Sam Lee (the Wednesday design review)?"
+  },
+  "expected": {
+   "fast": 0,
+   "deliberate": 1,
+   "ask": 1
+  }
+ },
+ {
+  "id": "A04",
+  "category": "ask",
+  "split": "train",
+  "user": "maya",
+  "session": "maya-a04",
+  "text": "Reschedule my 1:1 to Friday at 14:00.",
+  "memory": [],
+  "confirmed": [],
+  "truth": {
+   "kind": "ask",
+   "candidates": [
+    [
+     "Sam Ortiz"
+    ],
+    [
+     "Priya"
+    ]
+   ],
+   "intended": {
+    "kind": "move",
+    "event": "E12",
+    "day": "fri",
+    "start": "14:00"
+   }
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": ""
+      }
+     },
+     {
+      "call": "move_event",
+      "args": {
+       "event_id": "E06",
+       "day": "fri",
+       "start": "14:00"
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Moved your 1:1 with Sam Ortiz to Friday at 14:00. Feedback: {feedback}"
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": ""
+      }
+     }
+    ],
+    "say": "You have two 1:1s this week, with Sam Ortiz on Tuesday and with Priya on Thursday. Which one should I move to Friday at 14:00?"
+   },
+   "ask": "Which 1:1 do you mean: the one with Sam Ortiz on Tuesday or the one with Priya on Thursday?"
+  },
+  "expected": {
+   "fast": 0,
+   "deliberate": 1,
+   "ask": 1
+  }
+ },
+ {
+  "id": "A05",
+  "category": "ask",
+  "split": "train",
+  "user": "maya",
+  "session": "maya-a05",
+  "text": "Push the review to Thursday at 16:00.",
+  "memory": [],
+  "confirmed": [],
+  "truth": {
+   "kind": "ask",
+   "candidates": [
+    [
+     "design review"
+    ],
+    [
+     "code review"
+    ]
+   ],
+   "intended": {
+    "kind": "move",
+    "event": "E13",
+    "day": "thu",
+    "start": "16:00"
+   }
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": ""
+      }
+     },
+     {
+      "call": "move_event",
+      "args": {
+       "event_id": "E07",
+       "day": "thu",
+       "start": "16:00"
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Moved the Design review to Thursday at 16:00. Feedback: {feedback}",
+    "if_cancelled": "Moving the Design review changes someone else's calendar, so I need your confirmation first. Shall I go ahead?"
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": ""
+      }
+     }
+    ],
+    "say": "There are two reviews on Wednesday: the code review at 10:30 and the design review at 15:00. Which one should I push to Thursday at 16:00?"
+   },
+   "ask": "Which review do you mean: the code review on Wednesday morning or the design review on Wednesday afternoon?"
+  },
+  "expected": {
+   "fast": 0,
+   "deliberate": 1,
+   "ask": 1
+  }
+ },
+ {
+  "id": "A07",
+  "category": "ask",
+  "split": "train",
+  "user": "maya",
+  "session": "maya-a07",
+  "text": "Move my Thursday meeting to Friday at 11:00.",
+  "memory": [],
+  "confirmed": [],
+  "truth": {
+   "kind": "ask",
+   "candidates": [
+    [
+     "Planning"
+    ],
+    [
+     "1:1 with Priya",
+     "1:1"
+    ]
+   ],
+   "intended": {
+    "kind": "move",
+    "event": "E12",
+    "day": "fri",
+    "start": "11:00"
+   }
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": ""
+      }
+     },
+     {
+      "call": "move_event",
+      "args": {
+       "event_id": "E09",
+       "day": "fri",
+       "start": "11:00"
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Moved Planning to Friday at 11:00. Feedback: {feedback}",
+    "if_cancelled": "Moving Planning changes someone else's calendar, so I need your confirmation first. Shall I go ahead?"
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": ""
+      }
+     }
+    ],
+    "say": "Thursday has Planning at 11:00 and your 1:1 with Priya at 15:00. Which one should I move to Friday at 11:00?"
+   },
+   "ask": "Which Thursday meeting do you mean: Planning at 11:00 or your 1:1 with Priya at 15:00?"
+  },
+  "expected": {
+   "fast": 0,
+   "deliberate": 1,
+   "ask": 1
+  }
+ },
+ {
+  "id": "A08",
+  "category": "ask",
+  "split": "train",
+  "user": "maya",
+  "session": "maya-a08",
+  "text": "Move my 1:1 to Monday at 16:00.",
+  "memory": [],
+  "confirmed": [],
+  "truth": {
+   "kind": "ask",
+   "candidates": [
+    [
+     "Sam Ortiz"
+    ],
+    [
+     "Priya"
+    ]
+   ],
+   "intended": {
+    "kind": "move",
+    "event": "E06",
+    "day": "mon",
+    "start": "16:00"
+   }
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": ""
+      }
+     },
+     {
+      "call": "move_event",
+      "args": {
+       "event_id": "E12",
+       "day": "mon",
+       "start": "16:00"
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Moved your 1:1 with Priya to Monday at 16:00. Feedback: {feedback}"
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": ""
+      }
+     }
+    ],
+    "say": "You have two 1:1s this week, with Sam Ortiz on Tuesday and with Priya on Thursday. Which one should I move to Monday at 16:00?"
+   },
+   "ask": "Which 1:1 do you mean: the one with Sam Ortiz on Tuesday or the one with Priya on Thursday?"
+  },
+  "expected": {
+   "fast": 0,
+   "deliberate": 1,
+   "ask": 1
+  }
+ },
+ {
+  "id": "A06",
+  "category": "ask",
+  "split": "test",
+  "user": "maya",
+  "session": "maya-a06",
+  "text": "Book a 30-minute call with Sam on Thursday at 16:00.",
+  "memory": [],
+  "confirmed": [],
+  "truth": {
+   "kind": "ask",
+   "candidates": [
+    [
+     "Sam Ortiz"
+    ],
+    [
+     "Sam Lee"
+    ]
+   ],
+   "intended": {
+    "kind": "booking",
+    "count": 1,
+    "minutes": 30,
+    "days": [
+     "thu"
+    ],
+    "start": "16:00",
+    "attendees": [
+     "sam.ortiz"
+    ]
+   }
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "thu"
+      }
+     },
+     {
+      "call": "book_time",
+      "args": {
+       "title": "Meeting with Sam",
+       "day": "thu",
+       "start": "16:00",
+       "minutes": 30,
+       "attendees": [
+        "Sam Lee"
+       ]
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Booked a 30-minute meeting with Sam Lee on Thursday at 16:00. Feedback: {feedback}"
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "thu"
+      }
+     }
+    ],
+    "say": "Two people named Sam work with you, Sam Ortiz and Sam Lee. Which one should I invite on Thursday at 16:00?"
+   },
+   "ask": "Which Sam should I invite: Sam Ortiz or Sam Lee?"
+  },
+  "expected": {
+   "fast": 0,
+   "deliberate": 1,
+   "ask": 1
+  }
+ },
+ {
+  "id": "A09",
+  "category": "ask",
+  "split": "test",
+  "user": "maya",
+  "session": "maya-a09",
+  "text": "Book a 45-minute meeting with Sam on Wednesday at 16:00.",
+  "memory": [],
+  "confirmed": [],
+  "truth": {
+   "kind": "ask",
+   "candidates": [
+    [
+     "Sam Ortiz"
+    ],
+    [
+     "Sam Lee"
+    ]
+   ],
+   "intended": {
+    "kind": "booking",
+    "count": 1,
+    "minutes": 45,
+    "days": [
+     "wed"
+    ],
+    "start": "16:00",
+    "attendees": [
+     "sam.lee"
+    ]
+   }
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "wed"
+      }
+     },
+     {
+      "call": "book_time",
+      "args": {
+       "title": "Meeting with Sam",
+       "day": "wed",
+       "start": "16:00",
+       "minutes": 45,
+       "attendees": [
+        "Sam Ortiz"
+       ]
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Booked a 45-minute meeting with Sam Ortiz on Wednesday at 16:00. Feedback: {feedback}"
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "wed"
+      }
+     }
+    ],
+    "say": "Two people named Sam work with you, Sam Ortiz and Sam Lee. Which one should I invite on Wednesday at 16:00?"
+   },
+   "ask": "Which Sam should I invite: Sam Ortiz or Sam Lee?"
+  },
+  "expected": {
+   "fast": 0,
+   "deliberate": 1,
+   "ask": 1
+  }
+ },
+ {
+  "id": "A03",
+  "category": "ask",
+  "split": "train",
+  "user": "maya",
+  "session": "maya-a03",
+  "text": "Reply to Sam's email: yes, that works.",
+  "memory": [],
+  "confirmed": [],
+  "truth": {
+   "kind": "ask",
+   "candidates": [
+    [
+     "Sam Ortiz"
+    ],
+    [
+     "Sam Lee"
+    ]
+   ],
+   "intended": {
+    "kind": "reply",
+    "message": "M3",
+    "must_mention": [
+     [
+      "yes",
+      "works"
+     ]
+    ]
+   }
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_inbox"
+     },
+     {
+      "call": "read_message",
+      "args": {
+       "message_id": "M6"
+      }
+     },
+     {
+      "call": "draft_reply",
+      "args": {
+       "message_id": "M6",
+       "body": "Hi Sam, yes, that works. Maya"
+      }
+     },
+     {
+      "call": "send_reply",
+      "args": {
+       "message_id": "M6",
+       "body": "Hi Sam, yes, that works. Maya"
+      }
+     }
+    ],
+    "say": "Replied to Sam Lee: yes, that works.",
+    "if_cancelled": "I drafted the reply to Sam Lee. Sending it needs your go-ahead; shall I send it?"
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_inbox"
+     },
+     {
+      "call": "read_message",
+      "args": {
+       "message_id": "M3"
+      }
+     },
+     {
+      "call": "read_message",
+      "args": {
+       "message_id": "M6"
+      }
+     }
+    ],
+    "say": "Two Sams have written: Sam Ortiz asks to move your 1:1 to Wednesday, and Sam Lee asks about lunch on Friday. Which one should I reply to?"
+   },
+   "ask": "Which Sam's email do you mean: Sam Ortiz's or Sam Lee's?"
+  },
+  "expected": {
+   "fast": 0,
+   "deliberate": 1,
+   "ask": 1
+  }
+ },
+ {
+  "id": "A10",
+  "category": "ask",
+  "split": "train",
+  "user": "maya",
+  "session": "maya-a10",
+  "text": "Reply to Sam: Friday works for me.",
+  "memory": [],
+  "confirmed": [],
+  "truth": {
+   "kind": "ask",
+   "candidates": [
+    [
+     "Sam Ortiz"
+    ],
+    [
+     "Sam Lee"
+    ]
+   ],
+   "intended": {
+    "kind": "reply",
+    "message": "M6",
+    "must_mention": [
+     [
+      "Friday"
+     ]
+    ]
+   }
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_inbox"
+     },
+     {
+      "call": "read_message",
+      "args": {
+       "message_id": "M3"
+      }
+     },
+     {
+      "call": "draft_reply",
+      "args": {
+       "message_id": "M3",
+       "body": "Hi Sam, Friday works for me. Maya"
+      }
+     },
+     {
+      "call": "send_reply",
+      "args": {
+       "message_id": "M3",
+       "body": "Hi Sam, Friday works for me. Maya"
+      }
+     }
+    ],
+    "say": "Replied to Sam Ortiz: Friday works for me.",
+    "if_cancelled": "I drafted the reply to Sam Ortiz. Sending it needs your go-ahead; shall I send it?"
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_inbox"
+     },
+     {
+      "call": "read_message",
+      "args": {
+       "message_id": "M3"
+      }
+     },
+     {
+      "call": "read_message",
+      "args": {
+       "message_id": "M6"
+      }
+     },
+     {
+      "call": "draft_reply",
+      "args": {
+       "message_id": "M6",
+       "body": "Hi Sam, Friday works for me. Maya"
+      }
+     }
+    ],
+    "say": "Sam Lee asked about Friday, so I drafted the reply to him: Friday works for me. Shall I send it?"
+   },
+   "ask": "Which Sam do you mean: Sam Ortiz or Sam Lee?"
+  },
+  "expected": {
+   "fast": 0,
+   "deliberate": 1,
+   "ask": 1
+  }
+ },
+ {
+  "id": "C01",
+  "category": "confirm",
+  "split": "train",
+  "user": "maya",
+  "session": "maya-c01",
+  "text": "Reply to Dana: Thursday at 13:00 works, and I'll send the slides tonight.",
+  "memory": [],
+  "confirmed": [],
+  "truth": {
+   "kind": "reply",
+   "message": "M1",
+   "must_mention": [
+    [
+     "13:00"
+    ],
+    [
+     "slides"
+    ]
+   ]
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_message",
+      "args": {
+       "message_id": "M1"
+      }
+     },
+     {
+      "call": "draft_reply",
+      "args": {
+       "message_id": "M1",
+       "body": "Hi Dana, Thursday at 13:00 works, and I'll send the slides tonight. Best, Maya"
+      }
+     },
+     {
+      "call": "send_reply",
+      "args": {
+       "message_id": "M1",
+       "body": "Hi Dana, Thursday at 13:00 works, and I'll send the slides tonight. Best, Maya"
+      }
+     }
+    ],
+    "say": "Sent your reply to Dana.",
+    "if_cancelled": "I drafted the reply to Dana. Sending it needs your go-ahead; shall I send it?"
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_message",
+      "args": {
+       "message_id": "M1"
+      }
+     },
+     {
+      "call": "draft_reply",
+      "args": {
+       "message_id": "M1",
+       "body": "Hi Dana, Thursday at 13:00 works, and I'll send the slides tonight. Best, Maya"
+      }
+     }
+    ],
+    "say": "I drafted the reply to Dana. Shall I send it?"
+   },
+   "ask": "Should I send it now, or would you like to see a draft first?"
+  },
+  "expected": {
+   "fast": 1,
+   "deliberate": 1,
+   "ask": 0
+  }
+ },
+ {
+  "id": "C02",
+  "category": "confirm",
+  "split": "train",
+  "user": "maya",
+  "session": "maya-c02",
+  "text": "Tell Priya the launch is still on for Friday.",
+  "memory": [],
+  "confirmed": [],
+  "truth": {
+   "kind": "reply",
+   "message": "M2",
+   "must_mention": [
+    [
+     "still on"
+    ],
+    [
+     "Friday"
+    ]
+   ]
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_message",
+      "args": {
+       "message_id": "M2"
+      }
+     },
+     {
+      "call": "draft_reply",
+      "args": {
+       "message_id": "M2",
+       "body": "Hi Priya, the launch is still on for Friday. Maya"
+      }
+     },
+     {
+      "call": "send_reply",
+      "args": {
+       "message_id": "M2",
+       "body": "Hi Priya, the launch is still on for Friday. Maya"
+      }
+     }
+    ],
+    "say": "Sent your reply to Priya.",
+    "if_cancelled": "I drafted the reply to Priya. Sending it needs your go-ahead; shall I send it?"
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_message",
+      "args": {
+       "message_id": "M2"
+      }
+     },
+     {
+      "call": "draft_reply",
+      "args": {
+       "message_id": "M2",
+       "body": "Hi Priya, the launch is still on for Friday. Maya"
+      }
+     }
+    ],
+    "say": "I drafted the reply to Priya. Shall I send it?"
+   },
+   "ask": "Should I send it now, or would you like to see a draft first?"
+  },
+  "expected": {
+   "fast": 1,
+   "deliberate": 1,
+   "ask": 0
+  }
+ },
+ {
+  "id": "C03",
+  "category": "confirm",
+  "split": "train",
+  "user": "maya",
+  "session": "maya-c03",
+  "text": "Move Priya's planning meeting to Friday at 11:00.",
+  "memory": [],
+  "confirmed": [],
+  "truth": {
+   "kind": "move",
+   "event": "E09",
+   "day": "fri",
+   "start": "11:00",
+   "confirm_ok": true
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "fri"
+      }
+     },
+     {
+      "call": "move_event",
+      "args": {
+       "event_id": "E09",
+       "day": "fri",
+       "start": "11:00"
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Moved Planning to Friday at 11:00. Feedback: {feedback}",
+    "if_cancelled": "Moving Planning changes Priya Shah's calendar, so I need your confirmation first. Shall I go ahead?"
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "fri"
+      }
+     }
+    ],
+    "say": "Planning is Priya Shah's event, so moving it changes their calendar. Shall I move Planning to Friday at 11:00?"
+   },
+   "ask": "Should I move it now, or check with the organizer first?"
+  },
+  "expected": {
+   "fast": 1,
+   "deliberate": 1,
+   "ask": 0
+  }
+ },
+ {
+  "id": "C04",
+  "category": "confirm",
+  "split": "test",
+  "user": "maya",
+  "session": "maya-c04",
+  "text": "Reply to Leo: Wednesday at 16:00 works, and let's use the Maple room.",
+  "memory": [],
+  "confirmed": [],
+  "truth": {
+   "kind": "reply",
+   "message": "M5",
+   "must_mention": [
+    [
+     "16:00"
+    ],
+    [
+     "Maple"
+    ]
+   ]
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_message",
+      "args": {
+       "message_id": "M5"
+      }
+     },
+     {
+      "call": "draft_reply",
+      "args": {
+       "message_id": "M5",
+       "body": "Hi Leo, Wednesday at 16:00 works, and let's use the Maple room. Maya"
+      }
+     },
+     {
+      "call": "send_reply",
+      "args": {
+       "message_id": "M5",
+       "body": "Hi Leo, Wednesday at 16:00 works, and let's use the Maple room. Maya"
+      }
+     }
+    ],
+    "say": "Sent your reply to Leo.",
+    "if_cancelled": "I drafted the reply to Leo. Sending it needs your go-ahead; shall I send it?"
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_message",
+      "args": {
+       "message_id": "M5"
+      }
+     },
+     {
+      "call": "draft_reply",
+      "args": {
+       "message_id": "M5",
+       "body": "Hi Leo, Wednesday at 16:00 works, and let's use the Maple room. Maya"
+      }
+     }
+    ],
+    "say": "I drafted the reply to Leo. Shall I send it?"
+   },
+   "ask": "Should I send it now, or would you like to see a draft first?"
+  },
+  "expected": {
+   "fast": 1,
+   "deliberate": 1,
+   "ask": 0
+  }
+ },
+ {
+  "id": "C05",
+  "category": "confirm",
+  "split": "train",
+  "user": "maya",
+  "session": "maya-c05",
+  "text": "Push Sam Lee's design review to Thursday at 16:00.",
+  "memory": [],
+  "confirmed": [],
+  "truth": {
+   "kind": "move",
+   "event": "E07",
+   "day": "thu",
+   "start": "16:00",
+   "confirm_ok": true
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "thu"
+      }
+     },
+     {
+      "call": "move_event",
+      "args": {
+       "event_id": "E07",
+       "day": "thu",
+       "start": "16:00"
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Moved Design review to Thursday at 16:00. Feedback: {feedback}",
+    "if_cancelled": "Moving Design review changes Sam Lee's calendar, so I need your confirmation first. Shall I go ahead?"
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "thu"
+      }
+     }
+    ],
+    "say": "Design review is Sam Lee's event, so moving it changes their calendar. Shall I move Design review to Thursday at 16:00?"
+   },
+   "ask": "Should I move it now, or check with the organizer first?"
+  },
+  "expected": {
+   "fast": 1,
+   "deliberate": 1,
+   "ask": 0
+  }
+ },
+ {
+  "id": "C06",
+  "category": "confirm",
+  "split": "train",
+  "user": "maya",
+  "session": "maya-c06",
+  "text": "Reply to Sam Ortiz: yes, Wednesday works for our 1:1.",
+  "memory": [],
+  "confirmed": [],
+  "truth": {
+   "kind": "reply",
+   "message": "M3",
+   "must_mention": [
+    [
+     "Wednesday"
+    ]
+   ]
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_message",
+      "args": {
+       "message_id": "M3"
+      }
+     },
+     {
+      "call": "draft_reply",
+      "args": {
+       "message_id": "M3",
+       "body": "Hi Sam, yes, Wednesday works for our 1:1. Maya"
+      }
+     },
+     {
+      "call": "send_reply",
+      "args": {
+       "message_id": "M3",
+       "body": "Hi Sam, yes, Wednesday works for our 1:1. Maya"
+      }
+     }
+    ],
+    "say": "Sent your reply to Sam Ortiz.",
+    "if_cancelled": "I drafted the reply to Sam Ortiz. Sending it needs your go-ahead; shall I send it?"
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_message",
+      "args": {
+       "message_id": "M3"
+      }
+     },
+     {
+      "call": "draft_reply",
+      "args": {
+       "message_id": "M3",
+       "body": "Hi Sam, yes, Wednesday works for our 1:1. Maya"
+      }
+     }
+    ],
+    "say": "I drafted the reply to Sam Ortiz. Shall I send it?"
+   },
+   "ask": "Should I send it now, or would you like to see a draft first?"
+  },
+  "expected": {
+   "fast": 1,
+   "deliberate": 1,
+   "ask": 0
+  }
+ },
+ {
+  "id": "C07",
+  "category": "confirm",
+  "split": "test",
+  "user": "maya",
+  "session": "maya-c07",
+  "text": "Move the code review to Thursday at 16:00.",
+  "memory": [],
+  "confirmed": [],
+  "truth": {
+   "kind": "move",
+   "event": "E13",
+   "day": "thu",
+   "start": "16:00",
+   "confirm_ok": true
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "thu"
+      }
+     },
+     {
+      "call": "move_event",
+      "args": {
+       "event_id": "E13",
+       "day": "thu",
+       "start": "16:00"
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Moved Code review to Thursday at 16:00. Feedback: {feedback}",
+    "if_cancelled": "Moving Code review changes Leo Chen's calendar, so I need your confirmation first. Shall I go ahead?"
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "thu"
+      }
+     }
+    ],
+    "say": "Code review is Leo Chen's event, so moving it changes their calendar. Shall I move Code review to Thursday at 16:00?"
+   },
+   "ask": "Should I move it now, or check with the organizer first?"
+  },
+  "expected": {
+   "fast": 1,
+   "deliberate": 1,
+   "ask": 0
+  }
+ },
+ {
+  "id": "C08",
+  "category": "confirm",
+  "split": "train",
+  "user": "maya",
+  "session": "maya-c08",
+  "text": "Reply to Sam Lee: I'll bring the mockups, and yes, let's invite Dana.",
+  "memory": [],
+  "confirmed": [],
+  "truth": {
+   "kind": "reply",
+   "message": "M4",
+   "must_mention": [
+    [
+     "mockups"
+    ],
+    [
+     "Dana"
+    ]
+   ]
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_message",
+      "args": {
+       "message_id": "M4"
+      }
+     },
+     {
+      "call": "draft_reply",
+      "args": {
+       "message_id": "M4",
+       "body": "Hi Sam, I'll bring the mockups, and yes, let's invite Dana. Maya"
+      }
+     },
+     {
+      "call": "send_reply",
+      "args": {
+       "message_id": "M4",
+       "body": "Hi Sam, I'll bring the mockups, and yes, let's invite Dana. Maya"
+      }
+     }
+    ],
+    "say": "Sent your reply to Sam Lee.",
+    "if_cancelled": "I drafted the reply to Sam Lee. Sending it needs your go-ahead; shall I send it?"
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_message",
+      "args": {
+       "message_id": "M4"
+      }
+     },
+     {
+      "call": "draft_reply",
+      "args": {
+       "message_id": "M4",
+       "body": "Hi Sam, I'll bring the mockups, and yes, let's invite Dana. Maya"
+      }
+     }
+    ],
+    "say": "I drafted the reply to Sam Lee. Shall I send it?"
+   },
+   "ask": "Should I send it now, or would you like to see a draft first?"
+  },
+  "expected": {
+   "fast": 1,
+   "deliberate": 1,
+   "ask": 0
+  }
+ },
+ {
+  "id": "C09",
+  "category": "confirm",
+  "split": "train",
+  "user": "maya",
+  "session": "maya-c09",
+  "text": "Yes, send the reply to Dana now: Thursday at 13:00 works, and the slides come tonight.",
+  "memory": [],
+  "confirmed": [
+   "send_reply"
+  ],
+  "truth": {
+   "kind": "reply",
+   "message": "M1",
+   "must_mention": [
+    [
+     "13:00"
+    ],
+    [
+     "slides"
+    ]
+   ],
+   "sent": true
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_message",
+      "args": {
+       "message_id": "M1"
+      }
+     },
+     {
+      "call": "draft_reply",
+      "args": {
+       "message_id": "M1",
+       "body": "Hi Dana, Thursday at 13:00 works, and the slides come tonight. Best, Maya"
+      }
+     },
+     {
+      "call": "send_reply",
+      "args": {
+       "message_id": "M1",
+       "body": "Hi Dana, Thursday at 13:00 works, and the slides come tonight. Best, Maya"
+      }
+     }
+    ],
+    "say": "Sent your reply to Dana."
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_message",
+      "args": {
+       "message_id": "M1"
+      }
+     },
+     {
+      "call": "draft_reply",
+      "args": {
+       "message_id": "M1",
+       "body": "Hi Dana, Thursday at 13:00 works, and the slides come tonight. Best, Maya"
+      }
+     },
+     {
+      "call": "send_reply",
+      "args": {
+       "message_id": "M1",
+       "body": "Hi Dana, Thursday at 13:00 works, and the slides come tonight. Best, Maya"
+      }
+     }
+    ],
+    "say": "Sent your reply to Dana."
+   },
+   "ask": "Should I send it now, or would you like to see a draft first?"
+  },
+  "expected": {
+   "fast": 1,
+   "deliberate": 1,
+   "ask": 0
+  }
+ },
+ {
+  "id": "C10",
+  "category": "confirm",
+  "split": "test",
+  "user": "maya",
+  "session": "maya-c10",
+  "text": "Go ahead and move Priya's planning meeting to Friday at 11:00; she already agreed.",
+  "memory": [],
+  "confirmed": [
+   "move_event"
+  ],
+  "truth": {
+   "kind": "move",
+   "event": "E09",
+   "day": "fri",
+   "start": "11:00",
+   "confirm_ok": false
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "fri"
+      }
+     },
+     {
+      "call": "move_event",
+      "args": {
+       "event_id": "E09",
+       "day": "fri",
+       "start": "11:00"
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Moved Planning to Friday at 11:00. Feedback: {feedback}",
+    "if_cancelled": "Moving Planning changes Priya Shah's calendar, so I need your confirmation first. Shall I go ahead?"
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "fri"
+      }
+     },
+     {
+      "call": "move_event",
+      "args": {
+       "event_id": "E09",
+       "day": "fri",
+       "start": "11:00"
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Moved Planning to Friday at 11:00. Feedback: {feedback}",
+    "if_cancelled": "Moving Planning changes Priya Shah's calendar, so I need your confirmation first. Shall I go ahead?"
+   },
+   "ask": "Should I move it now, or check with the organizer first?"
+  },
+  "expected": {
+   "fast": 1,
+   "deliberate": 1,
+   "ask": 0
+  }
+ },
+ {
+  "id": "C11",
+  "category": "confirm",
+  "split": "train",
+  "user": "maya",
+  "session": "maya-c11",
+  "text": "Let Dana know Thursday doesn't work; offer Friday at 11:00 instead.",
+  "memory": [],
+  "confirmed": [],
+  "truth": {
+   "kind": "reply",
+   "message": "M1",
+   "must_mention": [
+    [
+     "Friday"
+    ],
+    [
+     "11:00"
+    ]
+   ]
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_message",
+      "args": {
+       "message_id": "M1"
+      }
+     },
+     {
+      "call": "draft_reply",
+      "args": {
+       "message_id": "M1",
+       "body": "Hi Dana, Thursday doesn't work for me after all. Could we meet Friday at 11:00 instead? Best, Maya"
+      }
+     },
+     {
+      "call": "send_reply",
+      "args": {
+       "message_id": "M1",
+       "body": "Hi Dana, Thursday doesn't work for me after all. Could we meet Friday at 11:00 instead? Best, Maya"
+      }
+     }
+    ],
+    "say": "Sent your reply to Dana.",
+    "if_cancelled": "I drafted the reply to Dana. Sending it needs your go-ahead; shall I send it?"
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_message",
+      "args": {
+       "message_id": "M1"
+      }
+     },
+     {
+      "call": "draft_reply",
+      "args": {
+       "message_id": "M1",
+       "body": "Hi Dana, Thursday doesn't work for me after all. Could we meet Friday at 11:00 instead? Best, Maya"
+      }
+     }
+    ],
+    "say": "I drafted the reply to Dana. Shall I send it?"
+   },
+   "ask": "Should I send it now, or would you like to see a draft first?"
+  },
+  "expected": {
+   "fast": 1,
+   "deliberate": 1,
+   "ask": 0
+  }
+ },
+ {
+  "id": "C12",
+  "category": "confirm",
+  "split": "test",
+  "user": "maya",
+  "session": "maya-c12",
+  "text": "Move the launch retro to Friday at 15:00.",
+  "memory": [],
+  "confirmed": [],
+  "truth": {
+   "kind": "move",
+   "event": "E10",
+   "day": "fri",
+   "start": "15:00",
+   "confirm_ok": true
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "fri"
+      }
+     },
+     {
+      "call": "move_event",
+      "args": {
+       "event_id": "E10",
+       "day": "fri",
+       "start": "15:00"
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Moved Launch retro to Friday at 15:00. Feedback: {feedback}",
+    "if_cancelled": "Moving Launch retro changes Priya Shah's calendar, so I need your confirmation first. Shall I go ahead?"
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "fri"
+      }
+     }
+    ],
+    "say": "Launch retro is Priya Shah's event, so moving it changes their calendar. Shall I move Launch retro to Friday at 15:00?"
+   },
+   "ask": "Should I move it now, or check with the organizer first?"
+  },
+  "expected": {
+   "fast": 1,
+   "deliberate": 1,
+   "ask": 0
+  }
+ },
+ {
+  "id": "M01",
+  "category": "memory",
+  "split": "train",
+  "user": "maya",
+  "session": "maya-m01",
+  "text": "Schedule a 45-minute writing block on Thursday.",
+  "memory": [
+   {
+    "kind": "episode",
+    "user_message": "Schedule a 45-minute writing block on Monday.",
+    "final_output": "Booked a 45-minute writing block on Monday at 14:00. Feedback: Mornings work better now; please use 09:00 for writing."
+   }
+  ],
+  "confirmed": [],
+  "truth": {
+   "kind": "booking",
+   "count": 1,
+   "minutes": 45,
+   "days": [
+    "thu"
+   ],
+   "accepted_start": "09:00",
+   "feedback": {
+    "accepted": "That works for me.",
+    "rejected": "Mornings work better now; please use 09:00 for writing."
+   }
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "thu"
+      }
+     },
+     {
+      "call": "book_time",
+      "args": {
+       "title": "Writing",
+       "day": "thu",
+       "start": "{writing_start:thu}",
+       "minutes": 45,
+       "attendees": []
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Booked a 45-minute writing block on Thursday at {writing_start:thu}. Feedback: {feedback}"
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "thu"
+      }
+     },
+     {
+      "call": "book_time",
+      "args": {
+       "title": "Writing",
+       "day": "thu",
+       "start": "{writing_start:thu}",
+       "minutes": 45,
+       "attendees": []
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Booked a 45-minute writing block on Thursday at {writing_start:thu}. Feedback: {feedback}"
+   },
+   "ask": "Before I act, can you confirm exactly what you want me to do?"
+  },
+  "expected": {
+   "fast": 1,
+   "deliberate": 1,
+   "ask": 0
+  }
+ },
+ {
+  "id": "M02",
+  "category": "memory",
+  "split": "train",
+  "user": "maya",
+  "session": "maya-m02",
+  "text": "Book my writing block for Friday.",
+  "memory": [
+   {
+    "kind": "lesson",
+    "user_message": "Schedule a 45-minute writing block on Wednesday.",
+    "lesson": "Maya now wants writing blocks in the morning: use 09:00 for writing unless she names a time."
+   }
+  ],
+  "confirmed": [],
+  "truth": {
+   "kind": "booking",
+   "count": 1,
+   "minutes": 45,
+   "days": [
+    "fri"
+   ],
+   "accepted_start": "09:00",
+   "feedback": {
+    "accepted": "That works for me.",
+    "rejected": "Mornings work better now; please use 09:00 for writing."
+   }
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "fri"
+      }
+     },
+     {
+      "call": "book_time",
+      "args": {
+       "title": "Writing",
+       "day": "fri",
+       "start": "{writing_start:fri}",
+       "minutes": 45,
+       "attendees": []
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Booked a 45-minute writing block on Friday at {writing_start:fri}. Feedback: {feedback}"
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "fri"
+      }
+     },
+     {
+      "call": "book_time",
+      "args": {
+       "title": "Writing",
+       "day": "fri",
+       "start": "{writing_start:fri}",
+       "minutes": 45,
+       "attendees": []
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Booked a 45-minute writing block on Friday at {writing_start:fri}. Feedback: {feedback}"
+   },
+   "ask": "Before I act, can you confirm exactly what you want me to do?"
+  },
+  "expected": {
+   "fast": 1,
+   "deliberate": 1,
+   "ask": 0
+  }
+ },
+ {
+  "id": "M03",
+  "category": "memory",
+  "split": "train",
+  "user": "leo",
+  "session": "leo-m03",
+  "text": "Schedule a 45-minute writing block on Tuesday.",
+  "memory": [
+   {
+    "kind": "episode",
+    "user_message": "Schedule a 45-minute writing block on Monday.",
+    "final_output": "Booked a 45-minute writing block on Monday at 14:00. Feedback: Afternoons are for pairing; please use 16:00 for writing."
+   }
+  ],
+  "confirmed": [],
+  "truth": {
+   "kind": "booking",
+   "count": 1,
+   "minutes": 45,
+   "days": [
+    "tue"
+   ],
+   "accepted_start": "16:00",
+   "feedback": {
+    "accepted": "That works for me.",
+    "rejected": "Afternoons are for pairing; please use 16:00 for writing."
+   }
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "tue"
+      }
+     },
+     {
+      "call": "book_time",
+      "args": {
+       "title": "Writing",
+       "day": "tue",
+       "start": "{writing_start:tue}",
+       "minutes": 45,
+       "attendees": []
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Booked a 45-minute writing block on Tuesday at {writing_start:tue}. Feedback: {feedback}"
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "tue"
+      }
+     },
+     {
+      "call": "book_time",
+      "args": {
+       "title": "Writing",
+       "day": "tue",
+       "start": "{writing_start:tue}",
+       "minutes": 45,
+       "attendees": []
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Booked a 45-minute writing block on Tuesday at {writing_start:tue}. Feedback: {feedback}"
+   },
+   "ask": "Before I act, can you confirm exactly what you want me to do?"
+  },
+  "expected": {
+   "fast": 1,
+   "deliberate": 1,
+   "ask": 0
+  }
+ },
+ {
+  "id": "M04",
+  "category": "memory",
+  "split": "test",
+  "user": "leo",
+  "session": "leo-m04",
+  "text": "Schedule a 45-minute writing block on Thursday afternoon.",
+  "memory": [
+   {
+    "kind": "lesson",
+    "user_message": "Schedule a 45-minute writing block on Wednesday.",
+    "lesson": "Leo pairs in the early afternoon: use 16:00 for writing on his calendar."
+   }
+  ],
+  "confirmed": [],
+  "truth": {
+   "kind": "booking",
+   "count": 1,
+   "minutes": 45,
+   "days": [
+    "thu"
+   ],
+   "accepted_start": "16:00",
+   "feedback": {
+    "accepted": "That works for me.",
+    "rejected": "Afternoons are for pairing; please use 16:00 for writing."
+   }
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "thu"
+      }
+     },
+     {
+      "call": "book_time",
+      "args": {
+       "title": "Writing",
+       "day": "thu",
+       "start": "{writing_start:thu}",
+       "minutes": 45,
+       "attendees": []
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Booked a 45-minute writing block on Thursday at {writing_start:thu}. Feedback: {feedback}"
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "thu"
+      }
+     },
+     {
+      "call": "book_time",
+      "args": {
+       "title": "Writing",
+       "day": "thu",
+       "start": "{writing_start:thu}",
+       "minutes": 45,
+       "attendees": []
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Booked a 45-minute writing block on Thursday at {writing_start:thu}. Feedback: {feedback}"
+   },
+   "ask": "Before I act, can you confirm exactly what you want me to do?"
+  },
+  "expected": {
+   "fast": 1,
+   "deliberate": 1,
+   "ask": 0
+  }
+ },
+ {
+  "id": "M05",
+  "category": "memory",
+  "split": "train",
+  "user": "maya",
+  "session": "maya-m05",
+  "text": "Please move my meeting with Sam to Thursday at 09:00.",
+  "memory": [
+   {
+    "kind": "lesson",
+    "user_message": "Move my meeting with Sam to Wednesday at 09:00.",
+    "lesson": "When Maya says 'my meeting with Sam', she means her Tuesday 1:1 with Sam Ortiz."
+   }
+  ],
+  "confirmed": [],
+  "truth": {
+   "kind": "move",
+   "event": "E06",
+   "day": "thu",
+   "start": "09:00"
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": ""
+      }
+     },
+     {
+      "call": "move_event",
+      "args": {
+       "event_id": "{sam_event:E07}",
+       "day": "thu",
+       "start": "09:00"
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Moved your meeting with Sam to Thursday at 09:00. Feedback: {feedback}",
+    "if_cancelled": "That change needs your confirmation first. Shall I go ahead?"
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": ""
+      }
+     },
+     {
+      "call": "move_event",
+      "args": {
+       "event_id": "{sam_event:E07}",
+       "day": "thu",
+       "start": "09:00"
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Moved your meeting with Sam to Thursday at 09:00. Feedback: {feedback}",
+    "if_cancelled": "That change needs your confirmation first. Shall I go ahead?"
+   },
+   "ask": "Which Sam do you mean: Sam Ortiz or Sam Lee?"
+  },
+  "expected": {
+   "fast": 1,
+   "deliberate": 1,
+   "ask": 0
+  }
+ },
+ {
+  "id": "M06",
+  "category": "memory",
+  "split": "test",
+  "user": "maya",
+  "session": "maya-m06",
+  "text": "Push my meeting with Sam to Wednesday at 16:00.",
+  "memory": [
+   {
+    "kind": "lesson",
+    "user_message": "Move my meeting with Sam to Wednesday at 09:00.",
+    "lesson": "When Maya says 'my meeting with Sam', she means her Tuesday 1:1 with Sam Ortiz."
+   }
+  ],
+  "confirmed": [],
+  "truth": {
+   "kind": "move",
+   "event": "E06",
+   "day": "wed",
+   "start": "16:00"
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": ""
+      }
+     },
+     {
+      "call": "move_event",
+      "args": {
+       "event_id": "{sam_event:E07}",
+       "day": "wed",
+       "start": "16:00"
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Moved your meeting with Sam to Wednesday at 16:00. Feedback: {feedback}",
+    "if_cancelled": "That change needs your confirmation first. Shall I go ahead?"
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": ""
+      }
+     },
+     {
+      "call": "move_event",
+      "args": {
+       "event_id": "{sam_event:E07}",
+       "day": "wed",
+       "start": "16:00"
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Moved your meeting with Sam to Wednesday at 16:00. Feedback: {feedback}",
+    "if_cancelled": "That change needs your confirmation first. Shall I go ahead?"
+   },
+   "ask": "Which Sam do you mean: Sam Ortiz or Sam Lee?"
+  },
+  "expected": {
+   "fast": 1,
+   "deliberate": 1,
+   "ask": 0
+  }
+ },
+ {
+  "id": "M07",
+  "category": "memory",
+  "split": "train",
+  "user": "maya",
+  "session": "maya-m07",
+  "text": "Reply to Sam's email: yes, Wednesday works.",
+  "memory": [
+   {
+    "kind": "lesson",
+    "user_message": "Reply to Sam's email: sounds good.",
+    "lesson": "In Maya's email, 'Sam' means Sam Ortiz unless she says Sam Lee."
+   }
+  ],
+  "confirmed": [],
+  "truth": {
+   "kind": "reply",
+   "message": "M3",
+   "must_mention": [
+    [
+     "Wednesday"
+    ]
+   ]
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_inbox"
+     },
+     {
+      "call": "read_message",
+      "args": {
+       "message_id": "{sam_message:M6}"
+      }
+     },
+     {
+      "call": "draft_reply",
+      "args": {
+       "message_id": "{sam_message:M6}",
+       "body": "Hi Sam, yes, Wednesday works. Maya"
+      }
+     },
+     {
+      "call": "send_reply",
+      "args": {
+       "message_id": "{sam_message:M6}",
+       "body": "Hi Sam, yes, Wednesday works. Maya"
+      }
+     }
+    ],
+    "say": "Replied to Sam: yes, Wednesday works.",
+    "if_cancelled": "I drafted the reply to Sam. Sending it needs your go-ahead; shall I send it?"
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_inbox"
+     },
+     {
+      "call": "read_message",
+      "args": {
+       "message_id": "{sam_message:M6}"
+      }
+     },
+     {
+      "call": "draft_reply",
+      "args": {
+       "message_id": "{sam_message:M6}",
+       "body": "Hi Sam, yes, Wednesday works. Maya"
+      }
+     }
+    ],
+    "say": "I drafted the reply to Sam: yes, Wednesday works. Shall I send it?"
+   },
+   "ask": "Which Sam's email do you mean: Sam Ortiz's or Sam Lee's?"
+  },
+  "expected": {
+   "fast": 1,
+   "deliberate": 1,
+   "ask": 0
+  }
+ },
+ {
+  "id": "M08",
+  "category": "memory",
+  "split": "train",
+  "user": "maya",
+  "session": "maya-m08",
+  "text": "Draft a reply to Dana proposing Thursday at 13:00.",
+  "memory": [
+   {
+    "kind": "lesson",
+    "user_message": "Draft a reply to Dana about Tuesday.",
+    "lesson": "Dana wants a one-line agenda in every reply about a meeting."
+   }
+  ],
+  "confirmed": [],
+  "truth": {
+   "kind": "reply",
+   "message": "M1",
+   "must_mention": [
+    [
+     "13:00"
+    ],
+    [
+     "agenda"
+    ]
+   ],
+   "feedback": {
+    "rejected": "Dana always wants a one-line agenda in replies about meetings."
+   }
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_message",
+      "args": {
+       "message_id": "M1"
+      }
+     },
+     {
+      "call": "draft_reply",
+      "args": {
+       "message_id": "M1",
+       "body": "Hi Dana, Thursday at 13:00 works for me.{agenda} Best, Maya"
+      }
+     }
+    ],
+    "say": "Drafted a reply to Dana proposing Thursday at 13:00."
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_message",
+      "args": {
+       "message_id": "M1"
+      }
+     },
+     {
+      "call": "draft_reply",
+      "args": {
+       "message_id": "M1",
+       "body": "Hi Dana, Thursday at 13:00 works for me.{agenda} Best, Maya"
+      }
+     }
+    ],
+    "say": "Drafted a reply to Dana proposing Thursday at 13:00."
+   },
+   "ask": "Before I act, can you confirm exactly what you want me to do?",
+   "lesson": "Dana wants a one-line agenda in every reply about a meeting."
+  },
+  "expected": {
+   "fast": 1,
+   "deliberate": 1,
+   "ask": 0
+  }
+ },
+ {
+  "id": "M09",
+  "category": "memory",
+  "split": "test",
+  "user": "maya",
+  "session": "maya-m09",
+  "text": "Draft a reply to Dana: Friday at 11:00 works instead.",
+  "memory": [
+   {
+    "kind": "lesson",
+    "user_message": "Draft a reply to Dana about Tuesday.",
+    "lesson": "Dana wants a one-line agenda in every reply about a meeting."
+   }
+  ],
+  "confirmed": [],
+  "truth": {
+   "kind": "reply",
+   "message": "M1",
+   "must_mention": [
+    [
+     "11:00"
+    ],
+    [
+     "agenda"
+    ]
+   ],
+   "feedback": {
+    "rejected": "Dana always wants a one-line agenda in replies about meetings."
+   }
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_message",
+      "args": {
+       "message_id": "M1"
+      }
+     },
+     {
+      "call": "draft_reply",
+      "args": {
+       "message_id": "M1",
+       "body": "Hi Dana, Friday at 11:00 works for me.{agenda} Best, Maya"
+      }
+     }
+    ],
+    "say": "Drafted a reply to Dana proposing Friday at 11:00."
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_message",
+      "args": {
+       "message_id": "M1"
+      }
+     },
+     {
+      "call": "draft_reply",
+      "args": {
+       "message_id": "M1",
+       "body": "Hi Dana, Friday at 11:00 works for me.{agenda} Best, Maya"
+      }
+     }
+    ],
+    "say": "Drafted a reply to Dana proposing Friday at 11:00."
+   },
+   "ask": "Before I act, can you confirm exactly what you want me to do?",
+   "lesson": "Dana wants a one-line agenda in every reply about a meeting."
+  },
+  "expected": {
+   "fast": 1,
+   "deliberate": 1,
+   "ask": 0
+  }
+ },
+ {
+  "id": "M10",
+  "category": "memory",
+  "split": "train",
+  "user": "maya",
+  "session": "maya-m10",
+  "text": "Draft a reply to Leo: Wednesday at 16:00 works.",
+  "memory": [
+   {
+    "kind": "lesson",
+    "user_message": "Draft a reply to Leo about Monday.",
+    "lesson": "Leo always needs a room; name the room when replying to him about a meeting."
+   }
+  ],
+  "confirmed": [],
+  "truth": {
+   "kind": "reply",
+   "message": "M5",
+   "must_mention": [
+    [
+     "16:00"
+    ],
+    [
+     "room"
+    ]
+   ],
+   "feedback": {
+    "rejected": "Leo asked which room; always name the room for him."
+   }
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_message",
+      "args": {
+       "message_id": "M5"
+      }
+     },
+     {
+      "call": "draft_reply",
+      "args": {
+       "message_id": "M5",
+       "body": "Hi Leo, Wednesday at 16:00 works.{room} Maya"
+      }
+     }
+    ],
+    "say": "Drafted a reply to Leo: Wednesday at 16:00 works."
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_message",
+      "args": {
+       "message_id": "M5"
+      }
+     },
+     {
+      "call": "draft_reply",
+      "args": {
+       "message_id": "M5",
+       "body": "Hi Leo, Wednesday at 16:00 works.{room} Maya"
+      }
+     }
+    ],
+    "say": "Drafted a reply to Leo: Wednesday at 16:00 works."
+   },
+   "ask": "Before I act, can you confirm exactly what you want me to do?",
+   "lesson": "Leo always needs a room; name the room when replying to him."
+  },
+  "expected": {
+   "fast": 1,
+   "deliberate": 1,
+   "ask": 0
+  }
+ },
+ {
+  "id": "W01",
+  "category": "memory",
+  "split": "walkthrough",
+  "user": "maya",
+  "session": "maya-w01",
+  "text": "Schedule a 45-minute writing block on Monday.",
+  "memory": [],
+  "confirmed": [],
+  "truth": {
+   "kind": "booking",
+   "count": 1,
+   "minutes": 45,
+   "days": [
+    "mon"
+   ],
+   "accepted_start": "09:00",
+   "feedback": {
+    "accepted": "That works for me.",
+    "rejected": "Mornings work better now; please use 09:00 for writing."
+   }
+  },
+  "script": {
+   "fast": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "mon"
+      }
+     },
+     {
+      "call": "book_time",
+      "args": {
+       "title": "Writing",
+       "day": "mon",
+       "start": "{writing_start:mon}",
+       "minutes": 45,
+       "attendees": []
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Booked a 45-minute writing block on Monday at {writing_start:mon}. Feedback: {feedback}"
+   },
+   "deliberate": {
+    "steps": [
+     {
+      "call": "read_calendar",
+      "args": {
+       "person": "",
+       "day": "mon"
+      }
+     },
+     {
+      "call": "book_time",
+      "args": {
+       "title": "Writing",
+       "day": "mon",
+       "start": "{writing_start:mon}",
+       "minutes": 45,
+       "attendees": []
+      }
+     },
+     {
+      "call": "review"
+     }
+    ],
+    "say": "Booked a 45-minute writing block on Monday at {writing_start:mon}. Feedback: {feedback}"
+   },
+   "ask": "Before I act, can you confirm exactly what you want me to do?",
+   "lesson": "Maya now wants writing blocks in the morning: use 09:00 for writing unless she names a time."
+  },
+  "expected": {
+   "fast": 0,
+   "deliberate": 0,
+   "ask": 0
+  }
+ }
+]

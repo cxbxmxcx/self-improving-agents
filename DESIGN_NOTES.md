@@ -44,11 +44,11 @@ This positions the book as the serious practitioner-author response to the 2026 
 
 **Chapter 1 has minimal code.** Maybe one or two short listings showing the shape of the primitives. The listings exist to make the concepts concrete enough that the reader recognizes them in later chapters. Roughly 15 lines, not 150.
 
-**Chapter 2 is where code earns real estate.** HelixAgent v0 to v1, RAG plus ReAct, SPO and GEPA against the routing and retrieval prompts. The reader sees Artifact, Signal, and Search primitives instantiated for the first time with real content.
+**Chapter 2 is where code earns real estate.** HelixAgent v0 to v1, RAG plus ReAct, SPO and a hill-climb against the system prompt, with GEPA and DGM following in Chapter 4. The reader sees Artifact, Signal, and Search primitives instantiated for the first time with real content.
 
-**Chapters 3-7 reuse primitives aimed at different artifacts.** Same Signal protocol, same Search protocol, different `Artifact.kind`. This is the architectural payoff the spec is designed to produce: the search-by-signal grid is executable, not just illustrative.
+**Chapters 3 to 8 reuse primitives aimed at different artifacts.** Same Signal protocol, same Search protocol, different `Artifact.kind`. This is the architectural payoff the spec is designed to produce: the search-by-signal grid is executable, not just illustrative.
 
-**Chapters 8-11 are mostly orchestration and prose.** Tournament eval, HITL gates, multi-agent decision rubric, drift detection. Code here is short integration listings.
+**Chapters 9 through 12 are mostly orchestration and prose.** Tournament eval, HITL gates, multi-agent decision rubric, drift detection. Code here is short integration listings.
 
 **Diagrams do the architectural work.** Budget of 60-80 diagrams. The search-by-signal grid figure (2D matrix with artifacts on one axis and search methods on the other, cells filled by canonical exemplars) is the book's intellectual map and will be referenced repeatedly.
 
@@ -76,15 +76,19 @@ The spec defines ten primitives. They compose into the entire book. No new primi
 How the primitives compose into each HelixAgent version:
 
 - **v0 (Ch 2)**: Minimal agent: system prompt as Artifact, tools, working memory. Pure agent loop, no improvement.
-- **v1 (Ch 2)**: Add Signal (LLM-as-Judge pairwise) + Search (SPO) aimed at system prompt. First closed self-improvement loop.
-- **v2 (Ch 3)**: Add evolutionary search (GEPA, DGM) and aim it at tool_description artifacts on a multi-tool task agent. Signal becomes deterministic ground-truth task success; multi-improver and StrategyChain share one archive.
-- **v3 (Ch 4)**: Add episodic + semantic memory tiers (PRE_MODEL reads, SESSION_END writes); memory entries are artifacts. Add MemRL aimed at episodic entries with ExpeL operators, GRPO-style group-relative selection, and OnlineImprover auto-promotion on online-safe layers.
-- **v4 (Ch 5)**: Add Planner/Monitor/Reflector/TSM as three coordinated hooks. Reflection is a Signal applied at SESSION_END.
-- **v5 (Ch 6)**: Aim existing searches at skill artifacts (tool descriptions came under search in Ch 3). Add HITL approval gate on archive commit.
-- **(Ch 7)**: Thought experiments: what each frontier system (DGM, AlphaEvolve, HyperAgents) would compose differently. Primitives unchanged.
-- **v6-v8 (Ch 8-11)**: Eval subsystem replaces ad-hoc signals. HITL ladder configured per artifact kind. Multi-agent is composition (sub-agents are tools). Drift detection consumes the bus.
+- **v1 (Ch 2)**: Add Signal (LLM-as-Judge pairwise) + Search (SPO, hill-climb) aimed at the system prompt; the archive and offline promote. First closed self-improvement loop.
+- **v1 (Ch 3, the Gödel Machine)**: No new hooks or searches; the chapter builds out the signal side: deterministic checkers, LLM judges, the proof gate (`proven` on GapMeasurement), and Reflection as a Signal filling `feedback`. The version label does not advance because the agent's artifacts do not change.
+- **v2 (Ch 4, the Darwin Gödel Machine)**: Add population search (GEPA, DGM, StrategyChain) sharing one archive on a deterministic task-success signal. The Observatory arrives as a bus consumer outside `helix/`.
+- **v3 (Ch 5, memory)**: Install memory as a harness component with PRE_MODEL and SESSION_END hook wrappers, and retain entries as `MEMORY_ENTRY` artifacts. Add `MemoryLearner` for fixed one-step value-based learning, `SignalKind.UTILITY`, memory operators, `OnlineMemoryImprover`, group-relative lesson selection, and consolidation. `MemRLSearch` remains a Search adapter; learning changes stored values while the configured application mechanism and learning algorithm stay fixed.
+- **v4 (Ch 6, metacognition)**: Add planner, monitor, reflector, and task-state hook wrappers bound in a `METACOGNITION` composite. Add the behavior-diff signal, the dual-process router at PRE_MODEL, and `ComposedSearch` over the composite.
+- **v5 (Ch 7, the harness)**: A coding agent with skill files (`helix/skills/`), `TextDescriptionTool`, a swappable sandboxed `ToolFromArtifact`, a `CodeMutator` with DGM aimed at code, and the `HARNESS` composite. Add the minimal HITL gate (Proposal, Decision, behavior diffs, rollback) as a `candidate_wins` subscriber.
+- **(Ch 8, HyperAgents)**: Add `SearchKind.EDITABLE_META` with the mutator prompt as a TEXT artifact and a read-only policy at the meta level. Primitives unchanged.
+- **v6 (Ch 9, evaluation)**: Eval subsystem replaces ad-hoc signals: tournament eval, calibration drift, continuous eval, judge bias.
+- **v7 (Ch 10, humans)**: HITL ladder configured per artifact kind, confidence routing, inoculation review, the drift queue, live feedback signals, and HITL-gated online prompt improvement.
+- **(Ch 11, multi-agent)**: Multi-agent is composition; sub-agents are tools. No new primitives.
+- **v8 (Ch 12, shipping)**: Drift detection consumes the bus; rollout controls and the reward-hacking runbook are consumers too.
 
-By Chapter 11 the framework has accumulated hooks, signal implementations, and consumers, all within the ten primitives. The agent loop is the same eight-line skeleton it was in Chapter 2.
+By Chapter 12 the framework has accumulated hooks, signal implementations, and consumers, all within the ten primitives. The agent loop is the same eight-line skeleton it was in Chapter 2.
 
 ---
 
@@ -92,21 +96,21 @@ By Chapter 11 the framework has accumulated hooks, signal implementations, and c
 
 Items where the spec is provisional and a manuscript decision is pending:
 
-**Reflection as Signal versus Search.** The spec puts Reflection in the Signal family (Section 3.3) because it makes GEPA-uses-reflection clean. An alternative is to treat Reflexion as a Search that consumes its own Signal output. Chapter 5 will validate or revise.
+**Reflection as Signal versus Search (resolved, v0.3).** The spec puts Reflection in the Signal family (Section 3.3) because it makes GEPA-uses-reflection clean. The alternative, Reflexion as a Search consuming its own Signal output, was rejected in the Chapter 6 plan: Reflection stays a Signal, and its only route to changed behavior is a memory entry read at PRE_MODEL. See §17.
 
-**Eval as primitive versus composition.** Section 8 makes Eval a primitive, but it could be expressed as a Signal-plus-Archive composition with a calibration Signal layered on. Pedagogically cleaner as primitive; architecturally cleaner as composition. Decision pending Chapter 8 drafting.
+**Eval as primitive versus composition.** Section 8 makes Eval a primitive, but it could be expressed as a Signal-plus-Archive composition with a calibration Signal layered on. Pedagogically cleaner as primitive; architecturally cleaner as composition. Decision pending Chapter 9 drafting.
 
-**Multi-agent composition shape.** Section 11.8 treats sub-agents as tools. Chapter 10's Anthropic-versus-Cognition rubric may demand a richer composition primitive (orchestrator-worker as a distinct shape, group-chat as another). Open until Chapter 10 is drafted.
+**Multi-agent composition shape.** Section 11.9 treats sub-agents as tools. Chapter 11's Anthropic-versus-Cognition rubric may demand a richer composition primitive (orchestrator-worker as a distinct shape, group-chat as another). Open until Chapter 11 is drafted.
 
-**The artifact kind for planner/monitor scaffolds.** Currently two kinds (`planner`, `monitor`). May be cleaner to unify under a single `scaffold` kind with a sub-type. Deferred to Chapter 5 drafting.
+**The artifact kind for planner/monitor scaffolds (resolved, SPEC v0.2).** Planner and monitor are `text` subtypes at L1, not kinds of their own; the L3 risk lives on the `metacognition` composite that binds them (§15). Chapter 6 builds on that shape.
 
-**Code as an artifact kind.** Section 1.2 lists `code` as a recognized kind. Execution sandbox and diff representation for code artifacts are not specified. Chapter 7 frontier territory and deliberately under-specified.
+**Code as an artifact kind.** Section 1.2 lists `code` as a recognized kind. The execution sandbox and the unified-diff mutation representation are specified by the Chapter 7 plan (a subprocess sandbox with a timeout, diffs stored in artifact metadata, no promotion without a passing test signal). Chapter 7 is where code comes under search; the earlier "Chapters 11/12" deferral is gone.
 
-**Trajectory storage cost.** Trajectories are large. Long-running deployments accumulate trajectories faster than archives. The spec assumes a TTL plus sampling policy; details depend on Chapter 8's continuous-eval sampling strategy, which is still in design.
+**Trajectory storage cost.** Trajectories are large. Long-running deployments accumulate trajectories faster than archives. The spec assumes a TTL plus sampling policy; details depend on Chapter 9's continuous-eval sampling strategy, which is still in design.
 
-**Skills as a separate subsystem.** Currently folded under procedural memory. May need its own section by Chapter 6.
+**Skills as a separate subsystem (decided).** Skills stay backed by the procedural memory tier, but they get their own package: `helix/skills/` (loader, SKILL.md reader, skill-to-prompt and skill-as-tool bridges) lands in Chapter 7. Until then `Subtype.SKILL` exists and nothing in the loop reads it.
 
-**MCP as a protocol layer.** Folded under tools currently. May need promoting to its own section given MCP's centrality in 2026.
+**MCP as a protocol layer (decided for now).** MCP stays folded under tools; local tools and MCP tools normalize to the same Tool primitive. It is listed in the base stack but absent from the code and requirements today, and it enters only if the Chapter 7 harness grows an MCP surface.
 
 ---
 
@@ -115,11 +119,13 @@ Items where the spec is provisional and a manuscript decision is pending:
 Any prose, documentation, or commentary generated for this project follows these rules:
 
 - **Paragraphs are 3 sentences.** Hard rule for prose deliverables. Break longer paragraphs at natural conceptual seams.
+- **Chapter openers are 2-3 paragraphs.** Fit the problem, previous-chapter connection, chapter direction, and payoff into that introduction; move setup and detailed explanations into the body.
 - **No em-dashes.** Use commas, semicolons, or colons instead.
 - **Markdown only for documents.** No .docx unless explicitly requested.
 - **NPG color palette where colors apply:** vermillion (#E64B35), slate blue (#3C5488), ocean teal (#00A087), soft cyan (#4DBBD5), muted salmon (#F39B7F). Nature Editorial infographic aesthetic.
 - **Code listings are short.** 5-20 lines for in-book listings. Repository code can be longer but stays readable.
-- **Mermaid for architectural diagrams.** All diagram sources in Mermaid.
+- **Draw.io for book figures.** Keep editable `.drawio` sources and match the existing chapter figures' dimensions, typography, NPG colors, and visual conventions. Export PNG previews for the manuscript.
+- **Increment manuscript revisions.** Save each delivered draft edit under the next version tag and preserve the preceding revision, for example `.draft0.6.md` to `.draft0.7.md`.
 
 ---
 
@@ -195,7 +201,7 @@ Option 1 won for three reasons. **(a) The per-artifact improver is teachable as 
 
 **The eventual-consistency property.** Each improver round measures its candidate against the artifacts that are live at the moment the round runs. If another improver promotes between rounds, subsequent measurements pick up the new live combination automatically. There is no synchronization barrier, no coordinated rollback, no "freeze all improvers while one is running" protocol. The framework trusts the next round to correct any drift; the dashboard surfaces score trends so operators can see if drift is accumulating.
 
-**MultiArtifactImprover is mentioned as a future extension point, not built.** When per-artifact improvement is insufficient (genuinely strongly-coupled artifacts), a subclass that mutates multiple artifacts per round and measures the bundle is the right escalation. The framework hooks for this are the existing Improver class; the chapter that needs it (Ch 8+ if ever) can introduce it without changing the foundation.
+**MultiArtifactImprover is mentioned as a future extension point, not built.** When per-artifact improvement is insufficient (genuinely strongly-coupled artifacts), a subclass that mutates multiple artifacts per round and measures the bundle is the right escalation. The framework hooks for this are the existing Improver class; the chapter that needs it (Ch 9 or later, if ever) can introduce it without changing the foundation.
 
 ---
 
@@ -253,7 +259,7 @@ This is the same trade-off the spec already accepted for Signal: `signal.measure
 
 Earlier drafts had a per-role artifact kind enum: `prompt`, `skill`, `tool_description`, `rubric`, `planner`, `monitor`, plus `memory_entry` and `code`. The roles were proliferating, and they hid a fact the search layer kept rediscovering: a prompt, a tool description, a skill, and a rubric are all natural language the LLM reads, and they are all mutated by the same text search methods (SPO, GEPA, reflective mutation). SPEC §4.3 already said as much in prose ("SPO works on prompts, on memory entries, on skill files, on rubrics"). Author decision: collapse the text roles into one `text` kind carrying a `subtype`, leaving `memory_entry`, `code`, and the new `composite` as the other kinds.
 
-**Why kind and layer became two different properties.** Folding the text roles into one kind raised a layer question, because the online-safety rule reads layer and an earlier draft put planner and monitor at L3. The author decision went further than "derive layer from subtype": planner and monitor are demoted to L1 text, and the L3 risk moves onto a `metacognition` composite (§18.2.1) that binds a planner, a monitor, and the memory/state the agent reasons over. The reasoning is that a standalone planner prompt is a low-risk wording change, while the metacognitive scaffold is dangerous precisely because the parts act together to modify the agent's own reasoning, so the risk is emergent from the composition rather than present in any constituent. Layer is therefore `max(subtype floor, max over constituents)`: text is L1, memory L2, code L4, and a composite can declare a floor (metacognition floors at L3) that exceeds its constituents. This is the cleaner answer to "where does metacognition live," and it makes Chapter 5 the chapter that introduces both metacognition and the composition machinery.
+**Why kind and layer became two different properties.** Folding the text roles into one kind raised a layer question, because the online-safety rule reads layer and an earlier draft put planner and monitor at L3. The author decision went further than "derive layer from subtype": planner and monitor are demoted to L1 text, and the L3 risk moves onto a `metacognition` composite (§18.2.1) that binds a planner, a monitor, and the memory/state the agent reasons over. The reasoning is that a standalone planner prompt is a low-risk wording change, while the metacognitive scaffold is dangerous precisely because the parts act together to modify the agent's own reasoning, so the risk is emergent from the composition rather than present in any constituent. Layer is therefore `max(subtype floor, max over constituents)`: text is L1, memory L2, code L4, and a composite can declare a floor (metacognition floors at L3) that exceeds its constituents. This is the cleaner answer to "where does metacognition live," and it makes Chapter 6 the chapter that introduces both metacognition and the composition machinery.
 
 **Why a clean break rather than dual kinds.** The same reasoning as the Improver rename (§14): the codebase is at MEAP with no production users, so carrying both the v0.1 per-role kinds and the v0.2 `text` subtypes would mean dual paths in every chapter and test for no benefit. Archives written under v0.1 are migrated on read by mapping each retired kind to `(text, subtype)`. The spec version bumps to 0.2 because the kind enum changed shape.
 
@@ -270,3 +276,51 @@ SPEC §16.1 settled "one improver per artifact," and §16.1.4 left a door open f
 **Why one whole-agent signal, optionally augmented.** A composite could be scored by combining per-constituent signals, but that quietly reintroduces the independence composition exists to remove. The constituents are coupled precisely so their joint effect on the end task is the thing that matters, so the default is a single whole-agent objective. A `CompositeSignal` (§3.5) may wrap it to fold in per-constituent metrics (skill token cost, memory latency) for multi-objective awareness, but the whole-agent score stays the arbiter.
 
 **Why replace is enforced at construction.** Declaring a constituent inside a composite opts it out of solo improvement, and the framework refuses to construct a solo improver targeting a composite constituent. Documentation alone would let a solo improver and a composed search both mutate one artifact, which is the exact combination-drift fight composition is meant to end. Enforcing it at construction is the same earliest-possible-failure discipline as the online layer-safety check (§17.3), and it is why fix #2 (the layer-safety raise) should be designed to understand composite layers rather than patched in isolation.
+
+---
+
+## 17. Chapters 5 to 8: decisions from the planning interview (2026-08-23)
+
+The plan for these chapters lives in `chapters/plan_ch05_ch08.md`. This section records why the decisions there came out the way they did, so a later session does not reopen them by accident.
+
+**Why memory entries become archive artifacts, with the tier row keeping an `artifact_ref`.** Nothing in the framework can search a thing that is not an artifact, and Chapter 5 exists to search memory. Rewriting the tiers to store artifacts directly would throw away working SQLite code and the vector-store adapter boundary for no gain. So the tier row stays the retrieval index and points at the archive row, the same shape the procedural tier already uses, and UPSERTs become new versions with a parent.
+
+**Why memory injection leaves `Agent.run` for constructor-declared hook wrappers.** The spec has said PRE_MODEL read and SESSION_END write since v0.1, and the inline code was a shortcut that two chapters now pay for. The first cost is cloning: an improver's `with_artifacts` clone must keep its memory behavior, and only wrappers that re-register their own hooks (the `Guardrail` pattern) survive a clone. The second cost is attribution: a utility signal cannot credit an entry the trajectory never recorded, so the read hook writes recalled-entry refs into `artifacts_used` as a side effect of being a hook.
+
+**Why `UTILITY` is its own signal family rather than a reuse of `ENVIRONMENT_REWARD`.** An environment reward scores an answer: was the trajectory's outcome correct or approved. A utility measurement scores a memory entry's share of that outcome across the trajectories that recalled it, which is credit assignment, not grading. Overloading one kind for both would make `measurements_for_signal()` lie about what was measured; the union shape of `GapMeasurement` is untouched, so non-negotiable 3 holds.
+
+**Why the group round stays in Chapter 5.** The framework has a pairwise round and an archive-sampling round hidden inside DGM, and GRPO-style selection is the obvious third shape: N candidates, one absolute signal, advantage over the group mean. Its natural target is insight extraction, where one trajectory yields several candidate lessons and only the above-average ones deserve to persist. Teaching it against memory entries keeps the RL framing of the chapter honest, and it is aimed at memory insights, never at tool-calling prompts.
+
+**Why the reflector is a Signal, and why memory is its only route to behavior.** Reflection that edits the next run directly would need mutation rights at POST_MODEL or SESSION_END, and those rights are `None` in the hook table on purpose. A reflector that is a Signal writes its feedback to an L2 memory entry, and the only way that lesson changes a later run is the PRE_MODEL memory read. That makes the Huang et al. failure mode diagnosable: if the next trajectory's behavior diff is flat, the lesson was theater, and the chapter can say so with a number. It is also why Chapter 5 must precede Chapter 6.
+
+**Why one coding agent serves Chapters 6 and 7.** Building a separate metacognition demo agent would add a second codebase the reader must hold while learning four new hooks. A coding agent built in v0 form in Chapter 6 gives planning and monitoring a place to visibly matter (which files to touch, a failing test caught before the answer ships), and the hidden-test score makes the behavior-change test exact rather than judged. Chapter 7 then grows the same agent, so familiarity compounds instead of resetting.
+
+**Why the HITL gate is a bus subscriber, not a new hook point.** Non-negotiable 6 fixes the hook points to SPEC §6.2, and an approval checkpoint at archive commit is not one of them. The promotion design in §10 already emits `candidate_wins` after the archive records the candidate, and `auto_promote=False` already leaves the live champion untouched. A gate that subscribes to that event, writes a Proposal, and promotes on Decision needs no new seam, and it keeps the gate a review checkpoint rather than a suppression checkpoint.
+
+**Why Chapter 7 ships a minimal gate and defers the ladder.** Chapter 7's job is to show code under search reaching a human safely: Proposal, Decision, a flat ApprovalPolicy, behavior diffs from replayed trajectories, and rollback as promoting the parent. The four-tier ladder, confidence routing, inoculation review, and the drift queue are about how humans spend attention across artifact kinds, which is Chapter 10's question. Splitting them keeps Chapter 7 about the harness and gives Chapter 10 something real to add.
+
+**Why behavior diffs are a signal shared across chapters.** Chapter 6 needs a trajectory-versus-trajectory divergence measure to separate reflection theater from real change, and Chapter 7 needs the same measure on a proposal card. One `behavior_diff` signal returning `GapMeasurement` serves both, and it reuses the archive's trajectory table as its replay corpus instead of inventing a second store.
+
+**Why planner code arrives in Chapter 7, not Chapter 6.** The planner is a text artifact at L1 in Chapter 6 because the chapter's subject is the scaffold, and the layer rule keeps the composite offline either way. Chapter 7 replaces the planner prompt with a planner function held as a CODE artifact, which is the first time a reasoning component is code. Putting that switch next to the sandbox and the test gate means the reader meets code-under-search once, with all its guards in view.
+
+**Why HyperAgents gets its own Chapter 8.** Everything in Chapter 7 can run today: `TextDescriptionTool`, `ToolFromArtifact`, the composite, and the promotion path all exist, and the chapter's claims are checkable against the repo. Making the search method itself an artifact is a different promise, partly runnable (DGM's mutator prompt is plain text) and partly a thought experiment. Keeping it out of Chapter 7 lets that chapter stay shippable-today and lets Chapter 8 be honest about where the frontier stops.
+
+**Why the meta level is read-only.** The layer rule says L1 and L2 may auto-promote online, L3 and L4 wait for a human, and a search method that edits its own mutator sits above all four. The outer loop's signal is the inner loop's gain, which is exactly the quantity a reward-hacking mutator would learn to inflate. Chapter 8 therefore runs its one meta hill-climb under a read-only policy with bounded mutation, and hands the reward-hacking runbook forward to Chapter 12.
+
+## 18. Chapter 5 memory belongs to the harness
+
+The harness installs memory tiers and connects them to the running agent through `MemoryHooks`. The learner targets that exact live tier and shares its archive, so an update is available to the next scoped recall. Persistence carries retained learning across sessions, while another agent must explicitly connect to the store and supply an authorized identity before it can use that learning.
+
+Chapter 5 implements value-based reinforcement learning with a defined one-step update, `q_new = q + alpha * (credit - q)`. Learning changes usefulness estimates, while the update algorithm, credit rule, learning rate, retrieval weight, injection format, and hook timing remain configured. This distinction keeps improvement to memory separate from later work that searches or modifies the harness or the improvement procedure itself.
+
+`MemoryLearner` makes that operation explicit without forcing the explanatory prose through the Search protocol. `MemRLSearch` inherits the learner and retains its existing adapter interface and archive labels for compatibility. The chapter examples and manuscript use the direct learner, and deterministic integration tests verify that changed values reach later requests through the existing hooks.
+
+## 19. A studio support case makes episodic memory concrete
+
+Second Breakfast Games is the approved Chapter 5 teaching scenario: recurring IT incidents around the fictional Moonbase Mayhem playtest. The corpus contains approved runbooks, while separate episodic entries retain attempts and observed outcomes. Maya's failed VPN reconnect is useful later context without becoming a successful fix merely because its utility rises.
+
+The author's subsequent correction confines this scenario to practical demonstrations and exercises. Following Chapters 3 and 4, the chapter opens on memory and learning, then introduces the task where inputs, executable code, observed results, and memory records can be inspected. The studio and its characters are not an introductory story or a recurring narrative frame.
+
+The walkthrough uses the existing Agent, MemoryHooks, MemoryLearner, and OnlineMemoryImprover with one recalled entry and a fixed lexical encoder. The optional encoder argument keeps the demonstration local without changing default memory behavior or adding a new framework primitive. The studio tools and simulator remain chapter application code, outside the core agent loop.
+
+Scripted outcomes explain the mechanism and are labeled separately from measured model performance. The earlier research-helpdesk scripts and historical run evidence remain available, while the studio writes each execution into a new directory. Three additional draw.io figures connect the incident, memory versions, and feedback to the executable code.

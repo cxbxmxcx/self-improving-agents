@@ -1,4 +1,4 @@
-"""A deterministic data-investigation task for the Chapter 3 improvement loop.
+"""A deterministic data-investigation task for the Chapter 3 and 4 improvement loops.
 
 The agent answers a vague analytics question ("top reps last quarter") by chaining
 query tools over a tiny in-memory company database. The catch is six business rules

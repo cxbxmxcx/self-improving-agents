@@ -21,13 +21,14 @@ starting line rather than a build tutorial. `01_helixagent_v0.py` runs a
 basic RAG plus ReAct agent with a fixed prompt so the reader has a
 concrete "before" to improve on. The shared v0 building blocks (genesis
 prompt, retrieve tool, agent factory) live in `agent_v0.py`, which every
-chapter listing imports. The Ch 3 tool-description scaffolding builds on
-the same blocks in `chapter_appendices/getting_started/`.
+chapter listing imports. The tool-description scaffolding in
+`chapter_appendices/getting_started/` builds on the same blocks; tool
+descriptions come under search in Chapter 7.
 
-Online improvement (auto-promotion, no labeled eval set, rolling
-spot-checks) is a Ch 8 topic; it composes with HITL and feedback in a
-way that needs both foundations. Evolutionary search (GEPA, multi-search
-strategy chains, tool-description improvement) is Ch 3.
+Online memory learning with auto-promotion arrives in Chapter 5, and the
+human-gated online variant (live feedback, rolling spot-checks) is Chapter
+10, since it composes HITL and feedback and needs both foundations.
+Evolutionary search (GEPA, DGM, multi-search strategy chains) is Chapter 4.
 
 ## Prerequisites
 
@@ -197,11 +198,11 @@ which is the deploy-gate act a human (or the dashboard button) performs.
 Visualize what happened:
 
 ```
-streamlit run helix/dashboard/app.py
+python helix_web/run.py
 ```
 
-The dashboard shows v1 as live, v2/v3/v4 as scored candidates, and a
-"Promote v{N} → live" button on the best candidate. Click it (or call
+The Helix Observatory (http://localhost:8610) shows v1 as live, v2/v3/v4 as
+scored candidates, and a promote button on the best candidate. Click it (or call
 `archive.promote()` from a notebook) and the next `02_helixagent_v1.py` run
 serves the new version. That's the full self-improvement cycle.
 
@@ -224,14 +225,15 @@ development.
 
 ## What's deferred
 
-- **Evolutionary search.** GEPA, multi-search strategy chains, tool
-  description improvement. Chapter 3.
+- **Evolutionary search.** GEPA, DGM, multi-search strategy chains.
+  Chapter 4.
 - **Memory tiers.** Episodic / semantic / procedural memory; agents that
-  learn from past trajectories. Chapter 4.
-- **Online improvement.** Auto-promotion, rolling spot-checks, no
-  labeled eval set. Chapter 8 (pairs with HITL and live feedback).
-- **Code-level artifacts.** Tool implementations, guardrails. Chapters
-  11/12.
+  learn from past trajectories. Chapter 5.
+- **Online improvement.** Auto-promotion of memory, no labeled eval set,
+  is Chapter 5; the human-gated variant with rolling spot-checks and live
+  feedback is Chapter 10.
+- **Code-level artifacts.** Tool descriptions, tool implementations,
+  guardrails. Chapter 7.
 
 The single-improver, single-artifact, offline, human-gated pattern in
 this chapter is the foundation everything else builds on.

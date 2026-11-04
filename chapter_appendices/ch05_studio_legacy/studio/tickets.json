@@ -1,0 +1,9 @@
+[
+  {"id":"MB-201","user":"maya","session":"maya-monday","state":"vpn_disconnected","question":"Moonbase Mayhem asset sync failed after my laptop woke. CrateSync shows NET01 and OrbitLink is disconnected.","expected_action":"reconnect_vpn","source":"01_orbitlink_vpn.md"},
+  {"id":"MB-202","user":"maya","session":"maya-tuesday","state":"vpn_disconnected","question":"Moonbase Mayhem asset sync is stuck again after my laptop woke. Can we use what worked last time?","expected_action":"reconnect_vpn","source":"01_orbitlink_vpn.md"},
+  {"id":"MB-203","user":"maya","session":"maya-wednesday","state":"asset_session_expired","question":"Moonbase Mayhem asset sync is stuck again. Should we try the previous fix?","expected_action":"refresh_asset_token","source":"02_cratesync_assets.md"},
+  {"id":"MB-203-followup","user":"maya","session":"maya-wednesday","state":"asset_session_expired","question":"Reconnecting did not help. The VPN is connected, but CrateSync shows AUTH17. What should we try next?","expected_action":"refresh_asset_token","source":"02_cratesync_assets.md"},
+  {"id":"PT-301","user":"leo","session":"leo-playtest","state":"wrong_audio_input","question":"The StageLink playtest hears my laptop microphone instead of the USB headset. Which input should I test?","expected_action":"select_stagelink_input","source":"04_stagelink_audio.md"},
+  {"id":"BD-401","user":"sam","session":"sam-build","state":"build_queued","question":"The Moonbase Mayhem BuildDock job is QUEUED. Should I submit duplicate jobs to get a build faster?","expected_action":"check_build_queue","source":"03_builddock_queue.md"},
+  {"id":"AC-501","user":"leo","session":"leo-access","state":"missing_membership","question":"CrateSync says PERM04 for Moonbase Mayhem. My VPN is connected and sign-in works. Can the helpdesk grant me membership?","expected_action":"request_asset_access","source":"05_accessdesk_permissions.md"}
+]

@@ -1,0 +1,296 @@
+{
+  "mode": "scripted walkthrough; not measured model performance",
+  "configuration": {
+    "algorithm": "one_step_value_update",
+    "alpha": 0.5,
+    "credit": "equal",
+    "utility_weight": 0.35,
+    "recency_weight": 0.0,
+    "episodic_k": 1,
+    "encoder": "calendar-token-hash-1024-v1",
+    "model": "calendar-scripted",
+    "prompt_sha256": "6247a4b24afc898bd476f92432d4f036d511f8a6e9d1aa24d686baf96b9924d5"
+  },
+  "requests_sha256": "538f8e1f63b48b10f7a506bdd1d05beffa37fa4b45a7362293d93a9d5ea84e61",
+  "calendar_sha256": "3ec47cb194dbf68e9fe8c1c3366bfbc80d85e105c7be60e98544a13850f6e78f",
+  "episodes": {
+    "bf16ae23-21a8-4c53-8d69-550d7fb9a254": "E1",
+    "a3e77ca6-888e-4c5e-990c-2ac0ac7f65a7": "E2",
+    "e6daa064-9a33-4b22-b28c-5d6dd6de8a57": "E3",
+    "35043039-1918-4c24-bea4-d2485571ada0": "E4"
+  },
+  "requests": [
+    {
+      "request": "CAL-201",
+      "user": "maya",
+      "session": "maya-monday",
+      "question": "Schedule a 45-minute writing block on 2026-10-05.",
+      "answer": "Created a 45-minute writing block on 2026-10-05 at 14:00. Booking feedback: accepted. User feedback: That works for me. The event remains at its booked time.",
+      "outcome": {
+        "event_id": "23ce863c-a707-43f0-a216-aeac6974d068",
+        "user": "maya",
+        "date": "2026-10-05",
+        "title": "Writing",
+        "start": "14:00",
+        "duration_minutes": 45,
+        "valid": true,
+        "accepted": true,
+        "feedback": "That works for me."
+      },
+      "reward": 1.0,
+      "available_starts": [
+        "09:00",
+        "14:00"
+      ],
+      "recalled": [],
+      "written_episode": "E1",
+      "written": {
+        "tier": "episodic",
+        "entry_id": "bf16ae23-21a8-4c53-8d69-550d7fb9a254",
+        "artifact_ref": [
+          "memory.episodic.bf16ae23-21a8-4c53-8d69-550d7fb9a254",
+          1
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "read_calendar",
+          "arguments": {}
+        },
+        {
+          "name": "book_time",
+          "arguments": {
+            "start": "14:00",
+            "duration_minutes": 45
+          }
+        },
+        {
+          "name": "review_booking",
+          "arguments": {}
+        }
+      ]
+    },
+    {
+      "request": "CAL-202",
+      "user": "maya",
+      "session": "maya-tuesday",
+      "question": "Schedule a 45-minute writing block on 2026-10-06.",
+      "answer": "Created a 45-minute writing block on 2026-10-06 at 14:00. Booking feedback: accepted. User feedback: That works for me. The event remains at its booked time.",
+      "outcome": {
+        "event_id": "8edf09a8-8e68-4f5c-a76b-1c62f8378dd2",
+        "user": "maya",
+        "date": "2026-10-06",
+        "title": "Writing",
+        "start": "14:00",
+        "duration_minutes": 45,
+        "valid": true,
+        "accepted": true,
+        "feedback": "That works for me."
+      },
+      "reward": 1.0,
+      "available_starts": [
+        "09:00",
+        "14:00"
+      ],
+      "recalled": [
+        {
+          "episode": "E1",
+          "recalled_ref": [
+            "memory.episodic.bf16ae23-21a8-4c53-8d69-550d7fb9a254",
+            1
+          ],
+          "current_ref": [
+            "memory.episodic.bf16ae23-21a8-4c53-8d69-550d7fb9a254",
+            2
+          ],
+          "q_before": 0.5,
+          "q_after": 0.75
+        }
+      ],
+      "written_episode": "E2",
+      "written": {
+        "tier": "episodic",
+        "entry_id": "a3e77ca6-888e-4c5e-990c-2ac0ac7f65a7",
+        "artifact_ref": [
+          "memory.episodic.a3e77ca6-888e-4c5e-990c-2ac0ac7f65a7",
+          1
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "read_calendar",
+          "arguments": {}
+        },
+        {
+          "name": "book_time",
+          "arguments": {
+            "start": "14:00",
+            "duration_minutes": 45
+          }
+        },
+        {
+          "name": "review_booking",
+          "arguments": {}
+        }
+      ]
+    },
+    {
+      "request": "CAL-203",
+      "user": "maya",
+      "session": "maya-wednesday",
+      "question": "Schedule a 45-minute writing block on 2026-10-07.",
+      "answer": "Created a 45-minute writing block on 2026-10-07 at 14:00. Booking feedback: rejected. User feedback: Mornings work better now; please use 09:00 for writing. The event remains at its booked time.",
+      "outcome": {
+        "event_id": "50817f8c-db62-4082-99ed-7ef1ac14a3d0",
+        "user": "maya",
+        "date": "2026-10-07",
+        "title": "Writing",
+        "start": "14:00",
+        "duration_minutes": 45,
+        "valid": true,
+        "accepted": false,
+        "feedback": "Mornings work better now; please use 09:00 for writing."
+      },
+      "reward": 0.0,
+      "available_starts": [
+        "09:00",
+        "14:00"
+      ],
+      "recalled": [
+        {
+          "episode": "E1",
+          "recalled_ref": [
+            "memory.episodic.bf16ae23-21a8-4c53-8d69-550d7fb9a254",
+            2
+          ],
+          "current_ref": [
+            "memory.episodic.bf16ae23-21a8-4c53-8d69-550d7fb9a254",
+            3
+          ],
+          "q_before": 0.75,
+          "q_after": 0.375
+        }
+      ],
+      "written_episode": "E3",
+      "written": {
+        "tier": "episodic",
+        "entry_id": "e6daa064-9a33-4b22-b28c-5d6dd6de8a57",
+        "artifact_ref": [
+          "memory.episodic.e6daa064-9a33-4b22-b28c-5d6dd6de8a57",
+          1
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "read_calendar",
+          "arguments": {}
+        },
+        {
+          "name": "book_time",
+          "arguments": {
+            "start": "14:00",
+            "duration_minutes": 45
+          }
+        },
+        {
+          "name": "review_booking",
+          "arguments": {}
+        }
+      ]
+    },
+    {
+      "request": "CAL-204",
+      "user": "maya",
+      "session": "maya-wednesday",
+      "question": "Schedule a 45-minute writing block on 2026-10-08. Use my feedback from the rejected writing booking.",
+      "answer": "Created a 45-minute writing block on 2026-10-08 at 09:00. Booking feedback: accepted. User feedback: That works for me. The event remains at its booked time.",
+      "outcome": {
+        "event_id": "b7be7f77-c08f-4f68-a97f-40912b1a222d",
+        "user": "maya",
+        "date": "2026-10-08",
+        "title": "Writing",
+        "start": "09:00",
+        "duration_minutes": 45,
+        "valid": true,
+        "accepted": true,
+        "feedback": "That works for me."
+      },
+      "reward": 1.0,
+      "available_starts": [
+        "09:00",
+        "14:00"
+      ],
+      "recalled": [
+        {
+          "episode": "E3",
+          "recalled_ref": [
+            "memory.episodic.e6daa064-9a33-4b22-b28c-5d6dd6de8a57",
+            1
+          ],
+          "current_ref": [
+            "memory.episodic.e6daa064-9a33-4b22-b28c-5d6dd6de8a57",
+            2
+          ],
+          "q_before": 0.5,
+          "q_after": 0.75
+        }
+      ],
+      "written_episode": "E4",
+      "written": {
+        "tier": "episodic",
+        "entry_id": "35043039-1918-4c24-bea4-d2485571ada0",
+        "artifact_ref": [
+          "memory.episodic.35043039-1918-4c24-bea4-d2485571ada0",
+          1
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "read_calendar",
+          "arguments": {}
+        },
+        {
+          "name": "book_time",
+          "arguments": {
+            "start": "09:00",
+            "duration_minutes": 45
+          }
+        },
+        {
+          "name": "review_booking",
+          "arguments": {}
+        }
+      ]
+    }
+  ],
+  "measurement": {
+    "requests": 4,
+    "valid_bookings": 4,
+    "invalid_bookings": 0,
+    "accepted": 3,
+    "rejected": 1,
+    "unobserved": 0,
+    "acceptance_rate": 0.75
+  },
+  "handoff": {
+    "maya": {
+      "answer": "Past scheduling experience supplied by the harness:\n- Asked: Schedule a 45-minute writing block on 2026-10-07.\n  Answered: Created a 45-minute writing block on 2026-10-07 at 14:00. Booking feedback: rejected. User feedback: Mornings work better now; please use 09:00 for writing. The event remains at its booked time.",
+      "recalled": [
+        {
+          "tier": "episodic",
+          "entry_id": "e6daa064-9a33-4b22-b28c-5d6dd6de8a57",
+          "artifact_ref": [
+            "memory.episodic.e6daa064-9a33-4b22-b28c-5d6dd6de8a57",
+            2
+          ],
+          "scope": "user:maya"
+        }
+      ]
+    },
+    "leo": {
+      "answer": "No earlier scheduling experience is available for this user.",
+      "recalled": []
+    }
+  },
+  "limits": "Scripted responses and scripted user reviews illustrate mechanics; this is not a performance improvement benchmark."
+}

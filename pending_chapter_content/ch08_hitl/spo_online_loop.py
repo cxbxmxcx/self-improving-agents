@@ -1,10 +1,10 @@
-"""Pending Ch 8 demo: online prompt improvement with auto-promote.
+"""Pending Chapter 10 demo: online prompt improvement with auto-promote.
 
 This script demonstrates the OnlineImprover pattern and is held here
-until Chapter 8 (HITL + live feedback) is drafted, where the auto-
+until Chapter 10 (HITL + live feedback) is drafted, where the auto-
 promotion semantics pair naturally with the chapter's HITL gates and
-implicit-feedback signals. Ch 2 (the foundational improvement chapter)
-covers the offline pattern only.
+implicit-feedback signals. Chapter 2 (the foundational improvement
+chapter) covers the offline pattern only.
 
 Where offline runs SPO against a labeled eval set and waits for a
 human to promote the winner, this script wires an `OnlineImprover` to

@@ -1,8 +1,8 @@
-"""HelixAgent v0 extensions: the Ch 3 tool-description scaffolding.
+"""HelixAgent v0 extensions: the Chapter 7 tool-description scaffolding.
 
 The v0 building blocks (genesis prompt, retrieve tool, agent factory) live in
 `chapters/ch02/agent_v0.py` and are re-exported here so existing importers keep
-working. This module adds the pieces Chapter 3 needs: the retrieve tool's
+working. This module adds the pieces Chapter 7 needs: the retrieve tool's
 description promoted to a TOOL_DESCRIPTION artifact, and a tool whose
 description a search method can improve. SPEC §16.2.2.
 
@@ -40,13 +40,13 @@ from chapters.ch02.agent_v0 import (
 
 load_env()
 
-# Ch 2 bakes the description string into the @tool decorator; Ch 3 promotes it
+# Chapter 2 bakes the description string into the @tool decorator; Chapter 7 promotes it
 # to a TOOL_DESCRIPTION artifact so a search method can improve it.
 RETRIEVE_DESCRIPTION_ID = "tool_description.helixagent.retrieve"
 
 
 def build_retrieve_description_artifact() -> Artifact:
-    """The genesis TOOL_DESCRIPTION artifact for the retrieve tool. Ch 3
+    """The genesis TOOL_DESCRIPTION artifact for the retrieve tool. Chapter 7
     aims search methods at this artifact to improve how the LLM understands
     when and how to call the tool."""
     return genesis(
@@ -61,7 +61,7 @@ def build_retrieve_tool_with_artifact_description(
     description_artifact: Artifact | None = None,
     corpus_path: Path = CORPUS_PATH,
 ) -> TextDescriptionTool:
-    """The Ch 3 retrieve tool: same Python implementation, but the LLM-facing
+    """The Chapter 7 retrieve tool: same Python implementation, but the LLM-facing
     description is a TOOL_DESCRIPTION artifact a search method can improve.
 
     Pass a specific description artifact (e.g. a candidate under test) or

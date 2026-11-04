@@ -10,7 +10,7 @@ operates on a trajectory in isolation. It reads:
   - The trajectory step pattern (retrieve called? abstain reached?)
 
 ...and rates it 0-1 against a rubric. The rubric is the artifact under
-improvement at this layer; the book's Ch 8 thesis ("rubrics decay, calibrate
+improvement at this layer; the book's Chapter 9 thesis ("rubrics decay, calibrate
 periodically") becomes concrete here.
 
 Use this signal when you cannot get pairwise comparisons (live production

@@ -1,0 +1,78 @@
+{
+  "config": {
+    "questions": {
+      "multi_event_limit": {
+        "hook": "route",
+        "type": "probability",
+        "instructions": "The request changes or sets a time, date, or duration for two or more calendar items, or for one calendar item and another person's availability in the same request."
+      },
+      "ambiguous_reference": {
+        "hook": "route",
+        "type": "probability",
+        "instructions": "The request names a person, event, or message that could refer to more than one stored item, and the request does not include a unique identifier such as a full title, sender, or time."
+      },
+      "reply_scope": {
+        "hook": "route",
+        "type": "probability",
+        "instructions": "The request asks to draft or edit a reply, and it asks to cover every point, answer more than one question, or add an extra detail beyond a single direct reply."
+      },
+      "consequence": {
+        "hook": "tool",
+        "type": "choice",
+        "instructions": "What does this tool call change for people other than the user?",
+        "criteria": {
+          "none": "Only the user's own calendar or drafts",
+          "other_event": "An event another person organized",
+          "sends": "A message sent in the user's name"
+        }
+      },
+      "reply_complete": {
+        "hook": "output",
+        "type": "probability",
+        "instructions": "The reply answers every question the request asks."
+      }
+    },
+    "rules": [
+      {
+        "question": "ambiguous_reference",
+        "op": ">=",
+        "action": "ask",
+        "threshold": "ask"
+      },
+      {
+        "question": "multi_event_limit",
+        "op": ">=",
+        "action": "deliberate",
+        "threshold": "deliberate"
+      },
+      {
+        "question": "reply_scope",
+        "op": ">=",
+        "action": "deliberate",
+        "threshold": "deliberate"
+      },
+      {
+        "question": "consequence",
+        "op": "not_in",
+        "action": "confirm",
+        "value": [
+          "none"
+        ]
+      },
+      {
+        "question": "reply_complete",
+        "op": "<",
+        "action": "revise",
+        "threshold": "revise"
+      }
+    ]
+  },
+  "config_version": 4,
+  "thresholds": {
+    "ask": 0.4,
+    "deliberate": 0.4,
+    "revise": 0.5
+  },
+  "thresholds_version": 8,
+  "training_score": 0.7665301495
+}

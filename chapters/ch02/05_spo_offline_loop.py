@@ -6,8 +6,8 @@ compares two prompts' outputs against a rubric, the same self-supervised idea
 as section 2.3, now assembled from Helix abstractions. Candidates are written
 to the archive with measurements, but the running agent does not switch to a
 new prompt automatically: a human (or the dashboard's promote button) decides
-when to call `archive.promote()`. Auto-promotion is a Ch 8 topic, paired with
-HITL and live feedback.
+when to call `archive.promote()`. Auto-promotion is a Chapter 10 topic, paired
+with HITL and live feedback.
 
 Recipe:
 

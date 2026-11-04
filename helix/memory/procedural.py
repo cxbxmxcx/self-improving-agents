@@ -4,9 +4,10 @@ Stores named, reusable procedures (skills) the agent has accumulated. Each
 skill has a description, optional code, provenance (who/what created it,
 when), and a usage count that grows over time. SPEC section 7.2.
 
-Chapter 6 is where this tier gets actively used (Voyager-style skill
-libraries, Anthropic's skill files). The contract is here from the start so
-the platform shape is stable.
+Chapter 6 puts this tier to work: text skills reach the model as context
+through the memory hooks, and code skills (body_kind "python") become tools
+through helix/memory/code_skills.py. Chapter 7 builds on both when the
+harness itself comes under search.
 
 Skills are also Artifacts (kind=Subtype.SKILL); this tier handles
 their storage and retrieval. The Archive handles their lineage and
@@ -21,9 +22,16 @@ import json
 import sqlite3
 import uuid
 from datetime import datetime, timezone
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from helix.memory.archive_bridge import (
+    latest_artifact,
+    memory_artifact_content,
+    record_genesis,
+    record_version,
+)
 from helix.memory.base import (
     ConsolidationReport,
     EntryId,
@@ -33,6 +41,8 @@ from helix.memory.base import (
     MemoryQuery,
     Scope,
     ScopeKey,
+    ref_from_str,
+    ref_to_str,
 )
 from helix.memory.episodic import _cosine, _embed
 
@@ -76,8 +86,22 @@ class ProceduralMemory:
 
     tier_name: str = "procedural"
 
-    def __init__(self, path: str | Path = ":memory:", check_same_thread: bool = True) -> None:
+    def __init__(
+        self,
+        path: str | Path = ":memory:",
+        check_same_thread: bool = True,
+        archive: Any | None = None,
+        embedding_fn: Callable[[list[str]], list[list[float]]] | None = None,
+    ) -> None:
         self.path = str(path)
+        # As in the episodic tier: a chapter may fix its own encoder so
+        # recall needs no model download. None keeps the default embedder.
+        self.embedding_fn = embedding_fn
+        # With an archive, a skill row with no explicit artifact_ref is
+        # recorded as a MEMORY_ENTRY artifact and re-saves become child
+        # versions. Chapter 7 passes an explicit ref to a text:skill artifact
+        # instead, and that ref wins.
+        self.archive = archive
         self._conn = sqlite3.connect(self.path, check_same_thread=check_same_thread)
         self._conn.row_factory = sqlite3.Row
         self._conn.executescript(_SCHEMA)
@@ -97,10 +121,33 @@ class ProceduralMemory:
     ) -> EntryId:
         """Upsert a skill. Description is embedded for fuzzy retrieval."""
         scope_key = scope_key or ScopeKey(Scope.GLOBAL, "*")
-        vectors = _embed([description]) if description else []
+        vectors = (self.embedding_fn or _embed)([description]) if description else []
         embedding = vectors[0] if vectors else None
-        entry_id = str(uuid.uuid4())
-        artifact_ref_str = f"{artifact_ref[0]}:{artifact_ref[1]}" if artifact_ref else None
+        existing = self._conn.execute(
+            "SELECT id, artifact_ref FROM procedural_skills WHERE scope = ? AND scope_key = ? AND skill_name = ?",
+            (scope_key.scope.value, scope_key.key, name),
+        ).fetchone()
+        entry_id = existing["id"] if existing is not None else str(uuid.uuid4())
+        if artifact_ref is None and self.archive is not None:
+            prior = ref_from_str(existing["artifact_ref"]) if existing is not None else None
+            entry = MemoryEntry(
+                id=entry_id,
+                scope_key=scope_key,
+                content={"name": name, "description": description, "body": body, "body_kind": body_kind},
+                metadata=dict(metadata or {}),
+            )
+            parent = await latest_artifact(self.archive, prior[0]) if prior else None
+            if parent is None or not parent.id.startswith("memory."):
+                artifact_ref = await record_genesis(self.archive, self.tier_name, entry)
+            else:
+                artifact_ref = await record_version(
+                    self.archive,
+                    parent,
+                    memory_artifact_content(self.tier_name, entry),
+                    created_by=str((metadata or {}).get("created_by") or "agent"),
+                    operator="edit",
+                )
+        artifact_ref_str = ref_to_str(artifact_ref)
         self._conn.execute(
             """
             INSERT INTO procedural_skills
@@ -193,6 +240,7 @@ class ProceduralMemory:
             created_at=datetime.fromisoformat(row["created_at"]),
             last_accessed_at=datetime.fromisoformat(row["last_used_at"]) if row["last_used_at"] else None,
             access_count=int(row["usage_count"]),
+            artifact_ref=ref_from_str(row["artifact_ref"]),
         )
 
     # ---------------- MemoryTier contract ----------------
@@ -233,13 +281,16 @@ class ProceduralMemory:
             # Sort by usage_count desc as a sensible default
             candidates.sort(key=lambda e: e.access_count, reverse=True)
             return candidates[: query.k]
-        vectors = _embed([query.text])
+        vectors = (self.embedding_fn or _embed)([query.text])
         if not vectors:
             return candidates[: query.k]
         qvec = vectors[0]
         scored = []
         for entry in candidates:
             sim = _cosine(qvec, entry.embedding) if entry.embedding else 0.0
+            # Kept on the returned copy only, so a harness can report how
+            # closely the recalled skill matched; the stored row is unchanged.
+            entry.metadata["retrieval_score"] = round(float(sim), 4)
             scored.append((sim, entry))
         scored.sort(key=lambda x: x[0], reverse=True)
         return [e for _, e in scored[: query.k]]

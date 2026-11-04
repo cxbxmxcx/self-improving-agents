@@ -5,13 +5,13 @@ The schema is derived from the function's type hints via Pydantic's create_model
 so readers write normal Python and get LLM-ready JSON schemas for free.
 
 Tool descriptions are themselves artifacts (Spec §1.2 kind=tool_description),
-but at v0 we don't put them under search yet. Ch 6 turns the description
-attribute into an Artifact and aims searches at it.
+but at v0 we don't put them under search yet. TextDescriptionTool below
+holds the description as an Artifact; Chapter 7 aims searches at it.
 
 ToolFromArtifact (SPEC §16.2.2) bundles a CODE artifact (the implementation)
 with a TOOL_DESCRIPTION artifact (the LLM-facing description) into a single
 Tool. Used when both the implementation and the description are under
-improvement (Ch 11/12). Plain `tool` decorator + plain `Tool` instances stay
+improvement (Chapter 7). Plain `tool` decorator + plain `Tool` instances stay
 the simpler default for chapters where the tool isn't being improved.
 """
 
@@ -56,7 +56,7 @@ def tool(description: str | None = None) -> Callable[[Callable[..., Any]], Tool]
 
     The Pydantic args model is built from the function's type hints. The
     description defaults to the function's docstring, but can be overridden,
-    which is what the book exploits in Ch 6 when descriptions become artifacts.
+    which is what the book exploits in Chapter 7 when descriptions come under search.
     """
 
     def wrap(fn: Callable[..., Any]) -> Tool:
@@ -247,7 +247,7 @@ class ToolFromArtifact:
 
 # ---------------------------------------------------------------------------
 # TextDescriptionTool: plain Python implementation, artifact-backed description.
-# SPEC §16.2.2 (the description-only path). Chapter 3.
+# SPEC §16.2.2 (the description-only path). Demonstrated in Chapter 7.
 # ---------------------------------------------------------------------------
 
 
@@ -255,11 +255,11 @@ class TextDescriptionTool:
     """A Tool whose implementation is a plain Python callable but whose
     LLM-facing description is a TOOL_DESCRIPTION artifact under improvement.
 
-    This is the Ch 3 shape: the *description* (what the LLM reads to decide
-    whether and how to call the tool) is the artifact a search method
-    mutates. The implementation stays a normal Python function — code is not
-    under search until Ch 11/12, where the full ToolFromArtifact path takes
-    over.
+    This is the first shape Chapter 7 puts under search: the *description*
+    (what the LLM reads to decide whether and how to call the tool) is the
+    artifact a search method mutates. The implementation stays a normal Python
+    function; code comes under search later in Chapter 7, where the full
+    ToolFromArtifact path takes over.
 
     Construction:
         retrieve = TextDescriptionTool(

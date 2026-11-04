@@ -6,10 +6,10 @@ runnable baseline is `01_helixagent_v0.py`, which imports from here, and
 `02_helixagent_v1.py` reuses the same prompt text and tool so that the only
 difference between v0 and v1 is where the system prompt comes from.
 
-Only the pieces Chapter 2 needs live here. The Ch 3 tool-description
+Only the pieces Chapter 2 needs live here. The Chapter 7 tool-description
 scaffolding (the TOOL_DESCRIPTION artifact and the artifact-backed retrieve
 tool) stays in `chapter_appendices/getting_started/helixagent_v0.py`, which is
-where Chapter 3 imports it from. SPEC section 11.1.
+where Chapter 7 imports it from. SPEC section 11.1.
 """
 
 from __future__ import annotations
@@ -59,7 +59,7 @@ def _retrieve_index(corpus_path: Path = CORPUS_PATH):
 
 
 def build_retrieve_tool(corpus_path: Path = CORPUS_PATH) -> Tool:
-    """The Ch 2 retrieve tool: description baked into the @tool decorator."""
+    """The Chapter 2 retrieve tool: description baked into the @tool decorator."""
     index = _retrieve_index(corpus_path)
 
     @tool(description=RETRIEVE_DESCRIPTION_V0)

@@ -35,6 +35,7 @@ from helix.agent import Agent
 from helix.archive.archive import Archive
 from helix.artifact import Artifact
 from helix.eval.source import EvalSource
+from helix.improvement.deploy import expand_composite
 from helix.improvement.guards import reject_composite_constituent
 from helix.improvement.policy import ImproverMode, ImproverPolicy, Schedule
 from helix.improvement.promotion import (
@@ -255,15 +256,21 @@ class OfflineImprover:
             await self.archive.put_artifact(self.seed_fallback)
         return self.seed_fallback
 
-    def _capped_build_agent(self, candidate: Artifact):
+    async def _capped_build_agent(self, candidate: Artifact):
         """Clone the agent with `candidate` swapped in for the target artifact,
         applying the policy's per-question caps (max iterations, max tool calls).
 
         SPEC §15.2: the improver tests candidates by calling
         `agent.with_artifacts({target_id: candidate})`, then trims the clone
-        to the policy's per-question budgets.
+        to the policy's per-question budgets. A composite candidate is
+        expanded into the constituent versions it binds (§18.6), so the
+        clone runs the combination being measured.
         """
-        clone = self.agent.with_artifacts({self.target_artifact_id: candidate})
+        # The agent holds the versions a candidate leaves unchanged; the
+        # archive holds the ones a search proposed.
+        bound = [self.agent.find_artifact(ref[0]) for ref in candidate.constituent_refs]
+        overrides = await expand_composite(self.archive, candidate, [a for a in bound if a is not None])
+        clone = self.agent.with_artifacts(overrides)
         clone.max_iterations = self.policy.max_iterations_per_question
         clone.max_tool_calls = self.policy.max_tool_calls_per_question
         return clone

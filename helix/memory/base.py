@@ -73,6 +73,14 @@ class MemoryEntry:
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     last_accessed_at: datetime | None = None
     access_count: int = 0
+    # The (id, version) of this entry's MEMORY_ENTRY artifact in the shared
+    # archive, when the tier was built with one (SPEC §7.3). The tier row is
+    # the live index; the archive holds every version and the parent chain.
+    artifact_ref: tuple[str, int] | None = None
+
+    @property
+    def artifact_id(self) -> str | None:
+        return self.artifact_ref[0] if self.artifact_ref else None
 
     def to_row(self) -> dict[str, Any]:
         """Serialize to a flat dict (for SQLite or JSON)."""
@@ -87,7 +95,33 @@ class MemoryEntry:
             "created_at": self.created_at.isoformat(),
             "last_accessed_at": self.last_accessed_at.isoformat() if self.last_accessed_at else None,
             "access_count": self.access_count,
+            "artifact_ref": list(self.artifact_ref) if self.artifact_ref else None,
         }
+
+
+def ref_to_str(ref: tuple[str, int] | None) -> str | None:
+    """Serialize an artifact ref for a tier column ("id:version")."""
+    return f"{ref[0]}:{ref[1]}" if ref else None
+
+
+def ref_from_str(s: str | None) -> tuple[str, int] | None:
+    """Parse a tier column back into an artifact ref, tolerating blanks."""
+    if not s:
+        return None
+    head, _, tail = s.rpartition(":")
+    try:
+        return (head, int(tail))
+    except ValueError:
+        return None
+
+
+def memory_artifact_id(tier: str, entry_id: str) -> str:
+    """The artifact id namespace for memory entries: one id per entry.
+
+    Versions of the same entry share the id, so UPVOTE, DOWNVOTE, and EDIT
+    produce children with parent pointers rather than new ids.
+    """
+    return f"memory.{tier}.{entry_id}"
 
 
 # ---------------------------------------------------------------------------

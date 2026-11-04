@@ -25,7 +25,7 @@ idea for free, then the LLM loops that complete the cost ladder:
 | 4.3 | Quality-diversity sampling | `04_qd_sampler.py` (no LLM) |
 | 4.3 | A deceptive landscape: greedy sticks, an archive escapes | `05_deceptive_optimum.py` (no LLM) |
 | 4.3 | DGM reaches 1.00 with an archive that never forgets | `06_revenue_dgm_loop.py` |
-| 4.4 | Seeing the evolution: the lineage dashboard | `helix/dashboard/app.py` |
+| 4.4 | Seeing the evolution: the lineage dashboard | `helix_web/run.py` |
 
 The task and scorer are the same `agents/revenue.py` from chapter 3, so the
 only thing that changes between SPO, GEPA, and DGM is the search. The full
@@ -179,10 +179,10 @@ method, so the tree comes up colored and ranked.
 After running the two loops, launch the viewer:
 
 ```
-streamlit run helix/dashboard/app.py
+python helix_web/run.py
 ```
 
-Point it at `chapters/ch04/runs/revenue_gepa.sqlite` or
+Open the Helix Observatory at http://localhost:8610, pick `chapters/ch04/runs/revenue_gepa.sqlite` or
 `revenue_dgm.sqlite`, focus the prompt artifact, and open the Lineage panel.
 GEPA's tree is a shallow fan that narrows as the population converges, while
 DGM's is a deep, branching archive with one long shoot reaching down to an old
@@ -197,8 +197,9 @@ in chapter 2.
 
 - **Memory-grounded search**: evolutionary search where the artifact is a
   memory entry, not a prompt. Chapter 5.
-- **Online evolutionary search**: continuous mutation against live traffic,
-  no labeled eval set. Chapter 5, with HITL and feedback.
+- **Online search**: continuous improvement against live traffic, no
+  labeled eval set. Chapter 5 auto-promotes memory by the layer rule;
+  Chapter 10 adds the human gate and live feedback.
 - **Code-level DGM**: aiming the archive at a tool's implementation rather
-  than a prompt, where the agent edits its own code. Later chapters, once
+  than a prompt, where the agent edits its own code. Chapter 7, when
   sandboxed execution joins the framework.

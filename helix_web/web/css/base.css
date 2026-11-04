@@ -1,0 +1,197 @@
+/* Base layout: header bar, sidebar nav, main panel, drawer. */
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: var(--fs-md);
+}
+
+input, select, textarea { accent-color: var(--sepia); }
+
+#app {
+  display: grid;
+  grid-template: "header header" auto "nav main" 1fr / 210px 1fr;
+  height: 100vh;
+}
+
+/* ---------- header ---------- */
+header.topbar {
+  grid-area: header;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: var(--sp-2) var(--sp-4);
+  background: var(--bg-panel);
+  border-bottom: 3px double var(--border-strong);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-right: var(--sp-4);
+}
+.brand svg.emblem { height: 30px; width: auto; flex: none; opacity: 0.9; }
+.brand .name {
+  font-size: 19px;
+  font-weight: 600;
+  color: var(--sepia);
+  font-variant-caps: small-caps;
+  letter-spacing: 0.09em;
+}
+.brand .tag { font-size: var(--fs-xs); font-style: italic; color: var(--fg-faint); }
+
+.topbar select {
+  font: inherit;
+  font-size: var(--fs-sm);
+  padding: var(--sp-1) var(--sp-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--bg-panel);
+  color: var(--fg);
+  max-width: 340px;
+}
+.topbar label { font-size: var(--fs-xs); color: var(--fg-muted); margin-right: var(--sp-1); }
+
+.live-pill {
+  margin-left: auto;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  color: var(--fg-faint);
+  background: var(--bg-inset);
+}
+.live-pill.live { color: #fff; background: var(--npg-teal); border-color: var(--npg-teal); }
+.live-pill.stale { color: #fff; background: var(--warn); border-color: var(--warn); }
+.live-pill.offline { color: #fff; background: var(--err); border-color: var(--err); }
+
+/* ---------- nav ---------- */
+nav.sidebar {
+  grid-area: nav;
+  padding: var(--sp-4) 0;
+  background: var(--bg-panel);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+}
+nav.sidebar a {
+  display: block;
+  padding: var(--sp-2) var(--sp-4);
+  color: var(--fg-muted);
+  text-decoration: none;
+  font-size: var(--fs-md);
+  font-variant-caps: small-caps;
+  letter-spacing: 0.05em;
+  border-left: 3px solid transparent;
+}
+nav.sidebar a:hover { background: var(--bg-inset); }
+nav.sidebar a.active {
+  color: var(--sepia);
+  font-weight: 650;
+  border-left-color: var(--gilt);
+  background: var(--bg-inset);
+}
+nav.sidebar .nav-section {
+  margin: var(--sp-4) var(--sp-4) var(--sp-1);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  color: var(--fg-faint);
+}
+
+/* ---------- main ---------- */
+main#panel {
+  grid-area: main;
+  overflow: auto;
+  padding: var(--sp-5);
+}
+
+main#panel a, #drawer a { color: var(--sepia); text-decoration-color: var(--gilt); }
+
+/* ---------- expanded (full screen) reading mode ---------- */
+/* The whole window becomes the plate: header and sidebar step aside, the
+   panel keeps its toolbar, and the drawer still opens over it. Panels opt
+   in via the expand=1 URL param; the router clears the class on render. */
+body.expanded #app { grid-template: "main" 1fr / 1fr; }
+body.expanded header.topbar,
+body.expanded nav.sidebar,
+body.expanded main#panel h2.panel-title,
+body.expanded main#panel p.panel-caption { display: none; }
+body.expanded main#panel { padding: var(--sp-3) var(--sp-4); }
+
+h2.panel-title {
+  margin: 0 0 var(--sp-1);
+  font-size: var(--fs-xl);
+  font-weight: 600;
+  color: var(--sepia);
+  font-variant-caps: small-caps;
+  letter-spacing: 0.05em;
+}
+p.panel-caption {
+  margin: 0 0 var(--sp-5);
+  color: var(--fg-muted);
+  font-size: var(--fs-sm);
+  font-style: italic;
+  max-width: 88ch;
+}
+
+section.block { margin-bottom: var(--sp-6); }
+section.block > h3 {
+  margin: 0 0 var(--sp-3);
+  font-size: var(--fs-md);
+  font-weight: 650;
+  color: var(--fg);
+}
+
+.placeholder {
+  color: var(--fg-faint);
+  background: var(--bg-panel);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  padding: var(--sp-5);
+  font-size: var(--fs-sm);
+}
+
+/* ---------- drawer ---------- */
+#drawer-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(44, 44, 42, 0.35);
+  display: none;
+}
+#drawer {
+  position: fixed; top: 0; right: 0; bottom: 0;
+  width: min(560px, 92vw);
+  background: var(--bg-panel);
+  border-left: 3px double var(--border-strong);
+  box-shadow: -6px 0 24px rgba(58, 47, 31, 0.18);
+  transform: translateX(100%);
+  transition: transform 160ms ease-out;
+  overflow-y: auto;
+  padding: var(--sp-5);
+}
+#drawer.open { transform: translateX(0); }
+#drawer-backdrop.open { display: block; }
+
+/* ---------- toast ---------- */
+#toasts {
+  position: fixed; bottom: var(--sp-5); right: var(--sp-5);
+  display: flex; flex-direction: column; gap: var(--sp-2);
+  z-index: 50;
+}
+.toast {
+  background: var(--sepia);
+  color: #F5F0E1;
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: var(--radius-md);
+  border-left: 2px solid var(--gilt);
+  font-size: var(--fs-sm);
+  box-shadow: 0 4px 16px rgba(58, 47, 31, 0.25);
+}
+.toast.error { background: var(--err); }
+.toast.success { background: var(--npg-teal); }

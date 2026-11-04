@@ -87,7 +87,7 @@ class WorkingMemory:
         return excess
 
     async def consolidate(self) -> ConsolidationReport:
-        """No-op in v0. Chapter 3 adds summarization of old turns here."""
+        """No-op in v0. Chapter 5's consolidation pass adds summarization of old turns here."""
         return ConsolidationReport(
             tier=self.tier_name,
             entries_before=len(self._messages),

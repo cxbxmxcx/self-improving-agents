@@ -4,7 +4,7 @@ Periodically runs the candidate artifact against a small fixed eval set with
 known reference answers. Returns the candidate's pass rate as a
 GapMeasurement.
 
-This is the drift anchor of Chapter 8 in concrete form. When LiveTrajectoryJudge
+This is the drift anchor of Chapters 9 and 12 in concrete form. When LiveTrajectoryJudge
 or ImplicitFeedbackSignal start drifting (rubric decay; user-satisfaction
 hacking), the golden set's pass rate is the truth check that catches it.
 

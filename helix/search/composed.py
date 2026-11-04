@@ -15,8 +15,9 @@ shape; this class is the generic fallback.
 
 The search keeps the current champion artifact per constituent role in memory so
 propose can seed each child search and select can advance the accepted role.
-Persisting the constituent versions for cross-process deployment resolution
-(§18.6) is the improver's job, not the search's.
+Each proposed constituent is also put in the archive, and the variant names it by
+ref, so recording works and an improver can expand the composite into the exact
+versions it binds (§18.6).
 """
 
 from __future__ import annotations
@@ -57,6 +58,9 @@ class ComposedSearch:
         self._improvable_roles = [r for r in constituents if r in child_searches]
         self._label = label
         self._next = 0
+        # Proposed constituents by ref; variant metadata holds only the ref,
+        # because the archive records metadata as JSON.
+        self._proposed: dict[tuple[str, int], Artifact] = {}
 
     @property
     def kind(self) -> SearchKind:
@@ -94,16 +98,26 @@ class ComposedSearch:
             new_composite = seed.mutate(
                 new_content, created_by=f"{self._label}:{role}"
             )
+            self._proposed[new_constituent.ref] = new_constituent
+            if archive is not None and hasattr(archive, "put_artifact"):
+                await archive.put_artifact(new_constituent)
             yield Variant(
                 artifact=new_composite,
                 parent=seed,
                 search_method=f"{self.kind.value}:{role}",
                 metadata={
                     "changed_role": role,
-                    "constituent_artifact": new_constituent,
+                    "constituent_ref": list(new_constituent.ref),
                 },
             )
             return  # one constituent variant per round (coordinate descent)
+
+    def constituents_for(self, variant: Variant) -> list[Artifact]:
+        """The constituents a proposed composite binds that only this search
+        holds so far, for expanding it before evaluation (§18.6)."""
+        ref = variant.metadata.get("constituent_ref")
+        found = self._proposed.get(tuple(ref)) if ref else None
+        return [found] if found is not None else []
 
     async def select(
         self,
@@ -124,9 +138,9 @@ class ComposedSearch:
         )
         # Advance the accepted role's champion so the next round seeds from it.
         role = winner.metadata.get("changed_role")
-        constituent = winner.metadata.get("constituent_artifact")
-        if role is not None and isinstance(constituent, Artifact):
-            self._current[role] = constituent
+        accepted = self.constituents_for(winner)
+        if role is not None and accepted:
+            self._current[role] = accepted[0]
         return winner.artifact
 
     def _rebuild_content(

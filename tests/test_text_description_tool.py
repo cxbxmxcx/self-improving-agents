@@ -1,4 +1,4 @@
-"""Tests for TextDescriptionTool (SPEC §16.2.2, Ch 3)."""
+"""Tests for TextDescriptionTool (SPEC §16.2.2, Chapter 7)."""
 
 from __future__ import annotations
 

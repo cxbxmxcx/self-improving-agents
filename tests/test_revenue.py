@@ -1,4 +1,4 @@
-"""Deterministic tests for the Chapter 3 revenue data-investigation task.
+"""Deterministic tests for the revenue data-investigation task (Chapters 3 and 4).
 
 These exercise the ground-truth pipeline and the scorers, which are plain code with
 no LLM, so they run fast and pin down the task the search methods optimize against.

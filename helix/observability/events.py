@@ -145,9 +145,56 @@ class MutationProposed(Event):
 
 @dataclass
 class HookFired(Event):
+    """A hook wrapper acted. `wrapper` names it (the chapter 6 router, monitor,
+    task state, or reflector), `verdict` says what it decided, and `detail`
+    carries the evidence, which is what the Observatory's decision timeline draws."""
+
     event_type: str = "hook_fired"
     point: str = ""
     trajectory_id: str = ""
+    wrapper: str = ""
+    verdict: str = ""
+    detail: dict[str, Any] = field(default_factory=dict)
+
+
+# ---------------------------------------------------------------------------
+# Memory events (SPEC §10.1, v0.3). Memory is a hook pair, so its activity
+# needs its own events for consumers to render what was recalled and written.
+# ---------------------------------------------------------------------------
+
+@dataclass
+class MemoryRead(Event):
+    """A PRE_MODEL memory hook recalled entries for a run."""
+    event_type: str = "memory_read"
+    trajectory_id: str = ""
+    tier: str = ""
+    n_entries: int = 0
+    entry_ids: list[str] = field(default_factory=list)
+    artifact_refs: list[list[Any]] = field(default_factory=list)
+
+
+@dataclass
+class MemoryWritten(Event):
+    """A SESSION_END memory hook (or an operator) persisted an entry."""
+    event_type: str = "memory_written"
+    trajectory_id: str = ""
+    tier: str = ""
+    entry_id: str = ""
+    scope: str = ""
+    artifact_ref: list[Any] | None = None
+    operator: str = "add"
+
+
+@dataclass
+class Consolidated(Event):
+    """A consolidation pass finished on one tier."""
+    event_type: str = "consolidated"
+    tier: str = ""
+    entries_before: int = 0
+    entries_after: int = 0
+    entries_summarized: int = 0
+    entries_dropped: int = 0
+    notes: str = ""
 
 
 # ---------------------------------------------------------------------------

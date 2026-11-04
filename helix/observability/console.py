@@ -170,7 +170,8 @@ class ConsoleRenderer:
         if isinstance(event, TrajectoryCompleted):
             return f"      [trajectory ] {event.outcome}  steps={event.num_steps}  {event.trajectory_id[:8]}"
         if isinstance(event, HookFired):
-            return f"      [hook       ] {event.point}  {event.trajectory_id[:8]}"
+            acted = f"  {event.wrapper} -> {event.verdict}" if event.wrapper else ""
+            return f"      [hook       ] {event.point}{acted}  {event.trajectory_id[:8]}"
         # Fallback for verbose mode or new event types
         return f"  [{et}] {event.fields()}"
 

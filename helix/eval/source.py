@@ -9,8 +9,8 @@ Two concrete implementations:
 - RecentTrajectorySource: subscribes to TrajectoryCompleted events on the
   event bus, buffers the last N completed trajectories, and serves them as
   questions for live-traffic improvement. The "candidate vs reference" judge
-  compares fresh agent runs against the stored ones. Used in Ch 3+ when the
-  Improver learns from production traffic.
+  compares fresh agent runs against the stored ones. Used from Chapter 5 on,
+  when the Improver learns from production traffic.
 
 Both conform to the EvalSource Protocol so the Improver does not care which
 mode is active.
@@ -66,7 +66,7 @@ class RecentTrajectorySource:
     output. That is intentionally weak: the Improver using this source is
     asking "would a different prompt have done this same task differently
     and better?" rather than "is this answer correct against ground truth."
-    Ch 8 introduces stronger ground-truth sourcing for live traffic.
+    Chapter 9 introduces stronger ground-truth sourcing for live traffic.
     """
 
     def __init__(self, buffer_size: int = 100, bus: EventBus | None = None) -> None:

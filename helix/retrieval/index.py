@@ -7,7 +7,7 @@ text plus a 768-dim vector from BAAI/bge-base-en-v1.5 and exposes:
   - search(): hybrid (vector + BM25) query, returns top-k chunks
 
 The embedding model loads on first use and stays cached. v0 sticks with a
-single model; Ch 3 puts the embedding choice under search.
+single model; putting the embedding choice under search is not scheduled.
 """
 
 from __future__ import annotations

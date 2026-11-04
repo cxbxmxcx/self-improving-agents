@@ -1,0 +1,254 @@
+{
+  "mode": "scripted walkthrough; not measured model performance",
+  "configuration": {
+    "algorithm": "one_step_value_update",
+    "alpha": 0.5,
+    "credit": "equal",
+    "utility_weight": 0.35,
+    "recency_weight": 0.0,
+    "episodic_k": 1,
+    "encoder": "studio-token-hash-1024-v1",
+    "model": "studio-scripted",
+    "prompt_sha256": "a11bc13240e25fafb85593c40ec8e997028acb7bdce21a22fdc0bd8ea080cd1d"
+  },
+  "corpus_sha256": {
+    "01_orbitlink_vpn.md": "4c8e6372519db5f1b6fe803e200e2150909a32b77ffc152b1bacf4ab29a81dd3",
+    "02_cratesync_assets.md": "ef7211b37525121d17be74dee300af40b7e83c3665053900d162e4d886447926",
+    "03_builddock_queue.md": "50061e1582e0a11eedfbb9a9ce2e4ab88d725c0ce09e6e6a92b4caaa7fa8b525",
+    "04_stagelink_audio.md": "af553f968209f52d969dbddfb9c4f1c19edb74cc5cbd78116d9ee34225f97363",
+    "05_accessdesk_permissions.md": "0fc7e9d1cb93856917db4b0a891a78d242fec8a96eea90dbd0166c48d4815404",
+    "06_support_handoffs.md": "0718fe19834fddff40be2304fee67f9b91fd8feb037ee63146c35d3e71bab418"
+  },
+  "tickets_sha256": "b3b3f8536dd58dd58a33ffd8f03fa4cbdda53f84b4c96fcae351f855048ac54d",
+  "episodes": {
+    "09815cf8-14ba-4944-b759-ea270bdf618b": "E1",
+    "5c8cc571-98d7-40a7-9235-115a5437f9eb": "E2",
+    "20508c59-44a1-41ed-ae0d-68f6faa15775": "E3",
+    "bb9a2528-b2a3-4e27-af2d-8a4e09fc6954": "E4"
+  },
+  "requests": [
+    {
+      "ticket": "MB-201",
+      "user": "maya",
+      "session": "maya-monday",
+      "question": "Moonbase Mayhem asset sync failed after my laptop woke. CrateSync shows NET01 and OrbitLink is disconnected.",
+      "answer": "Attempted reconnect_vpn; resolved. OrbitLink connected; the asset sync succeeded. Source consulted: 01_orbitlink_vpn.md.",
+      "outcome": {
+        "ticket_id": "MB-201",
+        "action": "reconnect_vpn",
+        "resolved": true,
+        "observed": "OrbitLink connected; the asset sync succeeded.",
+        "simulated": true
+      },
+      "reward": 1.0,
+      "recalled": [],
+      "written_episode": "E1",
+      "written": {
+        "tier": "episodic",
+        "entry_id": "09815cf8-14ba-4944-b759-ea270bdf618b",
+        "artifact_ref": [
+          "memory.episodic.09815cf8-14ba-4944-b759-ea270bdf618b",
+          1
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "retrieve",
+          "arguments": {
+            "query": "Moonbase Mayhem asset sync failed after my laptop woke. CrateSync shows NET01 and OrbitLink is disconnected. ",
+            "k": 3
+          }
+        },
+        {
+          "name": "support_step",
+          "arguments": {
+            "action": "reconnect_vpn"
+          }
+        }
+      ]
+    },
+    {
+      "ticket": "MB-202",
+      "user": "maya",
+      "session": "maya-tuesday",
+      "question": "Moonbase Mayhem asset sync is stuck again after my laptop woke. Can we use what worked last time?",
+      "answer": "Attempted reconnect_vpn; resolved. OrbitLink connected; the asset sync succeeded. Source consulted: 01_orbitlink_vpn.md.",
+      "outcome": {
+        "ticket_id": "MB-202",
+        "action": "reconnect_vpn",
+        "resolved": true,
+        "observed": "OrbitLink connected; the asset sync succeeded.",
+        "simulated": true
+      },
+      "reward": 1.0,
+      "recalled": [
+        {
+          "episode": "E1",
+          "recalled_ref": [
+            "memory.episodic.09815cf8-14ba-4944-b759-ea270bdf618b",
+            1
+          ],
+          "current_ref": [
+            "memory.episodic.09815cf8-14ba-4944-b759-ea270bdf618b",
+            2
+          ],
+          "q_before": 0.5,
+          "q_after": 0.75
+        }
+      ],
+      "written_episode": "E2",
+      "written": {
+        "tier": "episodic",
+        "entry_id": "5c8cc571-98d7-40a7-9235-115a5437f9eb",
+        "artifact_ref": [
+          "memory.episodic.5c8cc571-98d7-40a7-9235-115a5437f9eb",
+          1
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "retrieve",
+          "arguments": {
+            "query": "Moonbase Mayhem asset sync is stuck again after my laptop woke. Can we use what worked last time? - Asked: Moonbase Mayhem asset sync failed after my laptop woke. CrateSync shows NET01 and OrbitLink is disconnected.\n  Answered: Attempted reconnect_vpn; resolved. OrbitLink connected; the asset sync succeeded. Source consulted: 01_orbitlink_vpn.md.",
+            "k": 3
+          }
+        },
+        {
+          "name": "support_step",
+          "arguments": {
+            "action": "reconnect_vpn"
+          }
+        }
+      ]
+    },
+    {
+      "ticket": "MB-203",
+      "user": "maya",
+      "session": "maya-wednesday",
+      "question": "Moonbase Mayhem asset sync is stuck again. Should we try the previous fix?",
+      "answer": "Attempted reconnect_vpn; unresolved. OrbitLink is connected; CrateSync still reports AUTH17. Source consulted: 01_orbitlink_vpn.md.",
+      "outcome": {
+        "ticket_id": "MB-203",
+        "action": "reconnect_vpn",
+        "resolved": false,
+        "observed": "OrbitLink is connected; CrateSync still reports AUTH17.",
+        "simulated": true
+      },
+      "reward": 0.0,
+      "recalled": [
+        {
+          "episode": "E1",
+          "recalled_ref": [
+            "memory.episodic.09815cf8-14ba-4944-b759-ea270bdf618b",
+            2
+          ],
+          "current_ref": [
+            "memory.episodic.09815cf8-14ba-4944-b759-ea270bdf618b",
+            3
+          ],
+          "q_before": 0.75,
+          "q_after": 0.375
+        }
+      ],
+      "written_episode": "E3",
+      "written": {
+        "tier": "episodic",
+        "entry_id": "20508c59-44a1-41ed-ae0d-68f6faa15775",
+        "artifact_ref": [
+          "memory.episodic.20508c59-44a1-41ed-ae0d-68f6faa15775",
+          1
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "retrieve",
+          "arguments": {
+            "query": "Moonbase Mayhem asset sync is stuck again. Should we try the previous fix? - Asked: Moonbase Mayhem asset sync failed after my laptop woke. CrateSync shows NET01 and OrbitLink is disconnected.\n  Answered: Attempted reconnect_vpn; resolved. OrbitLink connected; the asset sync succeeded. Source consulted: 01_orbitlink_vpn.md.",
+            "k": 3
+          }
+        },
+        {
+          "name": "support_step",
+          "arguments": {
+            "action": "reconnect_vpn"
+          }
+        }
+      ]
+    },
+    {
+      "ticket": "MB-203-followup",
+      "user": "maya",
+      "session": "maya-wednesday",
+      "question": "Reconnecting did not help. The VPN is connected, but CrateSync shows AUTH17. What should we try next?",
+      "answer": "Attempted refresh_asset_token; resolved. CrateSync session refreshed; the asset sync succeeded. Source consulted: 02_cratesync_assets.md.",
+      "outcome": {
+        "ticket_id": "MB-203-followup",
+        "action": "refresh_asset_token",
+        "resolved": true,
+        "observed": "CrateSync session refreshed; the asset sync succeeded.",
+        "simulated": true
+      },
+      "reward": 1.0,
+      "recalled": [
+        {
+          "episode": "E3",
+          "recalled_ref": [
+            "memory.episodic.20508c59-44a1-41ed-ae0d-68f6faa15775",
+            1
+          ],
+          "current_ref": [
+            "memory.episodic.20508c59-44a1-41ed-ae0d-68f6faa15775",
+            2
+          ],
+          "q_before": 0.5,
+          "q_after": 0.75
+        }
+      ],
+      "written_episode": "E4",
+      "written": {
+        "tier": "episodic",
+        "entry_id": "bb9a2528-b2a3-4e27-af2d-8a4e09fc6954",
+        "artifact_ref": [
+          "memory.episodic.bb9a2528-b2a3-4e27-af2d-8a4e09fc6954",
+          1
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "retrieve",
+          "arguments": {
+            "query": "Reconnecting did not help. The VPN is connected, but CrateSync shows AUTH17. What should we try next? - Asked: Moonbase Mayhem asset sync is stuck again. Should we try the previous fix?\n  Answered: Attempted reconnect_vpn; unresolved. OrbitLink is connected; CrateSync still reports AUTH17. Source consulted: 01_orbitlink_vpn.md.",
+            "k": 3
+          }
+        },
+        {
+          "name": "support_step",
+          "arguments": {
+            "action": "refresh_asset_token"
+          }
+        }
+      ]
+    }
+  ],
+  "handoff": {
+    "maya": {
+      "answer": "Prior case supplied by the harness:\n- Asked: Moonbase Mayhem asset sync is stuck again. Should we try the previous fix?\n  Answered: Attempted reconnect_vpn; unresolved. OrbitLink is connected; CrateSync still reports AUTH17. Source consulted: 01_orbitlink_vpn.md.",
+      "recalled": [
+        {
+          "tier": "episodic",
+          "entry_id": "20508c59-44a1-41ed-ae0d-68f6faa15775",
+          "artifact_ref": [
+            "memory.episodic.20508c59-44a1-41ed-ae0d-68f6faa15775",
+            2
+          ],
+          "scope": "user:maya"
+        }
+      ]
+    },
+    "leo": {
+      "answer": "No prior incident is available in this user's context.",
+      "recalled": []
+    }
+  },
+  "limits": "Scripted responses and simulated outcomes illustrate mechanics; this is not an answer-quality benchmark."
+}

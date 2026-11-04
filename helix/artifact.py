@@ -53,6 +53,8 @@ class Subtype(str, Enum):
     RUBRIC = "rubric"
     PLANNER = "planner"
     MONITOR = "monitor"
+    # The prompt the Reflection signal and chapter 6's reflector read (SPEC v0.3).
+    REFLECTOR = "reflector"
     # composite subtypes (open set; metacognition is the first, SPEC §18.2.1)
     METACOGNITION = "metacognition"
 
@@ -66,6 +68,7 @@ _KIND_OF_SUBTYPE: dict[Subtype, ArtifactKind] = {
     Subtype.RUBRIC: ArtifactKind.TEXT,
     Subtype.PLANNER: ArtifactKind.TEXT,
     Subtype.MONITOR: ArtifactKind.TEXT,
+    Subtype.REFLECTOR: ArtifactKind.TEXT,
     Subtype.METACOGNITION: ArtifactKind.COMPOSITE,
 }
 

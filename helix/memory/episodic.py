@@ -2,7 +2,7 @@
 
 Storage is SQLite with optional vector embeddings over the entry's
 searchable text (typically `user_message` + `final_output`). Retrieval
-combines vector similarity, recency, and access count into a single ranked
+combines vector similarity and recency with stored utility under fixed weights in a ranked
 list. SPEC section 7.2.
 
 The unit of storage is a trajectory summary: one entry per agent.run().
@@ -15,13 +15,14 @@ reads can request entries from multiple scope levels at once (e.g. session
 + user + global). Cross-scope leakage is prevented by always filtering on
 the requested scope_keys.
 
-The embedding model is lazy-loaded once per process. The vector format is
+The default embedding model is lazy-loaded once per process. The vector format is
 a JSON list[float] stored as a column; for production-scale you'd swap to
 sqlite-vec or pgvector with no API change.
 """
 
 from __future__ import annotations
 
+from collections.abc import Callable
 import json
 import math
 import sqlite3
@@ -30,6 +31,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from helix.memory.archive_bridge import record_genesis
 from helix.memory.base import (
     ConsolidationReport,
     EntryId,
@@ -39,6 +41,8 @@ from helix.memory.base import (
     MemoryQuery,
     Scope,
     ScopeKey,
+    ref_from_str,
+    ref_to_str,
 )
 
 
@@ -84,7 +88,8 @@ CREATE TABLE IF NOT EXISTS episodic_entries (
     metadata_json TEXT NOT NULL,
     created_at TEXT NOT NULL,
     last_accessed_at TEXT,
-    access_count INTEGER NOT NULL DEFAULT 0
+    access_count INTEGER NOT NULL DEFAULT 0,
+    artifact_ref TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_episodic_scope ON episodic_entries(scope, scope_key);
 CREATE INDEX IF NOT EXISTS idx_episodic_created ON episodic_entries(created_at);
@@ -93,6 +98,10 @@ CREATE INDEX IF NOT EXISTS idx_episodic_created ON episodic_entries(created_at);
 
 class EpisodicMemory:
     """SQLite-backed episodic memory tier with vector retrieval.
+
+    A supplied embedding_fn must return consistently sized, normalized vectors.
+    Reopen a persisted store with the same encoder used to write its entries.
+    Omitting the callable preserves the default sentence-transformer model.
 
     Typical usage:
         em = EpisodicMemory(path="data/episodic.sqlite")
@@ -114,13 +123,36 @@ class EpisodicMemory:
         path: str | Path = ":memory:",
         recency_weight: float = 0.2,
         check_same_thread: bool = True,
+        archive: Any | None = None,
+        utility_weight: float = 0.0,
+        *,
+        embedding_fn: Callable[[list[str]], list[list[float]]] | None = None,
     ) -> None:
         self.path = str(path)
         self.recency_weight = recency_weight
+        # A caller may supply a fixed local encoder for a small offline corpus.
+        # Keep that encoder consistent when reopening the store; learning never
+        # selects or modifies it. None retains the existing default embedder.
+        self.embedding_fn = embedding_fn
+        # Fixed harness configuration: learned values enter this ranking,
+        # but learning does not tune its weight. Zero is the relevance-only
+        # control; Chapter 5 configures 0.35 before running the learner.
+        self.utility_weight = max(0.0, min(1.0, utility_weight))
+        # The shared archive, when given, makes every entry a MEMORY_ENTRY
+        # artifact with lineage (SPEC §7.3); the tier table stays the live
+        # index. Without it the tier behaves as it did in Chapter 2.
+        self.archive = archive
         self._conn = sqlite3.connect(self.path, check_same_thread=check_same_thread)
         self._conn.row_factory = sqlite3.Row
         self._conn.executescript(_SCHEMA)
+        self._migrate_artifact_ref_column()
         self._conn.commit()
+
+    def _migrate_artifact_ref_column(self) -> None:
+        """Stores created before v0.3 lack the artifact_ref column."""
+        cols = {r["name"] for r in self._conn.execute("PRAGMA table_info(episodic_entries)")}
+        if "artifact_ref" not in cols:
+            self._conn.execute("ALTER TABLE episodic_entries ADD COLUMN artifact_ref TEXT")
 
     # ---------------- internals ----------------
 
@@ -145,36 +177,40 @@ class EpisodicMemory:
             created_at=datetime.fromisoformat(row["created_at"]),
             last_accessed_at=datetime.fromisoformat(row["last_accessed_at"]) if row["last_accessed_at"] else None,
             access_count=int(row["access_count"]),
+            artifact_ref=ref_from_str(row["artifact_ref"]) if "artifact_ref" in row.keys() else None,
         )
 
     # ---------------- MemoryTier contract ----------------
 
     async def write(self, entry: MemoryEntry) -> EntryId:
-        """Persist an entry. Computes the embedding if not already set."""
+        """Persist an entry. Computes the embedding if not already set.
+
+        The caller's entry is updated in place with the id and artifact ref
+        the write assigned, so the hook that wrote it can report them.
+        """
         if entry.embedding is None:
             text = self._searchable(entry.content)
             if text:
-                vectors = _embed([text])
+                vectors = (self.embedding_fn or _embed)([text])
                 if vectors:
-                    entry = MemoryEntry(
-                        id=entry.id,
-                        scope_key=entry.scope_key,
-                        content=entry.content,
-                        embedding=vectors[0],
-                        score=entry.score,
-                        metadata=entry.metadata,
-                        created_at=entry.created_at,
-                        last_accessed_at=entry.last_accessed_at,
-                        access_count=entry.access_count,
-                    )
+                    entry.embedding = vectors[0]
 
         eid = entry.id or str(uuid.uuid4())
+        if not entry.id:
+            entry.id = eid
+        # First write of an entry under an archive is ExpeL's ADD: a genesis
+        # artifact. Later writes arrive with a ref already set by an operator
+        # (EDIT, UPVOTE, DOWNVOTE minted the child version) and only refresh
+        # the index row.
+        if self.archive is not None and entry.artifact_ref is None:
+            entry.artifact_ref = await record_genesis(self.archive, self.tier_name, entry)
         self._conn.execute(
             """
             INSERT OR REPLACE INTO episodic_entries
             (id, scope, scope_key, searchable_text, content_json, embedding_json,
-             score, metadata_json, created_at, last_accessed_at, access_count)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             score, metadata_json, created_at, last_accessed_at, access_count,
+             artifact_ref)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 eid,
@@ -188,17 +224,33 @@ class EpisodicMemory:
                 entry.created_at.isoformat(),
                 entry.last_accessed_at.isoformat() if entry.last_accessed_at else None,
                 entry.access_count,
+                ref_to_str(entry.artifact_ref),
             ),
         )
         self._conn.commit()
         return eid
+
+    async def get(self, entry_id: EntryId) -> MemoryEntry | None:
+        """Fetch one entry by id without touching its access stats."""
+        row = self._conn.execute(
+            "SELECT * FROM episodic_entries WHERE id = ?", (entry_id,)
+        ).fetchone()
+        return self._row_to_entry(row) if row is not None else None
+
+    async def by_artifact_id(self, artifact_id: str) -> MemoryEntry | None:
+        """Fetch the entry whose live index row points at this artifact id."""
+        row = self._conn.execute(
+            "SELECT * FROM episodic_entries WHERE artifact_ref LIKE ?",
+            (f"{artifact_id}:%",),
+        ).fetchone()
+        return self._row_to_entry(row) if row is not None else None
 
     async def read(
         self,
         query: MemoryQuery,
         context: MemoryContext,
     ) -> list[MemoryEntry]:
-        """Return top-k entries ranked by similarity + recency.
+        """Return top-k entries under the configured relevance/utility blend.
 
         The set of (scope, key) pairs to search comes from query.scope_keys
         if provided, otherwise from context.scope_keys() across all levels.
@@ -232,7 +284,7 @@ class EpisodicMemory:
         scored: list[tuple[float, MemoryEntry]] = []
         query_vec: list[float] | None = None
         if query.text:
-            vectors = _embed([query.text])
+            vectors = (self.embedding_fn or _embed)([query.text])
             query_vec = vectors[0] if vectors else None
 
         now = datetime.now(timezone.utc)
@@ -245,7 +297,10 @@ class EpisodicMemory:
             age_days = max(0.001, (now - entry.created_at).total_seconds() / 86400.0)
             recency = 1.0 / (1.0 + math.log10(age_days + 1.0))
 
-            combined = (1.0 - self.recency_weight) * sim + self.recency_weight * recency
+            relevance = (1.0 - self.recency_weight) * sim + self.recency_weight * recency
+            # Scope already determined eligibility. The formula and weight
+            # stay fixed while learned entry values can change the order.
+            combined = (1.0 - self.utility_weight) * relevance + self.utility_weight * entry.score
             scored.append((combined, entry))
 
         scored.sort(key=lambda x: x[0], reverse=True)
@@ -317,27 +372,39 @@ class EpisodicMemory:
         return before - after
 
     async def consolidate(self) -> ConsolidationReport:
-        """Summarize older episodic entries to compress the store.
+        """Run the 3 AM pass with default settings. SPEC §7.4.
 
-        Chapter 3+ implements LLM-driven summarization (ExpeL-style insight
-        extraction). v1 is a stub that just reports current state — the
-        contract is real and a richer implementation lands without changing
-        callers.
+        The policy knobs, the merge and promote steps, and the scheduler live
+        in helix.memory.consolidation; this method is the MemoryTier contract
+        entry point that callers with no opinions use.
         """
-        n = self._conn.execute("SELECT COUNT(*) AS n FROM episodic_entries").fetchone()["n"]
-        return ConsolidationReport(
-            tier=self.tier_name,
-            entries_before=n,
-            entries_after=n,
-            entries_summarized=0,
-            entries_dropped=0,
-            notes="episodic consolidation is a stub; Ch 3 adds LLM-driven summarization",
-        )
+        from helix.memory.consolidation import consolidate_episodic
+
+        return await consolidate_episodic(self)
 
     # ---------------- introspection helpers (used by dashboard) ----------------
 
     async def count(self) -> int:
         return self._conn.execute("SELECT COUNT(*) AS n FROM episodic_entries").fetchone()["n"]
+
+    async def list_all(self, scope_key: ScopeKey | None = None) -> list[MemoryEntry]:
+        """Every live row, optionally within one scope, oldest first."""
+        if scope_key is None:
+            rows = self._conn.execute(
+                "SELECT * FROM episodic_entries ORDER BY created_at ASC"
+            ).fetchall()
+        else:
+            rows = self._conn.execute(
+                "SELECT * FROM episodic_entries WHERE scope = ? AND scope_key = ? ORDER BY created_at ASC",
+                (scope_key.scope.value, scope_key.key),
+            ).fetchall()
+        return [self._row_to_entry(r) for r in rows]
+
+    async def remove(self, entry_id: EntryId) -> bool:
+        """Forget one index row; the archive keeps its artifact chain."""
+        cur = self._conn.execute("DELETE FROM episodic_entries WHERE id = ?", (entry_id,))
+        self._conn.commit()
+        return cur.rowcount > 0
 
     async def list_recent(self, n: int = 20) -> list[MemoryEntry]:
         rows = self._conn.execute(

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Helix Observatory</title>
+  <link rel="stylesheet" href="/css/tokens.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/print.css" media="print">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='13' font-size='13'>🧬</text></svg>">
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <div class="brand">
+        <svg class="emblem" viewBox="0 0 96 78" aria-hidden="true">
+          <g fill="none" stroke="#4A3B28" stroke-width="3" stroke-linecap="round">
+            <path d="M48 74 C47.5 64 47.5 58 48 50"/>
+            <path d="M48 50 C44.5 42 39 38 31 34"/>
+            <path d="M48 50 C51.5 42 57 38 65 34"/>
+            <path d="M31 34 C27 28 23 26 17 24"/>
+            <path d="M31 34 C32 28 31 24 29 18"/>
+            <path d="M65 34 C69 28 73 26 79 24"/>
+            <path d="M65 34 C64 28 65 24 67 18"/>
+            <path d="M17 24 C15 20 13 18 11 16"/>
+            <path d="M29 18 C28 15 28 13 27 10"/>
+            <path d="M79 24 C81 20 83 18 85 16"/>
+            <path d="M67 18 C68 15 68 13 69 10"/>
+            <path d="M48 50 C49 44 50 40 52 36"/>
+          </g>
+        </svg>
+        <span class="name">Helix Observatory</span>
+        <span class="tag">self-improving agent runs</span>
+      </div>
+      <div>
+        <label for="archive-select">Archive</label>
+        <select id="archive-select"></select>
+      </div>
+      <div>
+        <label for="focus-select">Focus</label>
+        <select id="focus-select"><option value="">(all artifacts)</option></select>
+      </div>
+      <span id="live-pill" class="live-pill">static</span>
+    </header>
+
+    <nav class="sidebar">
+      <div class="nav-section">Panels</div>
+      <a href="#/overview" data-route="overview">Overview</a>
+      <a href="#/champion" data-route="champion">Champion</a>
+      <a href="#/lineage" data-route="lineage">Lineage</a>
+      <a href="#/compare" data-route="compare">Compare</a>
+      <a href="#/verdicts" data-route="verdicts">Verdicts</a>
+      <a href="#/replay" data-route="replay">Replay</a>
+      <a href="#/rounds" data-route="rounds">Rounds</a>
+      <div class="nav-section">Across archives</div>
+      <a href="#/lineage-compare" data-route="lineage-compare">Lineage compare</a>
+      <div class="nav-section">Outlines</div>
+      <a href="#/memory" data-route="memory">Memory</a>
+      <a href="#/scaffold" data-route="scaffold">Scaffold</a>
+      <a href="#/proposals" data-route="proposals">Proposals</a>
+    </nav>
+
+    <main id="panel"></main>
+  </div>
+
+  <div id="drawer-backdrop"></div>
+  <aside id="drawer"></aside>
+  <div id="toasts"></div>
+
+  <script src="/js/vendor/d3.v7.min.js"></script>
+  <script type="module" src="/js/main.js"></script>
+</body>
+</html>

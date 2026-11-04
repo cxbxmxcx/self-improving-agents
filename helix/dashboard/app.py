@@ -1,4 +1,9 @@
-"""Helix dashboard entry point.
+"""Helix dashboard entry point (Streamlit; superseded by the Observatory).
+
+The Helix Observatory in helix_web/ replaces this app with a FastAPI plus
+custom frontend version: multi-archive views, live SSE streaming, and SVG
+figure export. This Streamlit app remains runnable for the chapters that
+reference it, but new capability lands in helix_web only.
 
 Run:
     streamlit run helix/dashboard/app.py
@@ -67,10 +72,10 @@ def _placeholder_screen() -> None:
         python chapters/ch02/05_spo_offline_loop.py
         ```
 
-        ...or, for a richer Ch 3 run with two Search methods:
+        ...or, for a richer Chapter 4 run with population search:
 
         ```
-        python chapters/ch03/escalating_improver.py
+        python chapters/ch04/03_revenue_gepa_loop.py
         ```
         """
     )

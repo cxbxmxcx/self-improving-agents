@@ -1,0 +1,46 @@
+{
+  "week": {"mon": "2026-10-19", "tue": "2026-10-20", "wed": "2026-10-21", "thu": "2026-10-22", "fri": "2026-10-23"},
+  "hours": ["09:00", "17:00"],
+  "people": {
+    "maya": {"name": "Maya Rivera", "role": "product lead", "user": true},
+    "leo": {"name": "Leo Chen", "role": "engineer", "user": true},
+    "sam.ortiz": {"name": "Sam Ortiz", "role": "engineering lead"},
+    "sam.lee": {"name": "Sam Lee", "role": "designer"},
+    "dana": {"name": "Dana Park", "role": "client"},
+    "priya": {"name": "Priya Shah", "role": "manager"}
+  },
+  "events": [
+    {"id": "E01", "owner": "priya", "title": "Team standup", "day": "mon", "start": "10:00", "minutes": 15, "attendees": ["priya", "maya", "leo", "sam.ortiz"]},
+    {"id": "E02", "owner": "priya", "title": "Team standup", "day": "tue", "start": "10:00", "minutes": 15, "attendees": ["priya", "maya", "leo", "sam.ortiz"]},
+    {"id": "E03", "owner": "priya", "title": "Team standup", "day": "wed", "start": "10:00", "minutes": 15, "attendees": ["priya", "maya", "leo", "sam.ortiz"]},
+    {"id": "E04", "owner": "priya", "title": "Team standup", "day": "thu", "start": "10:00", "minutes": 15, "attendees": ["priya", "maya", "leo", "sam.ortiz"]},
+    {"id": "E05", "owner": "priya", "title": "Team standup", "day": "fri", "start": "10:00", "minutes": 15, "attendees": ["priya", "maya", "leo", "sam.ortiz"]},
+    {"id": "E06", "owner": "maya", "title": "1:1 with Sam Ortiz", "day": "tue", "start": "11:00", "minutes": 30, "attendees": ["maya", "sam.ortiz"]},
+    {"id": "E07", "owner": "sam.lee", "title": "Design review", "day": "wed", "start": "15:00", "minutes": 60, "attendees": ["sam.lee", "maya"]},
+    {"id": "E08", "owner": "dana", "title": "Client call", "day": "tue", "start": "14:00", "minutes": 60, "attendees": ["dana", "maya"]},
+    {"id": "E09", "owner": "priya", "title": "Planning", "day": "thu", "start": "11:00", "minutes": 60, "attendees": ["priya", "maya", "leo"]},
+    {"id": "E10", "owner": "priya", "title": "Launch retro", "day": "fri", "start": "16:00", "minutes": 60, "attendees": ["priya", "maya", "leo", "sam.ortiz", "sam.lee"]},
+    {"id": "E11", "owner": "maya", "title": "Lunch with Leo", "day": "mon", "start": "12:30", "minutes": 60, "attendees": ["maya", "leo"]},
+    {"id": "E12", "owner": "maya", "title": "1:1 with Priya", "day": "thu", "start": "15:00", "minutes": 30, "attendees": ["maya", "priya"]},
+    {"id": "E13", "owner": "leo", "title": "Code review", "day": "wed", "start": "10:30", "minutes": 60, "attendees": ["leo", "maya"]},
+    {"id": "S01", "owner": "sam.ortiz", "title": "Hiring panel", "day": "mon", "start": "13:00", "minutes": 120, "attendees": ["sam.ortiz"]},
+    {"id": "S02", "owner": "sam.ortiz", "title": "Vendor sync", "day": "tue", "start": "13:00", "minutes": 60, "attendees": ["sam.ortiz"]},
+    {"id": "S03", "owner": "sam.ortiz", "title": "Focus time", "day": "wed", "start": "13:00", "minutes": 120, "attendees": ["sam.ortiz"]},
+    {"id": "S04", "owner": "sam.ortiz", "title": "Sprint demo", "day": "thu", "start": "14:00", "minutes": 90, "attendees": ["sam.ortiz"]},
+    {"id": "S05", "owner": "sam.ortiz", "title": "Out of office", "day": "fri", "start": "09:00", "minutes": 480, "attendees": ["sam.ortiz"]},
+    {"id": "L01", "owner": "sam.lee", "title": "User research", "day": "thu", "start": "09:00", "minutes": 120, "attendees": ["sam.lee"]},
+    {"id": "L02", "owner": "sam.lee", "title": "Studio time", "day": "mon", "start": "14:00", "minutes": 120, "attendees": ["sam.lee"]},
+    {"id": "P01", "owner": "priya", "title": "Exec sync", "day": "mon", "start": "15:00", "minutes": 60, "attendees": ["priya"]},
+    {"id": "P02", "owner": "priya", "title": "Board prep", "day": "wed", "start": "13:00", "minutes": 120, "attendees": ["priya"]},
+    {"id": "O01", "owner": "leo", "title": "Dentist", "day": "thu", "start": "13:00", "minutes": 60, "attendees": ["leo"]},
+    {"id": "D01", "owner": "dana", "title": "Travel", "day": "thu", "start": "09:00", "minutes": 180, "attendees": ["dana"]}
+  ],
+  "messages": [
+    {"id": "M1", "from": "dana", "to": "maya", "subject": "Thursday?", "body": "Hi Maya, could we meet Thursday afternoon to go over the proposal? Also, could you send me the Q3 slides beforehand? Thanks, Dana"},
+    {"id": "M2", "from": "priya", "to": "maya", "subject": "Launch", "body": "Hi Maya, is the launch still on for Friday? Priya"},
+    {"id": "M3", "from": "sam.ortiz", "to": "maya", "subject": "Our 1:1", "body": "Hey Maya, could we push our Tuesday 1:1 to Wednesday? Sam"},
+    {"id": "M4", "from": "sam.lee", "to": "maya", "subject": "Design review", "body": "Hi Maya, can you bring the latest mockups to Wednesday's review? And should we invite Dana? Sam"},
+    {"id": "M5", "from": "leo", "to": "maya", "subject": "Wednesday", "body": "Do you have 30 minutes on Wednesday afternoon, and which room should we use? Leo"},
+    {"id": "M6", "from": "sam.lee", "to": "maya", "subject": "Lunch", "body": "Lunch on Friday? Sam"}
+  ]
+}

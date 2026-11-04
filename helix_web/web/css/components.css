@@ -1,0 +1,176 @@
+/* Shared components: tiles, tables, cards, chips, buttons, code blocks. */
+
+/* metric tiles */
+.tiles { display: flex; flex-wrap: wrap; gap: var(--sp-3); }
+.tile {
+  flex: 1 1 130px;
+  min-width: 130px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--sp-3) var(--sp-4);
+}
+.tile .label { font-size: var(--fs-xs); color: var(--fg-muted); margin-bottom: 2px; }
+.tile .value { font-size: var(--fs-xl); font-weight: 650; font-variant-numeric: tabular-nums; }
+.tile .value.muted { color: var(--fg-faint); }
+.tile .sub { font-size: var(--fs-xs); color: var(--fg-faint); margin-top: 2px; }
+.tile.accent-teal .value { color: var(--npg-teal); }
+.tile.accent-vermillion .value { color: var(--npg-vermillion); }
+.tile.accent-slate .value { color: var(--npg-slate); }
+
+/* data tables */
+table.data {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-size: var(--fs-sm);
+}
+table.data th, table.data td {
+  text-align: left;
+  padding: var(--sp-2) var(--sp-3);
+  border-bottom: 1px solid var(--border);
+}
+table.data th {
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--fg-muted);
+  background: var(--bg-inset);
+  position: sticky; top: 0;
+}
+table.data tbody tr:last-child td { border-bottom: none; }
+table.data tbody tr:hover { background: #F7F2E1; }
+table.data td.num { text-align: right; font-variant-numeric: tabular-nums; }
+table.data th.num { text-align: right; }
+
+/* cards */
+.card {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--sp-4);
+}
+.card.gold { border: 2px solid var(--gold); }
+
+/* the plate: an engraved double-ruled frame on laid paper, for the cards
+   that hold a lineage drawing. The outline draws outside the border, so the
+   plate carries its own margin to keep the frame clear of neighbours. */
+.card.plate {
+  border: 1px solid var(--border-strong);
+  outline: 3px double var(--border);
+  outline-offset: 3px;
+  margin: 5px;
+  background-image: repeating-linear-gradient(
+    0deg, rgba(122, 102, 66, 0.05) 0 1px, transparent 1px 7px);
+}
+
+/* plate drawings; heights live here so expanded mode can retarget them */
+#lg-svg { width: 100%; height: calc(100vh - 290px); display: block; }
+.lc-svg { width: 100%; height: calc(100vh - 420px); display: block; }
+body.expanded #lg-svg { height: calc(100vh - 110px); }
+body.expanded .lc-svg { height: calc(100vh - 250px); }
+
+/* chips / badges */
+.chip {
+  display: inline-block;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  color: #fff;
+  background: var(--c-unknown);
+}
+.chip.outline {
+  color: var(--fg-muted);
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  font-weight: 500;
+}
+
+/* buttons: set like a printer's imprint, small caps under a light emboss */
+button.btn {
+  font: inherit;
+  font-size: var(--fs-md);
+  font-weight: 600;
+  font-variant-caps: small-caps;
+  letter-spacing: 0.07em;
+  padding: var(--sp-1) var(--sp-4);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  background: #FBF7EA;
+  color: var(--sepia);
+  cursor: pointer;
+  box-shadow: 1px 1px 0 rgba(150, 130, 90, 0.35);
+}
+button.btn:hover { background: #F2E9D0; border-color: var(--fg-faint); }
+button.btn.primary {
+  background: var(--sepia);
+  border-color: var(--sepia);
+  color: #F5F0E1;
+  box-shadow: none;
+}
+button.btn.primary:hover { background: #5C4A32; }
+button.btn.danger { background: var(--npg-vermillion); border-color: var(--npg-vermillion); color: #fff; }
+button.btn:disabled { opacity: 0.5; cursor: default; box-shadow: none; }
+
+/* code / content blocks */
+pre.content {
+  background: var(--bg-inset);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--sp-4);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 420px;
+  overflow: auto;
+  margin: 0;
+}
+
+details.expander { border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--bg-panel); }
+details.expander > summary {
+  cursor: pointer;
+  padding: var(--sp-2) var(--sp-4);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--fg-muted);
+}
+details.expander > .body { padding: var(--sp-2) var(--sp-4) var(--sp-4); }
+
+/* banners */
+.banner {
+  border-radius: var(--radius-md);
+  padding: var(--sp-3) var(--sp-4);
+  font-size: var(--fs-sm);
+  margin-bottom: var(--sp-3);
+  border: 1px solid transparent;
+}
+.banner.success { background: #E7EFDB; border-color: var(--npg-teal); color: #23402F; }
+.banner.warning { background: #F6EDC8; border-color: var(--warn); color: #4A3A06; }
+.banner.error { background: #F6DFD2; border-color: var(--npg-vermillion); color: #7A2A1C; }
+.banner.info { background: #EFE6C8; border-color: var(--border-strong); color: var(--sepia); font-style: italic; }
+
+/* outline panels: planned layouts drawn as labeled frames */
+.outline-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+}
+.outline-region {
+  min-height: 120px;
+  border: 1px dashed var(--border-strong);
+  background: var(--bg-inset);
+  padding: var(--sp-2) var(--sp-3);
+}
+.outline-region-name {
+  font-variant: small-caps;
+  letter-spacing: 0.04em;
+  color: var(--sepia);
+  margin-bottom: var(--sp-1);
+}
+.outline-region-note { font-style: italic; color: var(--fg-muted); font-size: var(--fs-sm); }
+@media (max-width: 900px) { .outline-grid { grid-template-columns: 1fr; } }

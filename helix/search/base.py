@@ -36,6 +36,7 @@ class SearchKind(str, Enum):
     MCTS = "mcts"  # AFlow
     EVOLUTIONARY_ARCHIVE = "evolutionary_archive"  # DGM, AlphaEvolve, ShinkaEvolve
     MEMORY_Q_LEARNING = "memory_q_learning"  # MemRL
+    GROUP_RELATIVE = "group_relative"  # GRPO-style: N candidates, advantage over the group mean
     EDITABLE_META = "editable_meta"  # HyperAgents
     COMPOSED = "composed"  # joint search over a composite's constituents (§18)
     HUMAN = "human"  # hand-authored variants, treated as a Search
