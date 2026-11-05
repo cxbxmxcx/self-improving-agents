@@ -532,11 +532,12 @@ class Metacognition:
         while self._tasks:
             await asyncio.gather(*list(self._tasks.values()), return_exceptions=True)
 
-    def _practice_for(self, name: str) -> Practice:
-        if hasattr(self.practice, "bind"):  # AgentPractice or ReplayPractice: through the agent
-            return self.practice.bind(self, name)
-        if self.practice is not None:
-            return self.practice
+    def _practice_for(self, name: str, practice: Any = None) -> Practice:
+        practice = practice if practice is not None else self.practice
+        if hasattr(practice, "bind"):  # AgentPractice or ReplayPractice: through the agent
+            return practice.bind(self, name)
+        if practice is not None:
+            return practice
         raise ValueError("learning needs a practice: AgentPractice(world=...) or a function (source, case_id)")
 
     async def _learn(self, name: str, episodes: list[Episode], events: list[str]) -> None:
@@ -557,7 +558,8 @@ class Metacognition:
         mechanism = self.learner.name
         try:
             learned = await self.learner.learn(learn_from, practice, writer, proc.contract)
-            gate = await self.gate.check(learned.source, practice, cases)
+            gate_practice = practice if self.gate.practice is None else self._practice_for(name, self.gate.practice)
+            gate = await self.gate.check(learned.source, gate_practice, cases)
         except Exception as exc:  # noqa: BLE001 - a failed attempt is logged; serving goes on
             dollars = writer_cost(writer.usage, model, self.prices)
             self.store.log_learning(name=name, mechanism=mechanism, version=None, episodes=len(learn_from),

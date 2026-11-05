@@ -277,12 +277,22 @@ relearned at run 12 (gate 6/6), and learning paid for itself after 8.5 requests.
 showed a procedure removes variance: every trip passed every time with one, against 8 of 16 at `high` without.
 
 D2 ran live the same day for $1.94. It measured what scarce, late verdicts cost and what a judge buys, and it
-gave four lessons for the harness:
-- **Calibrate the controller.** In D2 a procedure at `none` was worse than measured floors.
+gave four lessons for the harness. A second pass ($1.11) applied the first three:
+- **Calibrate the controller.** In D2 a procedure at `none` was worse than measured floors. In the second
+  pass the measured settings cost less than the hand-set ones and lost nothing.
 - **Match the action tool.** A procedure should return the arguments its action tool takes, so the agent
-  doesn't have to translate.
-- **Gate on enough cases.** Three replayed cases aren't enough.
+  doesn't have to translate. Doing so took the procedure at `none` from 13 to 15 of 16 returns and ended the
+  translation errors.
+- **Gate on enough cases.** Three replayed cases aren't enough. `Gate(practice=...)` now lets a gate check
+  labeled cases its own way while the learner only replays. On 6 labeled holiday returns it admitted three
+  versions, and all three are right on every return.
 - **Count each run once.** A run judged twice must count once in the detector. That fix is built.
+
+The second pass found two more problems, not yet tested:
+- At `none` the agent sometimes overrules a right procedure after its own reads go wrong. An offered
+  procedure's answer should be acted on, not re-derived.
+- A detector that wants 2 rejections in 4 verdicts reacts slowly when only 30% of runs are reviewed, 10 runs
+  late.
 
 Each domain is built with the harness the way a real agent would be: tools, procedures, a verdict source,
 calibration, deployment and then drift. Each answers one question about metacognition. Live runs stop at a
@@ -291,7 +301,7 @@ set budget.
 | | Domain | The question | What it exercises |
 |---|---|---|---|
 | D1 | Expense claims (built) | Does the study's result hold on a second domain, with repeated trials and the domain-neutral prompts? | The full M5 study: floors, learning, and drift when the exchange-rate month changes |
-| D2 | Store refunds | Can an agent learn safely when verdicts are scarce, late and human? | Simulated reviewers who judge a sample of runs a day later; a judge as a second signal; replayed practice; approval by a person; a holiday returns policy as drift |
+| D2 | Store refunds (built) | Can an agent learn safely when verdicts are scarce, late and human? | Simulated reviewers who judge a sample of runs a day later; a judge as a second signal; replayed practice; approval by a person; a holiday returns policy as drift |
 | D3 | Invoice intake | How does metacognition behave with several procedures and several customers? | A procedure per task and per-customer scopes; routing and blame; `discover`; a vendor changing its layout |
 | D4 | Model switch | Do floors and learned procedures carry over between models? | D1 and D3 on `gpt-5.4-mini` and a Claude model: ladders, floors per model, and a procedure written by one model used by another |
 

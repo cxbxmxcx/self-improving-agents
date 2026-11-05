@@ -103,6 +103,30 @@ async def test_background_learning_and_a_holdout_gate():
     assert meta.store.trusted("basket_total")["version"] == 2
 
 
+async def test_the_gate_can_try_its_cases_its_own_way():
+    # As D2's second pass does: the learner practices one way (there, by replaying recorded runs) and the
+    # gate checks its labeled cases another (there, with a function and the audit).
+    tried: dict[str, list[str]] = {"learner": [], "gate": []}
+
+    def counted(who: str):
+        async def wrapped(source: str, case_id: str):
+            tried[who].append(case_id)
+            return await practice(source, case_id)
+        return wrapped
+
+    meta = make_meta(practice=counted("learner"), gate=Gate(cases=["G1", "G2"], bar=1.0, practice=counted("gate")))
+    meta.install("basket_total", V1)
+    shop = agent(meta)
+    model = ScriptedModel([*uses(["apple", "pear"], 5), *uses(["apple", "pear"], 5), *uses(["pear", "pear"], 6),
+                           text("7"), text("8"), WRITTEN, WRITTEN])
+    with model.active():
+        for case_id in ("S1", "D1", "D2", "A", "B"):
+            await serve(shop, case_id)
+    assert tried["gate"] == ["G1", "G2"]
+    assert tried["learner"] and not {"G1", "G2"} & set(tried["learner"])
+    assert meta.store.trusted("basket_total")["version"] == 2
+
+
 async def test_cold_start_learns_a_procedure_it_never_had():
     meta = make_meta()
     shop = agent(meta)

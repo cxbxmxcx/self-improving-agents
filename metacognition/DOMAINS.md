@@ -72,7 +72,8 @@ The recording replays the repeats offline in about 30 seconds, and the D1 test c
 ## D2. Store refunds: can an agent learn safely when verdicts are scarce, late and human?
 
 Built in `examples/refunds` (`world.py`, `agent.py`, `study.py`, and the hand-written procedures in
-`memories/`). It ran live on 2026-11-05; the results are below the design.
+`memories/`). It ran live twice on 2026-11-05: a first pass, then a second that applies the first pass's
+lessons. The results are below the design.
 
 - **The agent:** the returns desk at a store. It reads the return, its order, the customer and the returns
   policy (all read-only), then acts once: `issue_refund` (to the card, or as store credit) or
@@ -170,11 +171,83 @@ replays the whole study in about 15 seconds, and `tests/test_refunds.py` checks 
   - The people are simulated: reviews are sampled at random, and approval comes automatically 5 runs after a
     proposal.
 
+**Second pass** (2026-11-05, the same model: 765 live calls, $1.11; the no-procedure floors replayed free from
+the first pass). `python -m examples.refunds.study --contract tool --controller measured --gate cases` applies
+the first pass's three lessons at once:
+- **The procedure answers in the action tools' terms:** `{"method": "card" | "store_credit" | "decline",
+  "amount_usd"}`. `in_tool_terms` rewrites only the hand-written procedures' return lines, so the code is
+  otherwise the same.
+- **The arms take their reasoning settings from the measured floors:** `none` with the procedure and `low`
+  without, the cheapest settings that solve 7 of 8.
+- **The gate checks a candidate on the 6 held-out holiday returns, labeled.** It runs the procedure in the
+  simulator and takes the audit as the label: `Gate(cases=..., practice=practice)`, the harness option this
+  pass added. The learner still practices only by replaying accepted runs.
+
+The new calls joined the first pass's recording, which replays both passes offline. `tests/test_refunds.py`
+checks the numbers below.
+
+| Returns solved with the hand-written procedure (test returns) | `none` | `low` | `medium` | `high` |
+|---|---|---|---|---|
+| Answering in its own words (first pass) | 13/16 | 15/16 | 16/16 | 16/16 |
+| Answering in the tools' terms | 15/16 | 16/16 | 16/16 | 16/16 |
+
+| Online arms: second pass (first pass) | checker | reviewers | judge |
+|---|---|---|---|
+| Wrong actions served | 3 (13) | 27 (19) | 4 (11) |
+| Dollars over-refunded | $85.99 ($0) | $85.99 ($0) | $85.99 ($0) |
+| Dollars under-refunded | $281.94 ($31.95) | $310.29 ($111.60) | $281.94 ($9.00) |
+| First quarantine of a trusted procedure, at run | 11 (12) | 33 (22) | 11 (8) |
+| A relearned version trusted, at run | 15 (20) | never: proposed at 56 (57) | 20 (21) |
+| Learning spend | $0.17 ($0.40) | $0.17 ($0.10) | $0.13 ($0.33) |
+
+- **Answering in the tools' terms ended the translation errors.**
+  - With the procedure at `none`, the agent solved 15 of 16 test returns, up from 13.
+  - In the online arms it got 1 of the 10 regular returns wrong, where the first pass got 2 wrong in each
+    arm. That one was not a translation (see below).
+- **The labeled gate admitted only complete versions, and they held.**
+  - Each arm's learner wrote a version from 4 replayed runs, and each passed the 6 labeled returns.
+  - All three are right on all 82 returns in the test, stream and gate splits: the checker's, the judge's,
+    and the version the reviewers never approved.
+  - No arm quarantined a relearned version. In the first pass, 3 replayed cases let incomplete versions
+    through, and they were quarantined three more times.
+- **The measured settings cost less and lost nothing.** Without a procedure, the agent got 86% of holiday
+  returns right at the measured `low` (32 of 37) and at the first pass's hand-set `high` (43 of 50).
+  - The floor was measured on regular returns. On holiday returns, neither setting clears the 7-of-8 bar.
+- **What remains at `none` is the agent overruling a right procedure.**
+  - Both of the checker arm's mistakes after the fix happened the same way. The agent guessed a customer id
+    from the return number (C-209, C-713H) instead of taking it from the order. It then let what it read
+    override the procedure.
+  - At run 9 it refunded an opened beauty item the procedure had declined, $85.99 too much.
+  - At run 23 it declined a $258.99 card refund because "the customer record was not found".
+  - The prompt asks the agent to read everything and work the return out, which invites it to second-guess
+    the procedure. The next rule to test: when a procedure is offered, the agent acts on its answer and
+    doesn't redo its work.
+- **With scarce, late reviews, detection waits for two reviewed failures.**
+  - Among the first holiday returns the reviewers judged runs 12 and 23, so the second rejection arrived at
+    run 33. By then 22 holiday returns had been served wrongly.
+  - The first pass quarantined at run 22 only because a translation mistake at run 7 had been reviewed.
+    That unrelated error gave the detector a head start, as the judge's false alarm did.
+  - With the regular returns now right, that head start was gone. The detector's limit (2 rejections in its
+    last 4 verdicts) suits verdicts on every run, and reacts slowly when 30% arrive, 10 runs late. A trusted
+    person's rejection may deserve a lower limit; this is untested.
+- **The judge was more accurate.** It agreed with the audit on 57 of 60 runs and accepted no wrong action.
+  Its 3 false rejections, at runs 1, 14 and 46, never added up to a quarantine.
+- **Dollar totals are lumpy.**
+  - Two wrong actions account for $344.98 of the checker arm's errors.
+  - A wrong decline costs a customer far more than a misapplied fee, so the count of wrong actions and the
+    dollars can move in opposite directions.
+  - The dollars also miss harm that isn't an amount: store credit where the card was due.
+- **Caveats:**
+  - There is one sample per configuration.
+  - Identical requests share one recorded reply. The arms' first 10 runs are therefore one sample, and the
+    run 9 and run 23 mistakes recur across arms.
+  - The people are simulated.
+
 **Follow-ups:**
-- **Re-measure the floors with a procedure that returns the tool's arguments:** `method` card, store_credit
-  or decline, and `amount_usd`. About $0.20.
-- **Rerun the online arms with the controller set from D2's floors and a gate of 6 held-out cases.** About
-  $2.
+- **Act on the procedure.** Re-measure the floors at `none` with a prompt that has the agent act on an
+  offered procedure's answer, not redo its reads. About $0.10.
+- **Detect sooner with scarce reviews.** Rerun the reviewers arm with a detector that quarantines on one
+  rejection from a person. About $0.50.
 
 ## D3. Invoice intake: how does metacognition behave with several procedures and several customers?
 

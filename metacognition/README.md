@@ -26,12 +26,16 @@ The example domains are under way ([DOMAINS.md](DOMAINS.md)):
 - **D1, the full expense study,** has run live: once through, then its measurements three times over, for $2.00
   in all. It reproduced the study's results on a second domain, and the repeats show a procedure removes
   variance as well as cost. Its recording replays offline.
-- **D2, a returns desk where verdicts are scarce, late and human,** has run live for $1.94. Without a checker,
-  the procedure stayed stale longest, and it cost the most in wrong refunds. A judge on every run caught
-  problems fast but raised false alarms. The run also gave two design lessons: a procedure should return its
-  action tool's arguments, and a replayed gate needs more than three cases.
+- **D2, a returns desk where verdicts are scarce, late and human,** has run live twice, for $3.05 in all.
+  - **First pass:** without a checker, the procedure stayed stale longest and cost the most in wrong refunds.
+    A judge on every run caught problems fast but raised false alarms.
+  - **Second pass:** it applied the first pass's lessons. The procedure answered in its action tool's terms,
+    the reasoning settings came from measured floors, and the gate checked 6 labeled cases. Wrong actions fell
+    from 13 to 3 with a checker and from 11 to 4 with a judge.
+  - Two problems remain: an agent at `none` overruling a right procedure, and slow detection when reviews are
+    scarce.
 
-The suite has 130 tests and needs no API key. Nothing here is stable yet.
+The suite has 142 tests and needs no API key. Nothing here is stable yet.
 
 ## A plain agent
 
@@ -99,7 +103,9 @@ effects: a reasoning setting and a set of tools.
 Options: `learner` (value learning by default, or reflection, success or transition distillation, skill
 synthesis), `prompts` (`GENERIC`, or the book's `CALENDAR` for replay), `practice` (a function, an
 `AgentPractice` that runs the agent in a rebuilt world, or a `ReplayPractice` that replays an accepted run's
-world with side effects dry-run), `gate`, `detector`, `controller`, `router`, `attribution`, `approval`
+world with side effects dry-run), `gate` (held-out case ids or the last accepted runs; with its own `practice`
+when it checks labeled cases another way than the learner practices), `detector`, `controller`, `router`,
+`attribution`, `approval`
 ("auto" or "human"), `executor` ("guarded" in-process, or "subprocess" for model-written code), and `PerUser`
 for one procedure set per person.
 

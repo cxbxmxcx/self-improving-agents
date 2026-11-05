@@ -226,12 +226,18 @@ class Gate:
     `cases` are case ids to practice on. Or set `holdout`: the last `holdout`
     accepted runs since the procedure went untrusted are held back from the
     learner and become the cases, so relearning waits until there are enough.
+
+    `practice` is how the gate tries a candidate on its cases, when that differs
+    from how the learner practices: the learner can replay recorded runs while
+    the gate checks labeled cases from a case file with a function. It takes
+    the same forms as Metacognition's `practice` and defaults to it.
     """
 
     cases: list[str] | None = None
     holdout: int = 0
     bar: float = ADEQUATE
     min_cases: int = 1
+    practice: Any = None
 
     async def check(self, source: str, practice: Practice, cases: list[str]) -> GateResult:
         if len(cases) < self.min_cases:

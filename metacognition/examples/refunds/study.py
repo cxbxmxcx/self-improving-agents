@@ -1,6 +1,7 @@
 """D2, the returns desk: can an agent learn safely when verdicts are scarce, late and human? (DOMAINS.md)
 
-    python -m examples.refunds.study                                   # replay the committed recording
+    python -m examples.refunds.study                                   # replay the first pass
+    python -m examples.refunds.study --contract tool --controller measured --gate cases   # the second pass
     python -m examples.refunds.study --mode record --budget 4          # paid calls only for missing replies
 
 Phases (choose with --phases):
@@ -19,6 +20,14 @@ Arms (choose with --arms) differ only in who judges:
 
 Every run is audited either way, so the summary says what each arm served wrongly and what it cost,
 how long the stale procedure stayed trusted, and how often the judge agreed with the audit.
+
+The first pass ran with the defaults. The second applies its lessons:
+  --contract tool        the procedure answers in the action tools' terms ({"method": "card"}), not its
+                         own words ({"action": "refund"}); the same code otherwise
+  --controller measured  the arms take their reasoning settings from the floors and memory phases'
+                         results (run them first; the no-procedure floors replay free from the first pass)
+  --gate cases           the gate checks a candidate on the 6 held-out holiday returns, labeled, with the
+                         procedure run in the simulator and the audit; the learner still only replays
 """
 
 from __future__ import annotations
@@ -32,7 +41,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from examples.refunds.agent import REFERENCE, REGULAR, check, refund_decision, returns_desk
+from examples.refunds.agent import CONTRACTS, MODEL, check, practice, returns_desk
 from examples.refunds.world import ReturnsWorld, outcome, task_set
 from metacog import Recording, RunConfig, Runner
 from metacog.meta import (
@@ -92,14 +101,15 @@ async def phase_floors(args: argparse.Namespace, recording: Recording) -> None:
 
 
 async def phase_memory(args: argparse.Namespace, recording: Recording) -> None:
-    meta = Metacognition([refund_decision], verifier=check, recall_k=1, learning="inline")
-    meta.install("refund_decision", REFERENCE)
+    contract, reference, _ = CONTRACTS[args.contract]
+    meta = Metacognition([contract], verifier=check, recall_k=1, learning="inline")
+    meta.install("refund_decision", reference)
     floors = await calibrate(returns_desk(metacognition=meta), cases("test", args.tasks), verifier=check,
                              world=ReturnsWorld, efforts=args.efforts, arms=("memory",),
                              concurrency=args.concurrency, max_turns=12, run_config=RunConfig(max_tool_calls=24),
                              prices=PRICES)
-    show(floors, "Reasoning floors with the hand-written procedure (test returns)")
-    floors.save(args.output / "floors_memory.json")
+    show(floors, f"Reasoning floors with the hand-written procedure, contract {args.contract} (test returns)")
+    floors.save(args.output / f"floors_memory_{args.contract}.json")
     guard(recording, args.budget)
 
 
@@ -129,16 +139,27 @@ def same_actions(run: dict[str, Any], result: Any, world: Any) -> tuple[bool, st
     return False, f"took {world.actions or 'no actions'} where the accepted run took {world.expected}"
 
 
-def arm_metacognition(arm: str, store: Path) -> Metacognition:
+def arm_metacognition(arm: str, store: Path, args: argparse.Namespace) -> Metacognition:
     verifier: Any = {"checker": check, "reviewers": None,
                      "judge": Judge(RUBRIC, params={"reasoning_effort": "medium"})}[arm]
+    contract, _, regular = CONTRACTS[args.contract]
+    # The gate tries a candidate on the 6 labeled holiday returns, the procedure alone in the simulator; or
+    # replays the last 3 accepted runs, as the learner practices.
+    gate = (Gate(cases=[t["id"] for t in task_set("gate")], practice=practice) if args.gate == "cases" else
+            Gate(holdout=3))
     meta = Metacognition(
-        [refund_decision], verifier=verifier, learner=ValueLearning(GENERIC),
-        practice=ReplayPractice(compare=same_actions, ignore={"decline_return": ["reason"]}), gate=Gate(holdout=3),
+        [contract], verifier=verifier, learner=ValueLearning(GENERIC),
+        practice=ReplayPractice(compare=same_actions, ignore={"decline_return": ["reason"]}), gate=gate,
         controller=Controller({"memory": "none", "no_memory": "high"}), recall_k=1, relearn_after=4,
         learning="inline", gating_sources=("verifier", "human", "harness", *(("judge",) if arm == "judge" else ())),
         budget=LearningBudget(attempts_per_day=4), store=str(store), prices=PRICES)
-    meta.install("refund_decision", REGULAR)  # written before the holiday policy
+    if args.controller == "measured":  # measured floors in the store come before the hand-set table
+        for name in ("floors_no_memory.json", f"floors_memory_{args.contract}.json"):
+            if not (args.output / name).exists():
+                raise KeyError(f"--controller measured needs {name} in {args.output}: run the floors and memory "
+                               "phases first")
+            Floors.load(args.output / name).record(meta)
+    meta.install("refund_decision", regular)  # written before the holiday policy
     return meta
 
 
@@ -146,14 +167,16 @@ async def run_arm(arm: str, args: argparse.Namespace, recording: Recording) -> d
     store = args.output / f"{arm}.meta"
     if store.exists():
         shutil.rmtree(store)
-    meta = arm_metacognition(arm, store)
+    meta = arm_metacognition(arm, store, args)
     agent = returns_desk(metacognition=meta)
     stream = task_set("test")[: args.regular] + task_set("stream")[: args.holiday]
     sample = random.Random(1729)  # the same runs are reviewed in every arm
     pending: list[tuple[int, str, dict[str, Any]]] = []  # (due before run, run id, audit)
     seen: dict[str, int] = {}  # proposal "name@version" -> the run after which it appeared
     rows: list[dict[str, Any]] = []
-    print(f"\nArm {arm}: {args.regular} regular returns, then {args.holiday} under the holiday policy")
+    print(f"\nArm {arm}: {args.regular} regular returns, then {args.holiday} under the holiday policy "
+          f"(reasoning: {meta.setting('refund_decision', True, MODEL)} with the procedure, "
+          f"{meta.setting(None, False, MODEL)} without)")
     print(f"{'#':>3} {'case':<5} {'offered':<8} {'effort':<6} {'audit':<9} {'verdict':<20} events")
 
     async def deliver(now: int) -> list[str]:
@@ -195,6 +218,7 @@ async def run_arm(arm: str, args: argparse.Namespace, recording: Recording) -> d
         print(f"{n:>3} {task['id']:<5} {'yes' if report.offered else 'no':<8} {report.effort or '-':<6} "
               f"{'right' if audit['success'] else 'WRONG':<9} {verdict:<20} {'; '.join(events)}")
         guard(recording, args.budget)
+    (args.output / f"online_{arm}.json").write_text(json.dumps(rows, indent=2, default=str), encoding="utf-8")
     return outcome_of(arm, rows, meta)
 
 
@@ -217,6 +241,7 @@ def outcome_of(arm: str, rows: list[dict[str, Any]], meta: Metacognition) -> dic
         "judge_agreed": sum(r["verdict"] == r["audit"] for r in judged), "judge_runs": len(judged),
         "judge_false_accepts": sum(r["verdict"] and not r["audit"] for r in judged),
         "learning": summary["learning"], "procedures": summary["procedures"]["refund_decision"],
+        "attempts": [{"outcome": a["outcome"], "gate": a["gate"]} for a in meta.store.learning()],
     }
 
 
@@ -261,6 +286,12 @@ def parse(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--phases", nargs="+", default=["floors", "memory", "online"],
                         choices=["floors", "memory", "online"])
     parser.add_argument("--arms", nargs="+", default=list(ARMS), choices=list(ARMS))
+    parser.add_argument("--contract", default="words", choices=list(CONTRACTS),
+                        help="the procedure answers in its own words, or in the action tools' terms")
+    parser.add_argument("--controller", default="hand", choices=["hand", "measured"],
+                        help="the hand-set settings, or the floors the floors and memory phases measured")
+    parser.add_argument("--gate", default="holdout", choices=["holdout", "cases"],
+                        help="replay the last 3 accepted runs, or check the 6 labeled holiday returns")
     parser.add_argument("--mode", default="replay", choices=["replay", "record", "live"])
     parser.add_argument("--recording", type=Path, default=HERE / "recorded" / "study.jsonl")
     parser.add_argument("--output", type=Path, default=HERE / "runs")

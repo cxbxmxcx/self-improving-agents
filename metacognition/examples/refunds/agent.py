@@ -22,6 +22,18 @@ MEMORIES = Path(__file__).parent / "memories"
 REFERENCE = (MEMORIES / "refund_decision.py").read_text(encoding="utf-8")
 # The same procedure as written before the holiday policy existed: where D2's online loop starts.
 REGULAR = (MEMORIES / "refund_decision_regular.py").read_text(encoding="utf-8")
+# How the first pass's procedure names an action, and the action tools' terms for it (the second pass).
+TOOL_TERMS = {"refund": "card", "credit": "store_credit", "decline": "decline"}
+
+
+def in_tool_terms(source: str) -> str:
+    """A procedure that answers {"action": "refund"} rewritten to answer {"method": "card"}: the same code, in
+    the terms the action tools take. D2's second pass changes nothing else."""
+    for action, method in TOOL_TERMS.items():
+        source = source.replace(f'{{"action": "{action}"', f'{{"method": "{method}"')
+    if '"action"' in source:
+        raise ValueError("a decision is left in the procedure's own words")
+    return source
 
 
 @function_tool(read_only=True)
@@ -77,6 +89,24 @@ def refund_decision(return_id: str) -> dict:
     ...
 
 
+@procedure(api=READS, name="refund_decision")
+def refund_decision_in_tool_terms(return_id: str) -> dict:
+    """Work out what a return gets under the store's returns policy, in the terms the action tools take.
+
+    Returns: {"method": "card" | "store_credit" | "decline", "amount_usd": float}: the method to pass to
+    issue_refund, or "decline" to call decline_return instead; the amount rounded to the cent (0 for a decline).
+    """
+    ...
+
+
+# The two contracts D2 compares: the first pass's procedure answers in its own words, the second's in the
+# action tools' terms. Each comes with its hand-written procedure and the one written before the holiday policy.
+CONTRACTS = {
+    "words": (refund_decision, REFERENCE, REGULAR),
+    "tool": (refund_decision_in_tool_terms, in_tool_terms(REFERENCE), in_tool_terms(REGULAR)),
+}
+
+
 def returns_desk(**kwargs: Any) -> Agent:
     return Agent(name="Larkspur returns desk", instructions=PROMPT, model=MODEL,
                  tools=[*READS, issue_refund, decline_return], **kwargs)
@@ -106,13 +136,21 @@ async def run_on_case(source: str, task: dict[str, Any]) -> Any:
         return {"error": f"refund_decision could not be called: {type(exc).__name__}: {exc}"}
 
 
+def method_of(decision: Any) -> str | None:
+    """The action tools' method for a decision in either contract: card, store_credit or decline."""
+    if not isinstance(decision, dict):
+        return None
+    method = decision.get("method") if "method" in decision else TOOL_TERMS.get(decision.get("action"))
+    return method if method in ("card", "store_credit", "decline") else None
+
+
 def apply(world: ReturnsWorld, return_id: str, decision: dict[str, Any]) -> None:
     """Carry out a procedure's decision the way the agent would."""
-    action, amount = decision.get("action"), float(decision.get("amount_usd") or 0.0)
-    if action == "decline":
+    method, amount = method_of(decision), float(decision.get("amount_usd") or 0.0)
+    if method == "decline":
         world.decline_return(return_id, "under the returns policy")
     else:
-        world.issue_refund(return_id, amount, "card" if action == "refund" else "store_credit")
+        world.issue_refund(return_id, amount, method)
 
 
 async def practice(source: str, case_id: str) -> tuple[float, str, str]:
@@ -123,7 +161,7 @@ async def practice(source: str, case_id: str) -> tuple[float, str, str]:
     observed = f"called with return_id={return_id!r}; returned {json.dumps(decision, default=str)[:600]}"
     if isinstance(decision, dict) and "error" in decision:
         return 0.0, f"the function crashed when run: {decision['error']}", observed
-    if not isinstance(decision, dict) or decision.get("action") not in ("refund", "credit", "decline"):
+    if method_of(decision) is None:
         return 0.0, f"the function returned {decision!r}, not an action and an amount", observed
     world = ReturnsWorld(task)
     apply(world, return_id, decision)

@@ -39,6 +39,12 @@ def reimbursable_total(trip_id: str) -> dict:
     ...
 ```
 
+The procedure returns what `file_claim` takes, so the agent only copies it across. Answer in the action
+tool's terms whenever you can. D2's returns desk showed why: its procedure first answered `"refund"` or
+`"credit"` where the refund tool takes `method: "card"` or `"store_credit"`. At `none` the agent sometimes
+translated wrongly, and got 13 of 16 returns right. Answering in the tool's terms brought that to 15 of 16
+([DOMAINS.md](DOMAINS.md), D2).
+
 Runs are judged by `check`, the finance team's checker. [`examples/expenses/app.py`](examples/expenses/app.py)
 turns the agent into a deployment: a store, learning in a worker, and a gate on trips held back from learning.
 Every command below names it as `examples.expenses.app:agent`.

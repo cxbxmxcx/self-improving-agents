@@ -10,7 +10,16 @@ from pathlib import Path
 import pytest
 
 from examples.refunds import study
-from examples.refunds.agent import REFERENCE, REGULAR, practice, refund_decision
+from examples.refunds.agent import (
+    CONTRACTS,
+    REFERENCE,
+    REGULAR,
+    in_tool_terms,
+    method_of,
+    practice,
+    refund_decision,
+    refund_decision_in_tool_terms,
+)
 from examples.refunds.world import (
     DIAGNOSES,
     ReturnsWorld,
@@ -24,14 +33,28 @@ from metacog import Recording
 from metacog.offline import Floors
 from metacog.testing import RespondingModel, call, text
 
-# The procedure as written before the holiday policy: it never looks for the holiday note.
-STALE = REGULAR
 
-
+@pytest.mark.parametrize("contract", list(CONTRACTS))
 @pytest.mark.parametrize("split", ["dev", "validation", "test", "stream", "gate"])
-async def test_the_hand_written_procedure_meets_the_policy_on_every_return(split):
+async def test_the_hand_written_procedure_meets_the_policy_on_every_return(split, contract):
+    reference = CONTRACTS[contract][1]
     tasks = task_set(split)
-    assert [(await practice(REFERENCE, t["id"]))[0] for t in tasks] == [1.0] * len(tasks)
+    assert [(await practice(reference, t["id"]))[0] for t in tasks] == [1.0] * len(tasks)
+
+
+def test_the_second_pass_procedure_is_the_same_code_in_the_tools_terms():
+    for words in (REFERENCE, REGULAR):
+        tool = in_tool_terms(words)
+        changed = [(a, b) for a, b in zip(words.splitlines(), tool.splitlines(), strict=True) if a != b]
+        assert changed and all(a.strip().startswith("return {\"action\"") and b.strip().startswith(
+            "return {\"method\"") for a, b in changed)
+    assert [method_of(d) for d in ({"action": "refund"}, {"action": "credit"}, {"method": "store_credit"},
+                                   {"method": "decline"}, {"action": "card"}, None)] == [
+        "card", "store_credit", "store_credit", "decline", None, None]
+    contract = refund_decision_in_tool_terms.contract
+    assert contract.name == "refund_decision"
+    assert contract.signature == "def refund_decision(api, return_id: str) -> dict:"
+    assert contract.returns.startswith('{"method": "card" | "store_credit" | "decline", "amount_usd": float}')
 
 
 def test_returns_cover_every_outcome_and_convention():
@@ -63,9 +86,11 @@ def test_the_audit_names_the_broken_rule_without_the_answer():
                 assert f"{right[1]:.2f}" not in verdict["reason"]
 
 
-async def test_after_the_holiday_policy_a_stale_procedure_is_rejected_for_it():
-    before = [(await practice(STALE, t["id"]))[0] for t in task_set("test")]
-    after = [await practice(STALE, t["id"]) for t in task_set("gate")]
+@pytest.mark.parametrize("contract", list(CONTRACTS))
+async def test_after_the_holiday_policy_a_stale_procedure_is_rejected_for_it(contract):
+    stale = CONTRACTS[contract][2]
+    before = [(await practice(stale, t["id"]))[0] for t in task_set("test")]
+    after = [await practice(stale, t["id"]) for t in task_set("gate")]
     assert before == [1.0] * len(before)
     assert all(reward == 0.0 and "regular windows and fees to a holiday delivery" in reason
                for reward, reason, _ in after)
@@ -111,7 +136,8 @@ def desk(request: dict):
     return, order, customer and policy and decides correctly."""
     system = request["messages"][0]["content"]
     if system.startswith("You are writing a Python function"):
-        return text(f"```python\n{REFERENCE}```")
+        asked = json.dumps(request["messages"])
+        return text(f"```python\n{in_tool_terms(REFERENCE) if 'method' in asked else REFERENCE}```")
     if system.startswith("You judge whether an assistant handled a request correctly"):
         shown = request["messages"][1]["content"]
         case = returned(re.search(r"return (RET-\d+H?)", shown).group(1))
@@ -132,7 +158,8 @@ def desk(request: dict):
         if not tools:
             return call("refund_decision", {"return_id": return_id})
         decision = json.loads(tools[-1]["content"])
-        return act((decision["action"], decision["amount_usd"]), return_id)
+        kind = {"card": "refund", "store_credit": "credit", "decline": "decline"}[method_of(decision)]
+        return act((kind, decision["amount_usd"]), return_id)
     reads = [("read_return", {"return_id": return_id}), ("read_order", {"order_id": case["order"]["order_id"]}),
              ("read_customer", {"customer_id": case["customer"]["customer_id"]}), ("read_policy", {})]
     if len(tools) < len(reads):
@@ -159,7 +186,26 @@ async def test_the_online_loop_recovers_from_the_holiday_policy(arm, tmp_path):
         assert result["judge_agreed"] == result["judge_runs"] == 34
 
 
-STUDY = Path(__file__).parents[1] / "examples" / "refunds" / "recorded" / "study.jsonl"
+@pytest.mark.parametrize("arm", ["checker", "judge"])
+async def test_the_second_pass_measures_its_settings_and_gates_on_labeled_returns(arm, tmp_path):
+    args = study.parse(["--contract", "tool", "--controller", "measured", "--gate", "cases", "--arms", arm,
+                        "--tasks", "2", "--efforts", "none", "high", "--regular", "4", "--holiday", "30",
+                        "--review-rate", "0.5", "--review-delay", "3", "--approve-after", "2",
+                        "--output", str(tmp_path), "--recording", str(tmp_path / "unused.jsonl")])
+    unused = Recording(tmp_path / "unused.jsonl")
+    with RespondingModel(desk).active():
+        await study.phase_floors(args, unused)
+        await study.phase_memory(args, unused)
+        result = await study.run_arm(arm, args, unused)
+    assert (tmp_path / "floors_memory_tool.json").exists()
+    # The scripted desk is right at every setting, so the measured floors put every run at `none`.
+    assert all(r["effort"] == "none" for r in json.loads((tmp_path / f"online_{arm}.json").read_text("utf-8")))
+    gated = [a["gate"] for a in result["attempts"] if a["gate"]]
+    assert gated and all(g["total"] == 6 for g in gated)  # the labeled holiday returns, never replays
+    assert result["relearned_at"] <= result["trusted_again_at"] < 34
+
+
+STUDY =Path(__file__).parents[1] / "examples" / "refunds" / "recorded" / "study.jsonl"
 
 
 async def test_the_recorded_d2_study_replays(tmp_path):
@@ -170,7 +216,7 @@ async def test_the_recorded_d2_study_replays(tmp_path):
     efforts = ("none", "low", "medium", "high")
     without = Floors.load(tmp_path / "floors_no_memory.json").sweeps["no_memory"]
     assert [without.cells[e].solved for e in efforts] == [6, 15, 16, 16]
-    with_procedure = Floors.load(tmp_path / "floors_memory.json").sweeps["memory"]
+    with_procedure = Floors.load(tmp_path / "floors_memory_words.json").sweeps["memory"]
     assert [with_procedure.cells[e].solved for e in efforts] == [13, 15, 16, 16]
     arms = {a["arm"]: a for a in json.loads((tmp_path / "online_summary.json").read_text(encoding="utf-8"))}
     measured = {name: (a["wrong"], a["quarantined_at"], a["trusted_again_at"], a["under_refunded_usd"])
@@ -179,3 +225,27 @@ async def test_the_recorded_d2_study_replays(tmp_path):
                         "judge": (11, 8, 21, 9.0)}
     judge = arms["judge"]
     assert (judge["judge_agreed"], judge["judge_runs"], judge["judge_false_accepts"]) == (56, 60, 1)
+
+
+async def test_the_recorded_d2_second_pass_replays(tmp_path):
+    """D2's second pass (DOMAINS.md): the procedure answers in the tools' terms, the controller is measured, and
+    the gate checks 6 labeled holiday returns. Live once on 2026-11-05; the no-procedure floors replay from the
+    first pass."""
+    if not STUDY.exists():
+        pytest.skip("no recorded D2 study")
+    await study.main(study.parse(["--recording", str(STUDY), "--output", str(tmp_path), "--contract", "tool",
+                                  "--controller", "measured", "--gate", "cases"]))
+    efforts = ("none", "low", "medium", "high")
+    with_procedure = Floors.load(tmp_path / "floors_memory_tool.json").sweeps["memory"]
+    assert [with_procedure.cells[e].solved for e in efforts] == [15, 16, 16, 16]
+    arms = {a["arm"]: a for a in json.loads((tmp_path / "online_summary.json").read_text(encoding="utf-8"))}
+    measured = {name: (a["wrong"], a["quarantined_at"], a["trusted_again_at"], a["over_refunded_usd"],
+                       a["under_refunded_usd"]) for name, a in arms.items()}
+    assert measured == {"checker": (3, 11, 15, 85.99, 281.94), "reviewers": (27, 33, None, 85.99, 310.29),
+                        "judge": (4, 11, 20, 85.99, 281.94)}
+    assert all([a["gate"]["accepted"] for a in arm["attempts"]] == [6] for arm in arms.values())
+    judge = arms["judge"]
+    assert (judge["judge_agreed"], judge["judge_runs"], judge["judge_false_accepts"]) == (57, 60, 0)
+    # The reasoning settings came from the measured floors: none with the procedure, low without.
+    rows = json.loads((tmp_path / "online_checker.json").read_text(encoding="utf-8"))
+    assert {(bool(r["offered"]), r["effort"]) for r in rows} == {(True, "none"), (False, "low")}
