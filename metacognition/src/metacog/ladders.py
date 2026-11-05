@@ -6,7 +6,7 @@ turns a rung into the call parameters for one model family. Both families
 supported so far take LiteLLM's `reasoning_effort`, which LiteLLM translates:
 
 - OpenAI (GPT-5.x and the o-series): sent unchanged.
-- Anthropic (Claude): LiteLLM 1.106 sends `none` as no thinking. Other rungs
+- Anthropic (Claude): LiteLLM (1.106 to 1.108) sends `none` as no thinking. Other rungs
   become adaptive thinking at that effort on the Claude 5 family, or a thinking
   budget (1,024, 2,048 or 4,096 tokens) on earlier models. tests/test_a1.py
   pins this translation.

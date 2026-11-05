@@ -8,17 +8,21 @@ as hooks around that loop, never as a change to it.
 This folder is a side project of the book's companion repository: a self-contained, installable harness that
 uses the repository's `helix/` as its agent loop and replays chapter 6's recordings as its regression suite.
 
+- From design to drift, step by step, on the expense example: [GUIDE.md](GUIDE.md)
 - Design and milestones: [HARNESS_PLAN.md](HARNESS_PLAN.md)
 - Architecture and phase 2 (deployment, then example domains): [ARCHITECTURE.md](ARCHITECTURE.md)
 - The research it builds on: chapter 6's study, [`chapters/ch06`](../chapters/ch06/README.md)
 
 Status: phase 1 (milestones M0 to M5) is built and tested. The study's experiments E1, E2, E3, and E5 replay
 through metacog from the book's recordings with the study's numbers. A second task class (expense claims) and
-its study script are in `examples/expenses`; only a small live check of it has been run so far. Phase 2, which
-readies the harness for real deployments, is under way. Built so far: A1 (agents with several procedures, on
-several models), A2 (deployment: a learning worker, a shared store, sandboxing by default, a budget, a judge),
-and A3 (case files and `metacog calibrate`, `metacog discover`, webhooks, and `metacog serve` with a live
-dashboard). The suite has 111 tests and needs no API key. Nothing here is stable yet.
+its study script are in `examples/expenses`; only a small live check of it has been run so far. Phase 2
+readies the harness for real deployments, and its architecture work is done:
+- A1: agents with several procedures, on several models;
+- A2: deployment (a learning worker, a shared store, sandboxing by default, a budget, a judge);
+- A3: case files and `metacog calibrate`, `metacog discover`, webhooks, and `metacog serve` with a live dashboard;
+- A4: CI (`.github/workflows/metacognition.yml`) and the guide.
+
+Next come the example domains. The suite has 114 tests and needs no API key. Nothing here is stable yet.
 
 ## A plain agent
 
@@ -201,9 +205,12 @@ uv pip install --python .venv -e ".[dev]"      # or: .venv\Scripts\pip install -
 ```
 
 Tests replay recorded model calls and need no API key; the parity tests replay the book's chapter 6
-recordings from `chapters/ch06`. The repository's own `pytest` (run from its root) doesn't collect them. For
-live calls, put provider keys in a `.env` file in this folder (it is gitignored). Record new runs with
-`Recording(path, mode="record")` or `RunConfig(recording=...)`.
+recordings from `chapters/ch06`. The repository's own `pytest` (run from its root) doesn't collect them; the
+`metacognition` GitHub workflow runs them whenever this folder, `helix/` or `chapters/ch06/` changes.
+`constraints.txt` pins the versions the suite last passed with (`pip install -c constraints.txt -e ".[dev]"`);
+refresh it with `uv pip freeze --exclude-editable` after an upgrade passes. For live calls, put provider keys
+in a `.env` file in this folder (it is gitignored). Record new runs with `Recording(path, mode="record")` or
+`RunConfig(recording=...)`.
 
 The expense study (`python -m examples.expenses.study --help`) replays its committed smoke recording by
 default; `--mode record --budget N` makes paid calls only for replies the recording lacks.

@@ -13,7 +13,7 @@ authors = [{ name = "Micheal Lanham" }]
 # sits in, which is not a package (see README, "Development setup").
 dependencies = [
   "litellm>=1.50.0",
-  # litellm 1.106 imports its MCP handler on the chat-completions path, so a
+  # litellm 1.106+ imports its MCP handler on the chat-completions path, so a
   # live call fails without this package even when no MCP tool is used.
   "mcp>=1.0",
   "pydantic>=2.7.0",

@@ -1,0 +1,46 @@
+# Tests for the metacognition side project (metacognition/). They need no API key: they replay
+# recorded model calls, including chapter 6's recordings, so helix and chapter 6 changes run them too.
+name: metacognition
+
+on:
+  push:
+    branches: [main, metacognition]
+    paths:
+      - "metacognition/**"
+      - "helix/**"
+      - "chapters/ch06/**"
+      - ".github/workflows/metacognition.yml"
+  pull_request:
+    paths:
+      - "metacognition/**"
+      - "helix/**"
+      - "chapters/ch06/**"
+      - ".github/workflows/metacognition.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: metacognition
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install (the versions the suite last passed with)
+        run: |
+          python -m venv .venv
+          .venv/bin/pip install --upgrade pip
+          .venv/bin/pip install -c constraints.txt -e ".[dev]"
+      - name: Link the repository's helix
+        run: .venv/bin/python scripts/link_helix.py
+      - name: Lint
+        run: .venv/bin/python -m ruff check src tests examples scripts
+      - name: Test
+        run: .venv/bin/python -m pytest -q

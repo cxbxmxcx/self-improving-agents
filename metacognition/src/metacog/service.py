@@ -48,6 +48,7 @@ from pydantic import BaseModel
 from metacog.exceptions import AgentsException, UserError
 from metacog.meta.report import summarize
 from metacog.model_settings import DEFAULT_MODEL
+from metacog.recording import MissingReply
 from metacog.run import RunConfig, Runner
 
 
@@ -135,6 +136,8 @@ def create_app(agent: Any, *, context: Callable[[dict[str, Any]], Any] | None = 
             result = await Runner.run(agent, body.input, context=world, max_turns=max_turns, run_config=config)
         except AgentsException as exc:
             raise HTTPException(422, f"{type(exc).__name__}: {exc}") from exc
+        except MissingReply as exc:  # serving from a replay-only recording that lacks this call
+            raise HTTPException(409, exc.args[0]) from exc
         report = result.metacognition
         return jsonable_encoder({"run_id": report.run_id, "final_output": result.final_output,
                                  "metacognition": {"effort": report.effort, "matched": report.matched,

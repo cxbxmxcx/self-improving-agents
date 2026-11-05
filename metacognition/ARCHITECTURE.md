@@ -183,8 +183,9 @@ Every milestone keeps the parity suite green and ends with tests that need no AP
   migration.
 - The E5 replay still reproduces the study's trace under the new default of blaming only the procedures a
   run called: both rejected runs that were offered the stale procedure had called it.
-- LiteLLM 1.106 sends `reasoning_effort` to Claude as no thinking for `none`, and otherwise as adaptive
-  thinking at that effort (Claude 5) or a thinking budget (earlier models). A test pins this.
+- LiteLLM (1.106, and 1.108 as pinned) sends `reasoning_effort` to Claude as no thinking for `none`, and
+  otherwise as adaptive thinking at that effort (Claude 5) or a thinking budget (earlier models). A test pins
+  this.
 
 A2 was built the same day (`tests/test_a2.py`, 11 tests; 100 in all):
 
@@ -256,6 +257,16 @@ A3 was built next (`tests/test_a3.py`, 11 tests; 111 in all), with the dashboard
 
 - Packaging under decision 1, CI on GitHub after the push, and a guide that takes the expense agent through
   every stage in section 2.
+- *Built:*
+  - **Packaging:** the side project sits in the book repository (decision 1).
+  - **CI:** `.github/workflows/metacognition.yml` runs lint and the suite whenever `metacognition/`, `helix/`
+    or `chapters/ch06/` changes, with the versions pinned in `constraints.txt`.
+  - **The guide:** [GUIDE.md](GUIDE.md) walks the expense agent from design to drift.
+  - **New commands:** `examples/expenses/app.py` makes the expense agent a deployment the CLI can name,
+    `metacog install` trusts a hand-written procedure, and `metacog serve --recording` replays or records a
+    served agent's calls.
+  - **Tests:** the guide's free steps run through the CLI in `tests/test_a4.py` and reproduce the smoke
+    study's numbers.
 
 ## 6. Example domains
 

@@ -5,6 +5,7 @@
                                                verdict, cost
     metacog show STORE NAME [--version N]      one procedure version's source and provenance
     metacog approve STORE NAME VERSION         trust a version the gate proposed
+    metacog install STORE NAME FILE [--by]     trust a procedure written by hand (or found elsewhere)
     metacog quarantine STORE NAME [--reason]   stop trusting a procedure; it relearns from new runs
     metacog report STORE [--html FILE]         the economics, as text or a standalone HTML page
     metacog discover STORE [--draft]           recurring, costly work in the runs: candidates for a procedure
@@ -111,6 +112,18 @@ def _show(args: argparse.Namespace) -> None:
 def _approve(args: argparse.Namespace) -> None:
     approve_version(_open(args.store), args.name, args.version)
     print(f"{args.name}@{args.version} is trusted")
+
+
+def _install(args: argparse.Namespace) -> None:
+    from metacog.meta.procedure import _check_source
+    from metacog.meta.runtime import trust_version
+
+    source = Path(args.source).read_text(encoding="utf-8")
+    _check_source(source, args.name)  # the code-skill guard, and a def with the procedure's name
+    store = _open(args.store)
+    version = trust_version(store, args.name, store.add_version(args.name, source, state="candidate",
+                                                                created_by=args.by))
+    print(f"{args.name}@{version} is trusted (by {args.by}, from {args.source})")
 
 
 def _quarantine(args: argparse.Namespace) -> None:
@@ -227,6 +240,8 @@ def _serve(args: argparse.Namespace) -> None:
 
     from metacog.meta.events import webhook
     from metacog.meta.worker import load_agent, load_object
+    from metacog.recording import Recording
+    from metacog.run import RunConfig
     from metacog.service import create_app
 
     _env()
@@ -234,9 +249,11 @@ def _serve(args: argparse.Namespace) -> None:
     context = load_object(args.context) if args.context else None
     if args.webhook:
         webhook(args.webhook)
-    print(f"metacog: serving {agent.name} at http://{args.host}:{args.port}")
-    uvicorn.run(create_app(agent, context=context, max_turns=args.max_turns), host=args.host, port=args.port,
-                log_level="warning")
+    config = RunConfig(recording=Recording(args.recording, mode=args.mode)) if args.recording else None
+    print(f"metacog: serving {agent.name} at http://{args.host}:{args.port}"
+          + (f", model calls from {args.recording} ({args.mode})" if args.recording else ""))
+    uvicorn.run(create_app(agent, context=context, run_config=config, max_turns=args.max_turns), host=args.host,
+                port=args.port, log_level="warning")
 
 
 def html_report(store: MetaStore, summary: dict) -> str:
@@ -303,6 +320,10 @@ def main(argv: list[str] | None = None) -> int:
     approve = command("approve", _approve)
     approve.add_argument("name")
     approve.add_argument("version", type=int)
+    install = command("install", _install)
+    install.add_argument("name")
+    install.add_argument("source", help="a .py file holding the procedure's function, taking `api` first")
+    install.add_argument("--by", default="human", help="who wrote it: 'human' runs in-process, others sandboxed")
     quarantine = command("quarantine", _quarantine)
     quarantine.add_argument("name")
     quarantine.add_argument("--reason", default="by hand")
@@ -333,6 +354,8 @@ def main(argv: list[str] | None = None) -> int:
     serve.add_argument("--context", help="module:attribute that builds a run's context from the request body")
     serve.add_argument("--webhook", help="post quarantines, proposals and installs to this URL")
     serve.add_argument("--max-turns", type=int, default=12)
+    serve.add_argument("--recording", help="serve model replies from this JSONL recording (see --mode)")
+    serve.add_argument("--mode", choices=["replay", "record", "live"], default="record")
     worker = command("worker", _worker, "TARGET")
     worker.add_argument("--once", action="store_true", help="one pass, then exit")
     worker.add_argument("--interval", type=float, default=30.0, help="seconds between passes")
