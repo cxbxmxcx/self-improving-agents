@@ -1,0 +1,18 @@
+# Secrets: API keys live here and must never be committed.
+.env
+
+# Environments and caches
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# Build output
+build/
+dist/
+*.egg-info/
+
+# Run output and local metacognition stores
+runs/
+*.meta/
