@@ -22,7 +22,9 @@ readies the harness for real deployments, and its architecture work is done:
 - A3: case files and `metacog calibrate`, `metacog discover`, webhooks, and `metacog serve` with a live dashboard;
 - A4: CI (`.github/workflows/metacognition.yml`) and the guide.
 
-Next come the example domains. The suite has 114 tests and needs no API key. Nothing here is stable yet.
+The example domains are under way ([DOMAINS.md](DOMAINS.md)). D1, the full expense study, has run live once
+for $1.05 and reproduced the study's results on a second domain. Its recording replays offline. The suite has
+115 tests and needs no API key. Nothing here is stable yet.
 
 ## A plain agent
 

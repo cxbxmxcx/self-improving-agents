@@ -270,6 +270,11 @@ A3 was built next (`tests/test_a3.py`, 11 tests; 111 in all), with the dashboard
 
 ## 6. Example domains
 
+Protocols and results live in [DOMAINS.md](DOMAINS.md). D1 ran live on 2026-11-05 for $1.05 and repeated the
+study's pattern on the expense domain. The domain-neutral prompts learned a procedure that matches the
+hand-written one on all 16 validation trips. In the online loop the procedure was quarantined after run 8 and
+relearned at run 12 (gate 6/6), and learning paid for itself after 8.5 requests.
+
 Each domain is built with the harness the way a real agent would be: tools, procedures, a verdict source,
 calibration, deployment and then drift. Each answers one question about metacognition. Live runs stop at a
 set budget.
