@@ -10,12 +10,12 @@ Every agent call and writer call must match the book's recordings.
 from __future__ import annotations
 
 import pytest
-from calendar_sdk import FIND_SHARED_STARTS, assistant, check
 from chapters.ch06.assistant import generator, generator_drift
 from chapters.ch06.assistant.environment import SchedulingEnvironment
 from chapters.ch06.assistant.learning import CONTRACT, act, gather_experience, recall_experience, remember
 from helix.memory.learning_mechanisms import Writer
 
+from examples.calendar.agent import FIND_SHARED_STARTS, assistant, check
 from metacog import Recording, RunConfig, Runner
 from metacog.meta import CALENDAR, Controller, Gate, Metacognition, ValueLearning
 from metacog.pricing import PRICES

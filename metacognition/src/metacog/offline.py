@@ -6,6 +6,8 @@ calibrate          effort sweeps per arm (no memory; trusted memory, recalled bu
                    whose table is the controller's lookup for the model measured (study E1)
 calibrate_routing  per-procedure thresholds for the router, from requests labeled with the
                    procedure they belong to (or none)
+calibrate_deployment  both, for an agent's deployment, recorded into its store (`metacog calibrate`);
+                   cases come from a JSONL case file (load_cases)
 search_procedure   GEPA over a procedure's source, scored by practice on recorded cases, every case
                    tried under each input variant, with the candidate's own outcome in the feedback
                    (study E2, including both of its measurement fixes)
@@ -15,6 +17,7 @@ search_learners    every learning mechanism on the same experience, scored by be
 
 from __future__ import annotations
 
+import inspect
 import json
 from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass, field, replace
@@ -43,11 +46,59 @@ from metacog.model_settings import DEFAULT_MODEL, ModelSettings, Reasoning
 
 @dataclass(frozen=True)
 class Case:
-    """One request to measure on: a stable id, the input, and what rebuilds its world."""
+    """One request to measure on: a stable id, the input, and what rebuilds its world.
+
+    `procedure` labels the request's class for routing calibration: a procedure's name, or None for a
+    request in no procedure's class. `labeled` says whether the case carries a label at all.
+    """
 
     id: str
     input: str
     data: Any = None
+    procedure: str | None = None
+    labeled: bool = False
+
+
+def load_cases(path: str | Path) -> list[Case]:
+    """Cases from a JSONL file, one object a line: {"id", "input", "data"?, "procedure"?}.
+
+    "data" is what the world factory rebuilds the case from. A "procedure" key (a procedure's name, or
+    null for a request in no procedure's class) labels the case for routing calibration.
+    """
+    cases: list[Case] = []
+    for n, line in enumerate(Path(path).read_text(encoding="utf-8").splitlines(), 1):
+        if not line.strip():
+            continue
+        try:
+            row = json.loads(line)
+        except ValueError as exc:
+            raise ValueError(f"{path}, line {n}: not JSON ({exc})") from exc
+        if not isinstance(row, dict) or "id" not in row or "input" not in row:
+            raise ValueError(f'{path}, line {n}: a case needs "id" and "input"')
+        cases.append(Case(str(row["id"]), str(row["input"]), row.get("data"), row.get("procedure"),
+                          "procedure" in row))
+    seen: set[str] = set()
+    for case in cases:
+        if case.id in seen:
+            raise ValueError(f"{path}: case id {case.id!r} appears more than once")
+        seen.add(case.id)
+    return cases
+
+
+def save_cases(path: str | Path, cases: Sequence[Case]) -> Path:
+    """Write cases as a JSONL case file that `load_cases` reads back."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    lines = []
+    for case in cases:
+        row: dict[str, Any] = {"id": case.id, "input": case.input}
+        if case.data is not None:
+            row["data"] = case.data
+        if case.labeled:
+            row["procedure"] = case.procedure
+        lines.append(json.dumps(row, default=str))
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
+    return path
 
 
 # ------------------------------------------------------------------ calibrate
@@ -148,7 +199,8 @@ async def calibrate(agent: Any, cases: Sequence[Case], *, verifier: Callable[...
                 result = await Runner.run(agent, case.input, context=context, max_turns=max_turns, run_config=config)
             except AgentsException as exc:
                 return False, f"the run failed: {exc}", getattr(exc, "trajectory", None)
-            verdict = Verdict.coerce(verifier(result.context_wrapper, result))
+            judged = verifier(result.context_wrapper, result)
+            verdict = Verdict.coerce(await judged if inspect.isawaitable(judged) else judged)
             return bool(verdict and verdict.accepted), verdict.reason if verdict else "no verdict", result.trajectory
 
         def task_id(task: tuple[Case, int]) -> str:
@@ -218,6 +270,53 @@ def calibrate_routing(procedures: Any, labeled: Sequence[tuple[str, str | None]]
         routed = [n for n, s in ranked if s >= router.thresholds.get(n, router.default)]
         correct += (routed[0] if routed else None) == label
     return RoutingCalibration(router, report, correct / len(rows) if rows else 0.0)
+
+
+@dataclass
+class Calibration:
+    """What `calibrate_deployment` measured and recorded."""
+
+    floors: Floors
+    routing: RoutingCalibration | None
+    skipped: list[str] = field(default_factory=list)  # arms not measured, and why
+
+
+async def calibrate_deployment(agent: Any, cases: Sequence[Case], *, world: Callable[[Any], Any] | None = None,
+                               efforts: Sequence[str] = EFFORTS, arms: Sequence[str] = ("no_memory", "memory"),
+                               repeats: int = 1, concurrency: int = 4, max_turns: int = 10, run_config: Any = None,
+                               prices: dict[str, tuple[float, ...]] | None = None,
+                               threshold: float = ADEQUATE) -> Calibration:
+    """Calibrate an agent's deployment in place, as `metacog calibrate` does.
+
+    Measures the reasoning floors on `cases` with the deployment's own verifier, records them in its store
+    for the agent's model (the controller reads them from there), and, when cases are labeled, calibrates
+    the router and saves it with the store. The world factory defaults to an AgentPractice's. The memory
+    arm is skipped while no procedure is trusted, because it would measure nothing a procedure does.
+    """
+    meta = getattr(agent, "metacognition", None)
+    if meta is None or not hasattr(meta, "store"):
+        raise ValueError("calibrate_deployment needs an agent with Metacognition (one store)")
+    if meta.verifier is None:
+        raise ValueError("calibration needs verdicts: give the Metacognition a verifier")
+    world = world or getattr(meta.practice, "world", None)
+    skipped = []
+    if "memory" in arms and not any(meta.store.trusted(name) for name in meta.procedures):
+        arms = [arm for arm in arms if arm != "memory"]
+        skipped.append("memory: no procedure is trusted yet")
+    floors = await calibrate(agent, cases, verifier=meta.verifier, world=world, efforts=efforts, arms=arms,
+                             repeats=repeats, concurrency=concurrency, max_turns=max_turns, run_config=run_config,
+                             prices=prices)
+    floors.record(meta, threshold=threshold)
+    routing = None
+    labeled = [(case.input, case.procedure) for case in cases if case.labeled]
+    if labeled:
+        routing = calibrate_routing(meta, labeled, k=meta.router.k)
+        if routing.router.thresholds:
+            meta.store.put_setting("router", routing.router.to_dict())
+            meta.router = routing.router
+        else:
+            skipped.append("routing: every procedure needs labeled requests both in and out of its class")
+    return Calibration(floors, routing, skipped)
 
 
 # ------------------------------------------------------------------ search_procedure

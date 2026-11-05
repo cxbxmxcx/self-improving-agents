@@ -90,6 +90,7 @@ class MetaStore:
             self.path.mkdir(parents=True, exist_ok=True)
             database = str(self.path / "meta.sqlite")
         self._lock = threading.RLock()
+        self._watch: sqlite3.Connection | None = None  # opened by stamp()
         self._conn = sqlite3.connect(database, check_same_thread=False, timeout=30.0)
         self._conn.row_factory = sqlite3.Row
         if self.path is not None:
@@ -122,6 +123,32 @@ class MetaStore:
     def schema_version(self) -> int:
         with self._lock:
             return int(self._conn.execute("SELECT value FROM meta WHERE key = 'schema_version'").fetchone()[0])
+
+    def stamp(self) -> str:
+        """A value that changes whenever anyone writes to the store: this process (its own write count) or
+        another one (SQLite's data_version, read on a second connection that sees every other commit)."""
+        with self._lock:
+            mine = self._conn.total_changes
+            if self.path is None:
+                return f"0:{mine}"
+            if self._watch is None:
+                self._watch = sqlite3.connect(str(self.path / "meta.sqlite"), check_same_thread=False, timeout=30.0)
+            theirs = self._watch.execute("PRAGMA data_version").fetchone()[0]
+            return f"{theirs}:{mine}"
+
+    # ------------------------------------------------------------ settings kept with the deployment
+
+    def put_setting(self, key: str, value: Any) -> None:
+        """Keep a deployment setting, such as the calibrated router, as JSON."""
+        with self._lock:
+            self._conn.execute("INSERT INTO meta VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+                               (f"setting:{key}", json.dumps(value)))
+            self._conn.commit()
+
+    def setting(self, key: str) -> Any:
+        with self._lock:
+            row = self._conn.execute("SELECT value FROM meta WHERE key = ?", (f"setting:{key}",)).fetchone()
+        return None if row is None else json.loads(row[0])
 
     @contextmanager
     def _immediate(self) -> Iterator[sqlite3.Connection]:
@@ -210,6 +237,24 @@ class MetaStore:
         with self._lock:
             rows = self._conn.execute("SELECT * FROM episodes WHERE ord >= ? ORDER BY ord", (since,)).fetchall()
         return [self._row(r) for r in rows]
+
+    def recent_runs(self, limit: int = 50, *, before: int | None = None, unjudged: bool = False
+                    ) -> list[dict[str, Any]]:
+        """The latest runs, newest first: before run number `before` if given, and only those still
+        awaiting a verdict with `unjudged`."""
+        query, params = "SELECT * FROM episodes WHERE 1 = 1", []
+        if before is not None:
+            query, params = query + " AND ord < ?", [*params, before]
+        if unjudged:
+            query += " AND verdict IS NULL"
+        with self._lock:
+            rows = self._conn.execute(query + " ORDER BY ord DESC LIMIT ?", [*params, limit]).fetchall()
+        return [self._row(r) for r in rows]
+
+    def run(self, run_id: str) -> dict[str, Any] | None:
+        with self._lock:
+            row = self._conn.execute("SELECT * FROM episodes WHERE run_id = ?", (run_id,)).fetchone()
+        return None if row is None else self._row(row)
 
     def episodes(self, *, since: int = 0, procedure: str | None = None) -> list[Episode]:
         """Judged runs at or after `since`, oldest first, as a learner reads them; filtered to the runs that
@@ -325,4 +370,6 @@ class MetaStore:
         return None if row is None else dict(row)
 
     def close(self) -> None:
+        if self._watch is not None:
+            self._watch.close()
         self._conn.close()

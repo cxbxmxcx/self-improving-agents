@@ -7,11 +7,11 @@ recording has no reply and replay fails.
 
 from __future__ import annotations
 
-from calendar_sdk import assistant
 from chapters.ch06.assistant.environment import SchedulingEnvironment
 from chapters.ch06.assistant.generator import task_set
 from helix.eval.effort import EFFORTS, sweep
 
+from examples.calendar.agent import assistant
 from metacog import ModelSettings, Reasoning, Recording, RunConfig, Runner
 from metacog.pricing import PRICES
 

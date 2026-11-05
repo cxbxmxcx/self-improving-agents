@@ -223,7 +223,6 @@ class Metacognition:
         self.executor = executor
         self.budget = budget
         self.attribution = attribution
-        self.router = router or Router(k=recall_k, default=relevance)
         self.procedures = {p.name: p for p in procedures}
         self.verifier = verifier
         self.learner = resolve_mechanism(learner, prompts)
@@ -234,6 +233,9 @@ class Metacognition:
         self.detector = detector or Detector()
         self.controller = controller or Controller()
         self.store = store if isinstance(store, MetaStore) else MetaStore(store)
+        # A router given in code wins; else the one `metacog calibrate` saved with the deployment.
+        saved = self.store.setting("router") if router is None else None
+        self.router = router or (Router.from_dict(saved) if saved else Router(k=recall_k, default=relevance))
         self.recall_k = self.router.k
         self.relearn_after = relearn_after
         self.learning = learning

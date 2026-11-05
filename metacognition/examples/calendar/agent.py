@@ -1,4 +1,4 @@
-"""The chapter 6 calendar assistant written on metacog's SDK surface, shared by the parity tests.
+"""The chapter 6 calendar assistant written on metacog's SDK surface (the parity tests and the drift demo use it).
 
 Only the calendar world, the prompt, and the tool descriptions come from the
 book; the agent is metacog's. Parity holds only if it sends the book's exact

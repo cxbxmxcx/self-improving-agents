@@ -15,9 +15,10 @@ uses the repository's `helix/` as its agent loop and replays chapter 6's recordi
 Status: phase 1 (milestones M0 to M5) is built and tested. The study's experiments E1, E2, E3, and E5 replay
 through metacog from the book's recordings with the study's numbers. A second task class (expense claims) and
 its study script are in `examples/expenses`; only a small live check of it has been run so far. Phase 2, which
-readies the harness for real deployments, is under way: A1 (agents with several procedures, on several models)
-and A2 (deployment: a learning worker, a shared store, sandboxing by default, a budget, a judge) are built.
-The suite has 100 tests and needs no API key. Nothing here is stable yet.
+readies the harness for real deployments, is under way. Built so far: A1 (agents with several procedures, on
+several models), A2 (deployment: a learning worker, a shared store, sandboxing by default, a budget, a judge),
+and A3 (case files and `metacog calibrate`, `metacog discover`, webhooks, and `metacog serve` with a live
+dashboard). The suite has 111 tests and needs no API key. Nothing here is stable yet.
 
 ## A plain agent
 
@@ -122,7 +123,38 @@ LiteLLM's `reasoning_effort`, which LiteLLM turns into Claude's thinking setting
   read each run against a rubric. Its verdicts are recorded, but they reach the detector only if `"judge"` is
   in `gating_sources`, and code learned under a judge waits for a person's approval.
 - **Keep floors in the store.** `floors.record(meta)` writes calibrated floors for their model, and the
-  controller reads them on every run.
+  controller reads them on every run. `metacog calibrate` does it for you (see below).
+- **Tell someone.** `metacog serve ... --webhook URL` and `metacog worker ... --webhook URL` post quarantines,
+  proposals and installs to a URL as JSON, with a one-line `text` a chat channel can show.
+
+## The service and the live dashboard
+
+`metacog serve app:agent` hosts an agent's deployment over HTTP. At `/` it serves a dashboard that updates as
+runs land:
+
+- **Needs you:** versions the gate proposed, with their diff, gate result and cost, and an Approve button;
+  runs awaiting a person's verdict, with Accept and Reject and a reason.
+- **Runs:** the procedures each run was offered and called, its reasoning setting, verdict and cost. Click a
+  run for its request, routing scores, tool calls with results, answer, and why it was judged as it was.
+- **Procedures:** each one's trust state, its last four judged uses, its versions, and a Quarantine button.
+
+Everything it shows is in the store and everything it does is an API call, so it adds no capability the CLI
+lacks; it puts a person in the loop as the loop runs. To see it with no API key, replay chapter 6's drift
+with a person approving installs:
+
+```powershell
+.venv\Scripts\python -m examples.calendar.drift_demo     # E5's first 12 runs, into examples/runs/drift.meta
+.venv\Scripts\metacog serve examples.calendar.drift_demo:agent
+# open http://127.0.0.1:8620: v1 quarantined at run 8, v2 relearned at run 12 and waiting for you
+```
+
+The API (`/api/docs` lists it) is `POST /api/runs` to run the agent, `POST /api/runs/{id}/feedback`,
+`GET /api/queue`, `GET /api/procedures`, `POST /api/procedures/{name}/{version}/approve`,
+`POST /api/procedures/{name}/quarantine`, and `GET /api/stream` for live updates. A run's context comes from
+`--context module:attribute`, a factory that builds it from the request body. Every POST needs the header
+`X-Metacog: 1`, which the dashboard sends and another site's page can't, and there is no other authentication:
+keep the default localhost binding, or put the service behind your own. It needs the `serve` extra
+(`pip install -e ".[serve]"`).
 
 ## Offline toolkit and CLI
 
@@ -138,15 +170,22 @@ kept = await search_learners(reimbursable_total, episodes, practice=practice, re
 
 ```text
 metacog status runs/jordan.meta          procedures, trust states, and economics
-metacog runs runs/jordan.meta            recent runs: effort, procedures offered, verdict, cost
+metacog runs runs/jordan.meta            recent runs: model, effort, procedures offered and called, verdict
 metacog show runs/jordan.meta NAME       a version's source and provenance
 metacog approve runs/jordan.meta NAME V  trust a version the gate proposed
 metacog quarantine runs/jordan.meta NAME stop trusting a procedure
 metacog report runs/jordan.meta --html report.html
+metacog discover app:agent [--draft]     recurring, costly work without a procedure: candidates for one
+metacog feedback app:agent 12 reject --reason "..."    a person's verdict on run 12
+metacog calibrate app:agent cases.jsonl --world app:world_for    floors (and routing) into the store
+metacog serve app:agent                  the API and the live dashboard
 metacog worker app:agent [--once]        learn for an agent with learning="worker"
 ```
 
-Every command that takes a store also takes a target such as `app:agent`.
+Every command that takes a store also takes a target such as `app:agent`. A case file has one JSON object a
+line: `{"id": ..., "input": ..., "data": ..., "procedure": ...}`. `data` is what `--world` rebuilds the case's
+context from, and `procedure` (a name, or `null` for a request in no procedure's class) labels the case for
+routing calibration. `metacog calibrate --recording calls.jsonl` reuses recorded replies and records new ones.
 
 ## Development setup
 
@@ -181,9 +220,10 @@ model as `{"error": ...}` unless the tool sets `failure_error_function`.
 ```text
 src/metacog/          the SDK: agent, run, tool, model_settings, ladders (effort per model family), guardrail,
                       lifecycle, session, stream, tracing, recording (record/replay), offline (calibrate,
-                      routing, searches), cli, testing
+                      routing, case files, searches), discover, service and dashboard.html, cli, testing
 src/metacog/meta/     metacognition: procedure, runtime, parts (router, controller, detector, gate, budget),
                       mechanisms, prompts, store, api, sandbox, replay, scopes, events, judge, worker, report
+examples/calendar/    chapter 6's assistant on metacog, and the drift demo for the dashboard
 examples/expenses/    the second task class: world, agent, study, recorded smoke run
 tests/                unit tests, and parity tests that replay the study's experiments
 ```

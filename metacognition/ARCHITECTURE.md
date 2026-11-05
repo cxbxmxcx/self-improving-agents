@@ -196,6 +196,28 @@ A2 was built the same day (`tests/test_a2.py`, 11 tests; 100 in all):
   Numbering a run or a version now holds SQLite's write lock from read to write.
 - Not yet: a worker for `PerUser` deployments (one store per person).
 
+A3 was built next (`tests/test_a3.py`, 11 tests; 111 in all), with the dashboard kept lean as agreed:
+
+- Findings 14 to 16 are fixed:
+  - **Evaluation:** case files and `metacog calibrate`, which records floors per model and, from labeled
+    cases, a calibrated router in the store; a new process on the store picks both up.
+  - **Hosting:** `metacog serve`.
+  - **Live view:** the dashboard, with what needs a person, a run feed with each run's detail, and procedure
+    states. Analytics stay in the static report.
+- **`metacog discover` finds work worth a procedure.** It groups runs without a procedure by the tools they
+  used and ranks the groups by reasoning spent. It prints a skeleton stub per group, or with `--draft` a writer
+  model drafts one.
+- **Webhooks** post quarantines, proposals and installs from whichever process causes them.
+- **`examples/calendar/drift_demo.py`** replays chapter 6's E5 through run 12, with a person approving
+  installs. The dashboard then has a real quarantine and a real proposal to show with no API key. The
+  acceptance tests serve the expense agent over HTTP from its recorded calls, judge its runs through
+  feedback, and approve the demo's proposal through the API.
+- **Two bugs turned up only when the real server and page ran,** and both are fixed: the summary's learning
+  totals overwrote the deployment's learning mode, and run details printed placeholder text.
+- **Routing on a description alone is weak.** The live demo showed run 8's request scoring 0.00 against its
+  procedure, because the two share no words. The study's single procedure matched only because nothing was
+  thresholded. Example requests (from labeled cases) are what make routing work.
+
 **A1. More than one procedure, more than one model** (findings 1 to 5, 12 and 13)
 
 - Record each run's model, the procedures it called, and its match scores. Blame verdicts on called

@@ -9,8 +9,8 @@ description = "An agent SDK shaped like the OpenAI Agents SDK whose agents learn
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [{ name = "Micheal Lanham" }]
-# helix's core needs; helix itself comes from a checkout of the book repo
-# until it is packaged (see README, "Development setup").
+# helix's core needs; helix itself comes from the book repository this project
+# sits in, which is not a package (see README, "Development setup").
 dependencies = [
   "litellm>=1.50.0",
   # litellm 1.106 imports its MCP handler on the chat-completions path, so a
@@ -27,7 +27,9 @@ dependencies = [
 metacog = "metacog.cli:main"
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0", "pytest-asyncio>=0.24", "ruff>=0.6"]
+# `metacog serve`: the HTTP service and live dashboard (the versions the repository's Observatory uses).
+serve = ["fastapi>=0.128.0", "uvicorn>=0.30.0"]
+dev = ["metacog[serve]", "pytest>=8.0", "pytest-asyncio>=0.24", "ruff>=0.6"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/metacog"]

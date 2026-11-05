@@ -31,16 +31,24 @@ from metacog.exceptions import UserError
 LEASE = "worker"
 
 
-def load_agent(target: str) -> Any:
-    """The metacog Agent a `module:attribute` target names (calling the attribute if it is a factory)."""
-    from metacog.agent import Agent
-
+def load_object(target: str) -> Any:
+    """What a `module:attribute` target names, imported with the current directory on the path."""
     module_name, _, attribute = target.partition(":")
     if not module_name or not attribute:
         raise UserError(f"a target is module:attribute, such as app:agent, not {target!r}")
     if str(Path.cwd()) not in sys.path:
         sys.path.insert(0, str(Path.cwd()))
-    found = getattr(importlib.import_module(module_name), attribute)
+    try:
+        return getattr(importlib.import_module(module_name), attribute)
+    except (ImportError, AttributeError) as exc:
+        raise UserError(f"can't load {target}: {exc}") from exc
+
+
+def load_agent(target: str) -> Any:
+    """The metacog Agent a `module:attribute` target names (calling the attribute if it is a factory)."""
+    from metacog.agent import Agent
+
+    found = load_object(target)
     if not isinstance(found, Agent) and callable(found):
         found = found()
     if not isinstance(found, Agent):

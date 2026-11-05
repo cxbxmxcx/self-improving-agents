@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import random
 
-from calendar_sdk import FIND_SHARED_STARTS, assistant, check
 from chapters.ch06.assistant import context_search as cs
 from chapters.ch06.assistant.environment import SchedulingEnvironment
 from chapters.ch06.assistant.generator import task_set
@@ -24,6 +23,7 @@ from chapters.ch06.assistant.learning import (
     run_on_case,
 )
 
+from examples.calendar.agent import FIND_SHARED_STARTS, assistant, check
 from metacog import Recording, RunConfig
 from metacog.meta import CALENDAR, Metacognition
 from metacog.offline import Case, calibrate, search_learners, search_procedure
