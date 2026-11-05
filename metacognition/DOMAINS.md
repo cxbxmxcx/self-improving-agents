@@ -71,8 +71,8 @@ The recording replays the repeats offline in about 30 seconds, and the D1 test c
 
 ## D2. Store refunds: can an agent learn safely when verdicts are scarce, late and human?
 
-Built in `examples/refunds` (`world.py`, `agent.py`, `study.py`, and the hand-written
-`memories/refund_decision.py`), with no live run yet.
+Built in `examples/refunds` (`world.py`, `agent.py`, `study.py`, and the hand-written procedures in
+`memories/`). It ran live on 2026-11-05; the results are below the design.
 
 - **The agent:** the returns desk at a store. It reads the return, its order, the customer and the returns
   policy (all read-only), then acts once: `issue_refund` (to the card, or as store credit) or
@@ -107,6 +107,74 @@ Built in `examples/refunds` (`world.py`, `agent.py`, `study.py`, and the hand-wr
   - With 30% of runs judged, late, how long does detection take, and what does the delay cost?
   - Does the judge shorten it without letting a bad version in?
   - Can replayed practice gate a candidate with only the reviewed runs to go on?
+
+**Results** (2026-11-05, `gpt-5.4-mini`, one sample per configuration: 1,083 live calls, $1.94). The recording
+replays the whole study in about 15 seconds, and `tests/test_refunds.py` checks the numbers below.
+
+| Returns solved | `none` | `low` | `medium` | `high` |
+|---|---|---|---|---|
+| No procedure (development returns) | 6/16 | 15/16 | 16/16 | 16/16 |
+| Hand-written procedure (test returns) | 13/16 | 15/16 | 16/16 | 16/16 |
+
+- **This domain needs little memory.** Without a procedure the agent clears the adequate bar at `low` and
+  solves every return at `medium`, because the returns policy states its rules plainly. With the procedure the
+  floors are the same and the cost barely moves ($0.0052 a run at `medium` with it, $0.0050 without). That's
+  the study's thesis from the other side: memory pays when it carries knowledge the model can't derive, and
+  here the model can.
+- **A procedure's answer should speak its action tool's language.**
+  - At `none` the hand-written procedure was right every time, yet the agent got 3 of 16 test returns wrong,
+    and 2 of the 10 regular returns in each online arm.
+  - The procedure said `{"action": "refund"}` and the agent called `issue_refund` with
+    `method: "store_credit"`. The procedure's words (refund, credit) aren't the tool's (card, store_credit),
+    and at `none` the agent sometimes translates by its own reading of the policy.
+  - The expense procedure returns the amount the claim tool takes, and got 16 of 16 at `none`.
+  - Design rule: have a procedure return the arguments its action tool takes.
+  - The online arms also used a hand-set controller (`none` with a procedure), where D2's measured floors say
+    `low` or `medium`.
+
+| Online arms (60 returns; the policy changes at run 11) | checker | reviewers | judge |
+|---|---|---|---|
+| Wrong actions served | 13 | 19 | 11 |
+| Dollars under-refunded (none were over-refunded) | $31.95 | $111.60 | $9.00 |
+| First quarantine of a trusted procedure, at run | 12 | 22 | 8 |
+| A relearned version trusted, at run | 20 | never (proposed at 57) | 21 |
+| Learning spend | $0.40 | $0.10 | $0.33 |
+
+- **Scarce, late reviews cost the most.**
+  - With 30% of runs reviewed 10 runs late, the stale procedure stayed trusted through 11 holiday returns, and
+    all of them were wrong.
+  - It was quarantined only when reviews of the first ones arrived, at run 22.
+  - Every one of those returns shorted the customer, $111.60 in all, three and a half times the checker's
+    loss.
+  - Learning then waited for four reviewed, accepted runs. A candidate came at run 57, and the stream ended
+    before a person approved it.
+  - Meanwhile the agent served at `high` without a procedure: mostly right, at the most expensive setting.
+- **A judge on every run catches problems fast, with false alarms.**
+  - It agreed with the audit on 56 of 60 runs.
+  - One of its three false rejections fell on run 8, a correct regular return. With a real mistake at run 7,
+    that quarantined the procedure before the policy changed. The false alarm happened to shield the holiday
+    returns, which the agent then served at `high`.
+  - Its one false acceptance let a wrong refund through.
+  - Detection is fast but imprecise, so the design holds: a judge may raise the alarm, never install code
+    alone.
+- **A small replayed gate lets incomplete procedures through.**
+  - In the checker and judge arms, learned versions passed the gate's 3 replayed cases, then failed within
+    about ten holiday returns. The checker arm quarantined learned versions twice more, the judge arm once.
+  - The gate's cases were the last 3 accepted runs: too few, and too alike, to show a version handles every
+    holiday case. D1's gate used 6 trips held back because they hinge on the change, and its replacement
+    held.
+  - In the checker arm, the learning budget (4 attempts a day) stopped the retries from run 48, as designed.
+- **Caveats:**
+  - There is one sample per configuration.
+  - The controller was set by hand, not from D2's floors.
+  - The people are simulated: reviews are sampled at random, and approval comes automatically 5 runs after a
+    proposal.
+
+**Follow-ups:**
+- **Re-measure the floors with a procedure that returns the tool's arguments:** `method` card, store_credit
+  or decline, and `amount_usd`. About $0.20.
+- **Rerun the online arms with the controller set from D2's floors and a gate of 6 held-out cases.** About
+  $2.
 
 ## D3. Invoice intake: how does metacognition behave with several procedures and several customers?
 

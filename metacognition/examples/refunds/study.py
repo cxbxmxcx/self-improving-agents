@@ -35,7 +35,16 @@ from typing import Any
 from examples.refunds.agent import REFERENCE, REGULAR, check, refund_decision, returns_desk
 from examples.refunds.world import ReturnsWorld, outcome, task_set
 from metacog import Recording, RunConfig, Runner
-from metacog.meta import GENERIC, Controller, Gate, Judge, Metacognition, ReplayPractice, ValueLearning
+from metacog.meta import (
+    GENERIC,
+    Controller,
+    Gate,
+    Judge,
+    LearningBudget,
+    Metacognition,
+    ReplayPractice,
+    ValueLearning,
+)
 from metacog.meta.report import summarize
 from metacog.offline import Case, Floors, calibrate
 from metacog.pricing import PRICES
@@ -102,15 +111,33 @@ def given(world: ReturnsWorld) -> tuple[str, float] | None:
     return mine[0] if len(mine) == 1 else None
 
 
+def same_actions(run: dict[str, Any], result: Any, world: Any) -> tuple[bool, str]:
+    """A replayed candidate passes when it did what the accepted run did: the same actions on the same return
+    by the same method, with amounts that agree to the cent (166.2 typed and 166.20 computed are one refund)."""
+
+    def norm(key: tuple[str, str]) -> tuple[str, str, float | None]:
+        args = json.loads(key[1])
+        amount = args.pop("amount_usd", None)
+        return key[0], json.dumps(args, sort_keys=True), None if amount is None else round(float(amount), 2)
+
+    got, want = sorted(map(norm, world.actions)), sorted(map(norm, world.expected))
+    same = len(got) == len(want) and all(
+        g[:2] == w[:2] and (g[2] is None) == (w[2] is None) and (g[2] is None or abs(g[2] - w[2]) <= 0.011)
+        for g, w in zip(got, want, strict=True))
+    if same:
+        return True, "the actions match the accepted run"
+    return False, f"took {world.actions or 'no actions'} where the accepted run took {world.expected}"
+
+
 def arm_metacognition(arm: str, store: Path) -> Metacognition:
     verifier: Any = {"checker": check, "reviewers": None,
                      "judge": Judge(RUBRIC, params={"reasoning_effort": "medium"})}[arm]
     meta = Metacognition(
         [refund_decision], verifier=verifier, learner=ValueLearning(GENERIC),
-        practice=ReplayPractice(ignore={"decline_return": ["reason"]}), gate=Gate(holdout=3),
+        practice=ReplayPractice(compare=same_actions, ignore={"decline_return": ["reason"]}), gate=Gate(holdout=3),
         controller=Controller({"memory": "none", "no_memory": "high"}), recall_k=1, relearn_after=4,
         learning="inline", gating_sources=("verifier", "human", "harness", *(("judge",) if arm == "judge" else ())),
-        store=str(store), prices=PRICES)
+        budget=LearningBudget(attempts_per_day=4), store=str(store), prices=PRICES)
     meta.install("refund_decision", REGULAR)  # written before the holiday policy
     return meta
 

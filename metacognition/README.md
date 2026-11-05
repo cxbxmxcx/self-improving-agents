@@ -26,8 +26,10 @@ The example domains are under way ([DOMAINS.md](DOMAINS.md)):
 - **D1, the full expense study,** has run live: once through, then its measurements three times over, for $2.00
   in all. It reproduced the study's results on a second domain, and the repeats show a procedure removes
   variance as well as cost. Its recording replays offline.
-- **D2, a returns desk where verdicts are scarce, late and human,** is built and tested offline. It hasn't run
-  live yet.
+- **D2, a returns desk where verdicts are scarce, late and human,** has run live for $1.94. Without a checker,
+  the procedure stayed stale longest, and it cost the most in wrong refunds. A judge on every run caught
+  problems fast but raised false alarms. The run also gave two design lessons: a procedure should return its
+  action tool's arguments, and a replayed gate needs more than three cases.
 
 The suite has 130 tests and needs no API key. Nothing here is stable yet.
 

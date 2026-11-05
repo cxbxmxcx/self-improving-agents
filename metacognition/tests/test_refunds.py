@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import re
+from pathlib import Path
 
 import pytest
 
@@ -20,6 +21,7 @@ from examples.refunds.world import (
     task_set,
 )
 from metacog import Recording
+from metacog.offline import Floors
 from metacog.testing import RespondingModel, call, text
 
 # The procedure as written before the holiday policy: it never looks for the holiday note.
@@ -155,3 +157,25 @@ async def test_the_online_loop_recovers_from_the_holiday_policy(arm, tmp_path):
         assert result["quarantined_at"] == 6  # judged at once, two wrong runs are enough
     if arm == "judge":
         assert result["judge_agreed"] == result["judge_runs"] == 34
+
+
+STUDY = Path(__file__).parents[1] / "examples" / "refunds" / "recorded" / "study.jsonl"
+
+
+async def test_the_recorded_d2_study_replays(tmp_path):
+    """D2 (DOMAINS.md): the returns desk study, live once on 2026-11-05, replayed from its recording."""
+    if not STUDY.exists():
+        pytest.skip("no recorded D2 study")
+    await study.main(study.parse(["--recording", str(STUDY), "--output", str(tmp_path)]))
+    efforts = ("none", "low", "medium", "high")
+    without = Floors.load(tmp_path / "floors_no_memory.json").sweeps["no_memory"]
+    assert [without.cells[e].solved for e in efforts] == [6, 15, 16, 16]
+    with_procedure = Floors.load(tmp_path / "floors_memory.json").sweeps["memory"]
+    assert [with_procedure.cells[e].solved for e in efforts] == [13, 15, 16, 16]
+    arms = {a["arm"]: a for a in json.loads((tmp_path / "online_summary.json").read_text(encoding="utf-8"))}
+    measured = {name: (a["wrong"], a["quarantined_at"], a["trusted_again_at"], a["under_refunded_usd"])
+                for name, a in arms.items()}
+    assert measured == {"checker": (13, 12, 20, 31.95), "reviewers": (19, 22, None, 111.6),
+                        "judge": (11, 8, 21, 9.0)}
+    judge = arms["judge"]
+    assert (judge["judge_agreed"], judge["judge_runs"], judge["judge_false_accepts"]) == (56, 60, 1)
