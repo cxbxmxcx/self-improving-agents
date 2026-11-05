@@ -45,36 +45,68 @@ replays the whole study in about 15 seconds, and `tests/test_expenses.py` checks
   - All 8 remaining requests ran at `none` and were accepted.
   - Learning paid for itself after about 8.5 requests; the calendar's figure was 7.6.
 - **Caveats:**
-  - There is one sample per configuration; `--repeats 3` (about $2) would show the variance.
   - Everything ran on one model.
   - The policy change is one rule. The online loop's gate used the 6 held-back trips, so it never tested the
     replacement on a request it learned from.
 
+**Repeats** (2026-11-05: 791 more live calls, $0.95, so $2.00 for D1 in all). Both measurement phases ran three
+times over with the learned procedure, from
+`--phases floors memory --repeats 3`. The first pass replays the run above, and each later pass gets its own
+replies.
+
+| Solved in each repeat (of 16) | `none` | `low` | `medium` | `high` |
+|---|---|---|---|---|
+| No procedure | 0, 0, 0 | 6, 5, 4 | 9, 10, 10 | 12, 12, 11 |
+| Learned procedure | 16, 16, 16 | 16, 16, 16 | 16, 16, 16 | 16, 16, 16 |
+
+- **The no-procedure numbers hold.** The totals are 0, 15, 29 and 35 of 48, and no setting reaches the
+  adequate bar.
+- **Without the procedure, the agent is inconsistent as well as inaccurate.** At `high`, only 8 of the 16 trips
+  were solved all three times. Three were solved once and one never, so the same request passes one day and
+  fails the next.
+- **With the procedure, every trip passed every time at every setting**, 192 of 192 runs. A procedure lowers
+  the cost and removes the variance.
+
+The recording replays the repeats offline in about 30 seconds, and the D1 test checks them.
+
 ## D2. Store refunds: can an agent learn safely when verdicts are scarce, late and human?
 
-- **The agent:** a returns desk. It reads an order, the customer and the returns policy (read-only), then
-  issues a refund or store credit and replies (acting).
-- **The procedure:** `refund_decision(order_id, sku, reason) -> {"approve", "amount", "method"}`.
-- **The policy's conventions can't be inferred from a request:**
-  - return windows by category;
-  - a restocking fee on opened electronics;
-  - final-sale items;
-  - store credit instead of a refund after the window;
-  - a longer window for members;
-  - a deduction for missing accessories.
-- **Verdicts:** simulated reviewers judge a random 30% of runs, about ten runs later, through
-  `meta.feedback(...)`. The simulator knows the right answer, but metacognition sees only the reviewers. A
-  `Judge` with the policy as its rubric runs on every run. Its agreement with the reviewers is measured, and it
-  doesn't drive the detector unless that's turned on.
-- **Practice:** `ReplayPractice`, so learning never touches the simulator, only accepted runs' recorded worlds,
-  with refunds dry-run.
-- **Release:** installs wait for a person (approval "human"); the dashboard is the review queue.
-- **Drift:** a holiday policy lengthens windows for November and December purchases, and waives the
-  restocking fee.
+Built in `examples/refunds` (`world.py`, `agent.py`, `study.py`, and the hand-written
+`memories/refund_decision.py`), with no live run yet.
+
+- **The agent:** the returns desk at a store. It reads the return, its order, the customer and the returns
+  policy (all read-only), then acts once: `issue_refund` (to the card, or as store credit) or
+  `decline_return`.
+- **The procedure:** `refund_decision(return_id) -> {"action": "refund" | "credit" | "decline",
+  "amount_usd"}`. Procedures can't import, so the hand-written one does its own date arithmetic.
+- **Conventions that live only in the policy:**
+  - windows count from delivery and vary by category, and members get 15 more days;
+  - up to 30 days after the window, a return gets store credit instead of a refund;
+  - opened electronics carry a 15% restocking fee, and opened beauty items can't come back;
+  - missing accessories are deducted;
+  - shipping is never refunded, and final-sale items can't be returned;
+  - an item that arrived damaged gets everything back, whatever else applies.
+- **Returns:** each regular split mixes refunds, credit and declines, and together the splits cover every
+  convention. The audit names the rule a wrong action most likely broke.
+- **Drift:** a holiday policy. Items delivered from November 15 through December 31 can be returned to the
+  card until January 31, with no restocking fee. Every return in the stream after the change hinges on it.
+- **Arms:** `python -m examples.refunds.study --phases online`. Each arm runs 10 regular returns, then 50
+  under the holiday policy, starting from the hand-written procedure. They differ only in who judges:
+  - **checker:** the audit judges every run as it ends, and a passing version installs itself.
+  - **reviewers:** people judge 30% of runs, 10 runs late, through `meta.feedback`, and a person approves
+    proposals 5 runs after the gate passes them.
+  - **judge:** the reviewers, plus a `Judge` on every run whose verdicts reach the detector.
+- **Learning:** value learning with the domain-neutral prompts. Practice is `ReplayPractice`: a candidate
+  is tried only in accepted runs' recorded worlds, with refunds dry-run, never in the simulator.
+- **Measures:** every run is also audited, whoever judged it. The study reports:
+  - wrong actions served, and the dollars over- and under-refunded;
+  - the run at which the stale procedure was quarantined, relearned and trusted again;
+  - the cost of learning;
+  - how often the judge agreed with the audit.
 - **Questions:**
-  - With 30% of runs judged, late, how long does detection take, and what does that delay cost?
+  - With 30% of runs judged, late, how long does detection take, and what does the delay cost?
   - Does the judge shorten it without letting a bad version in?
-  - Does a replay gate pass the same candidates an agent gate would?
+  - Can replayed practice gate a candidate with only the reviewed runs to go on?
 
 ## D3. Invoice intake: how does metacognition behave with several procedures and several customers?
 

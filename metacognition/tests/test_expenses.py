@@ -82,6 +82,14 @@ async def test_the_recorded_d1_study_replays(tmp_path, capsys):
     assert summary["procedures"]["reimbursable_total"] == [[1, "quarantined", "value_learning"],
                                                            [2, "trusted", "value_learning"]]
 
+    # D1's repeats: both measurement phases three times over, with the same learned procedure.
+    await study.main(study.parse(["--phases", "floors", "memory", "--repeats", "3", "--recording", str(STUDY),
+                                  "--output", str(tmp_path)]))
+    without = Floors.load(tmp_path / "floors_no_memory.json").sweeps["no_memory"]
+    assert [without.cells[e].solved for e in efforts] == [0, 15, 29, 35]  # of 48
+    learned = Floors.load(tmp_path / "floors_memory_learned.json").sweeps["memory"]
+    assert [learned.cells[e].solved for e in efforts] == [48, 48, 48, 48]
+
 
 async def test_the_recorded_smoke_study_replays(tmp_path):
     if not SMOKE.exists():

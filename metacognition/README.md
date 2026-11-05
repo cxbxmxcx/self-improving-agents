@@ -22,9 +22,14 @@ readies the harness for real deployments, and its architecture work is done:
 - A3: case files and `metacog calibrate`, `metacog discover`, webhooks, and `metacog serve` with a live dashboard;
 - A4: CI (`.github/workflows/metacognition.yml`) and the guide.
 
-The example domains are under way ([DOMAINS.md](DOMAINS.md)). D1, the full expense study, has run live once
-for $1.05 and reproduced the study's results on a second domain. Its recording replays offline. The suite has
-115 tests and needs no API key. Nothing here is stable yet.
+The example domains are under way ([DOMAINS.md](DOMAINS.md)):
+- **D1, the full expense study,** has run live: once through, then its measurements three times over, for $2.00
+  in all. It reproduced the study's results on a second domain, and the repeats show a procedure removes
+  variance as well as cost. Its recording replays offline.
+- **D2, a returns desk where verdicts are scarce, late and human,** is built and tested offline. It hasn't run
+  live yet.
+
+The suite has 130 tests and needs no API key. Nothing here is stable yet.
 
 ## A plain agent
 
@@ -233,6 +238,7 @@ src/metacog/          the SDK: agent, run, tool, model_settings, ladders (effort
 src/metacog/meta/     metacognition: procedure, runtime, parts (router, controller, detector, gate, budget),
                       mechanisms, prompts, store, api, sandbox, replay, scopes, events, judge, worker, report
 examples/calendar/    chapter 6's assistant on metacog, and the drift demo for the dashboard
-examples/expenses/    the second task class: world, agent, study, recorded smoke run
+examples/expenses/    the second task class (D1): world, agent, app, study, recorded runs
+examples/refunds/     D2's returns desk: world, agent, study with reviewers, a judge and replayed practice
 tests/                unit tests, and parity tests that replay the study's experiments
 ```
