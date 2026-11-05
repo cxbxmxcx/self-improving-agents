@@ -12,7 +12,7 @@ never had to decide which procedure a request belongs to.
 from __future__ import annotations
 
 import json
-from collections.abc import Awaitable, Callable, Mapping
+from collections.abc import Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -167,6 +167,23 @@ class Detector:
     def observe(self, recent: list[bool], accepted: bool) -> tuple[list[bool], bool]:
         recent = [*recent, accepted][-self.window:]
         return recent, sum(not ok for ok in recent) >= self.limit
+
+    def record(self, window: list[list[Any]], run_id: str | None, accepted: bool,
+               counted: Sequence[str] = ()) -> tuple[list[list[Any]], bool]:
+        """`observe`, one verdict per run: the window holds [run_id, accepted] pairs, and a later verdict on
+        a run still in it (a person's review after a judge's) replaces the earlier one. A run counted once
+        and since gone from the window (`counted`) isn't counted again. Returns the window and whether to
+        quarantine."""
+        entries = [list(entry) for entry in window]
+        for entry in entries:
+            if run_id is not None and entry[0] == run_id:
+                entry[1] = accepted
+                break
+        else:
+            if run_id is not None and run_id in counted:
+                return entries, False
+            entries = [*entries, [run_id, accepted]][-self.window:]
+        return entries, sum(not ok for _, ok in entries) >= self.limit
 
 
 @dataclass

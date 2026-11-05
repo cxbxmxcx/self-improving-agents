@@ -219,3 +219,27 @@ def test_prompt_packs():
     assert contract_text(basket_total.contract, CALENDAR).startswith(
         "You are writing a Python function that a calendar assistant will call")
     assert "calendar" not in contract_text(basket_total.contract, GENERIC).lower()
+
+
+def test_a_later_verdict_on_a_run_replaces_its_earlier_one():
+    detector = Detector(window=4, limit=2)
+    window, quarantine = detector.record([], "r1", False)
+    assert (window, quarantine) == ([["r1", False]], False)
+    assert detector.record(window, "r1", False) == ([["r1", False]], False)  # the same run: replaced, not added
+    assert detector.record(window, "r1", True) == ([["r1", True]], False)  # a person overturns a judge
+    assert detector.record(window, "r2", False)[1]
+    full = [["r3", True], ["r4", True], ["r5", True], ["r6", True]]
+    assert detector.record(full, "r1", False, counted=["r1"]) == (full, False)  # counted once, gone from the window
+
+
+async def test_feedback_counts_each_run_once_and_says_what_it_set_off():
+    meta = make_meta(verifier=None)
+    meta.install("basket_total", V1)
+    with ScriptedModel([*uses(["apple", "pear"], 5), *uses(["pear", "pear"], 6)]).active():
+        first = (await serve(agent(meta), "D1")).metacognition.run_id
+        second = (await serve(agent(meta), "D2")).metacognition.run_id
+    assert await meta.feedback(first, False, "the tax is missing") == []
+    assert await meta.feedback(first, False, "the tax is still missing") == []  # one run, one count
+    assert meta.store.trusted("basket_total")["version"] == 1
+    assert await meta.feedback(second, False, "the tax is missing") == [
+        "detector: quarantined basket_total@1 (the tax is missing)"]

@@ -60,6 +60,8 @@ MODES = ("online", "frozen", "practice")
 ATTRIBUTIONS = ("called", "offered")
 LEARNING = ("background", "inline", "worker")
 EXECUTORS = ("auto", "guarded", "subprocess")
+# How many judged runs per procedure version the detector remembers having counted.
+COUNTED = 256
 # Who wrote a version that may run in-process under "auto": people, not models.
 HUMAN = "human"
 
@@ -401,11 +403,14 @@ class Metacognition:
         await publish(kind="run", run_id=plan.run_id, effort=plan.effort, offered=list(report.offered),
                       detail="pending" if verdict is None else ("accepted" if verdict.accepted else "rejected"))
         if verdict is not None and verdict.source in self.gating_sources:
-            self._observe(called if self.attribution == "called" else plan.offered, verdict, report.events)
+            self._observe(called if self.attribution == "called" else plan.offered, verdict, report.events,
+                          plan.run_id)
         await self._maybe_learn(report.events)
 
-    async def feedback(self, run_id: str, accepted: bool, reason: str = "", *, source: str = "human") -> None:
-        """A verdict that arrives after the run, from a person or a later check."""
+    async def feedback(self, run_id: str, accepted: bool, reason: str = "", *, source: str = "human"
+                       ) -> list[str]:
+        """A verdict that arrives after the run, from a person or a later check. It replaces the run's earlier
+        verdict, in the store and in the detector's window. Returns what it set off: a quarantine, learning."""
         verdict = Verdict(accepted, reason, source)
         run = self.store.set_verdict(run_id, verdict)
         if run is None:
@@ -414,22 +419,29 @@ class Metacognition:
         if source in self.gating_sources:
             # A run recorded before metacog kept `called` has only `offered` to go on.
             blamed = run["offered"] if self.attribution == "offered" or run["called"] is None else run["called"]
-            self._observe([(item.split("@")[0], int(item.split("@")[1])) for item in blamed], verdict, events)
+            self._observe([(item.split("@")[0], int(item.split("@")[1])) for item in blamed], verdict, events,
+                          run_id)
         await self._maybe_learn(events)
+        return events
 
-    def _observe(self, offered: list[tuple[str, int]], verdict: Verdict, events: list[str]) -> None:
+    def _observe(self, offered: list[tuple[str, int]], verdict: Verdict, events: list[str],
+                 run_id: str | None = None) -> None:
         for name, version in offered:
             current = self.store.trusted(name)
             if current is None or current["version"] != version:
                 continue  # replaced or quarantined since this run
             state = self.store.state(name)
-            recent, quarantine = self.detector.observe(state.get("recent", []), verdict.accepted)
-            state["recent"] = recent
+            window = state.get("window") or [[None, ok] for ok in state.get("recent", [])]
+            counted = state.get("counted", [])
+            window, quarantine = self.detector.record(window, run_id, verdict.accepted, counted)
+            if run_id is not None and run_id not in counted:
+                counted = [*counted, run_id][-COUNTED:]
+            state.update(window=window, recent=[ok for _, ok in window], counted=counted)
             if quarantine:
                 self.store.set_state(name, version, "quarantined")
                 count = self.store.count()
-                state.update(recent=[], quarantined_at=count, next_attempt=count + self.relearn_after,
-                             reason=verdict.reason)
+                state.update(recent=[], window=[], counted=[], quarantined_at=count,
+                             next_attempt=count + self.relearn_after, reason=verdict.reason)
                 events.append(f"detector: quarantined {name}@{version} ({verdict.reason})")
                 emit(kind="quarantined", procedure=name, version=version, detail=verdict.reason)
             self.store.put_state(name, state)
@@ -598,7 +610,7 @@ def trust_version(store: MetaStore, name: str, version: int) -> int:
         store.set_state(name, current["version"], "retired")
     store.set_state(name, version, "trusted")
     state = store.state(name)
-    state["recent"] = []
+    state.update(recent=[], window=[], counted=[])
     store.put_state(name, state)
     return version
 
@@ -616,6 +628,6 @@ def quarantine_procedure(store: MetaStore, name: str, reason: str = "by hand", *
         return False
     store.set_state(name, current["version"], "quarantined")
     count = store.count()
-    store.put_state(name, {"recent": [], "quarantined_at": count, "next_attempt": count + relearn_after,
-                           "reason": reason})
+    store.put_state(name, {"recent": [], "window": [], "counted": [], "quarantined_at": count,
+                           "next_attempt": count + relearn_after, "reason": reason})
     return True

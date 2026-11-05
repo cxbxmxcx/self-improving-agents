@@ -147,8 +147,8 @@ def create_app(agent: Any, *, context: Callable[[dict[str, Any]], Any] | None = 
     @app.post("/api/runs/{run_id}/feedback", dependencies=[Depends(_guard)])
     async def feedback(run_id: str, body: FeedbackRequest) -> dict[str, Any]:
         found(run_id)
-        await meta.feedback(run_id, body.accepted, body.reason)
-        return run_view(found(run_id))
+        events = await meta.feedback(run_id, body.accepted, body.reason)
+        return {**run_view(found(run_id)), "events": events}
 
     @app.get("/api/queue")
     async def queue() -> dict[str, Any]:
