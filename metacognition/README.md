@@ -37,8 +37,11 @@ The example domains are under way ([DOMAINS.md](DOMAINS.md)):
     answer stopped it overruling a right one (76 of 76 returns at `none`, a third cheaper). Letting one
     rejection from a person quarantine (`Detector(limits={"human": 1})`) cut the scarce-review arm's wrong
     actions from 27 to 15.
+- **D3, invoice intake with several procedures and several clients,** is built and tested offline, and has not
+  run live yet. It found three things the harness can't yet set per procedure: its scope, its gate and its
+  learner.
 
-The suite has 142 tests and needs no API key. Nothing here is stable yet.
+The suite has 167 tests and needs no API key. Nothing here is stable yet.
 
 ## A plain agent
 
@@ -251,5 +254,6 @@ src/metacog/meta/     metacognition: procedure, runtime, parts (router, controll
 examples/calendar/    chapter 6's assistant on metacog, and the drift demo for the dashboard
 examples/expenses/    the second task class (D1): world, agent, app, study, recorded runs
 examples/refunds/     D2's returns desk: world, agent, study with reviewers, a judge and replayed practice
+examples/invoices/    D3's invoice intake: two procedures, three clients, routing, discover, and scopes
 tests/                unit tests, and parity tests that replay the study's experiments
 ```

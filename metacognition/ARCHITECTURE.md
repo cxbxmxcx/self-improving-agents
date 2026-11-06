@@ -298,6 +298,12 @@ The second pass found two more problems, and follow-ups ($0.35) tested a fix for
   quarantine. It cut the reviewers arm's wrong actions from 27 to 15, and a relearned version was trusted at
   run 38 instead of never.
 
+D3 was built offline on 2026-11-06 (not yet run live). Its scripted runs show calibrated routing keeping two
+procedures apart, blame quarantining only the parser, and `discover` finding the parsing work. It also found
+the next harness work: the scope (`PerUser`), the gate and the learner are set per Metacognition, but D3 wants
+them per procedure. A parser shared by every client belongs beside per-client payables, each with its own
+labeled gate cases and its own learner.
+
 Each domain is built with the harness the way a real agent would be: tools, procedures, a verdict source,
 calibration, deployment and then drift. Each answers one question about metacognition. Live runs stop at a
 set budget.
@@ -306,7 +312,7 @@ set budget.
 |---|---|---|---|
 | D1 | Expense claims (built) | Does the study's result hold on a second domain, with repeated trials and the domain-neutral prompts? | The full M5 study: floors, learning, and drift when the exchange-rate month changes |
 | D2 | Store refunds (built) | Can an agent learn safely when verdicts are scarce, late and human? | Simulated reviewers who judge a sample of runs a day later; a judge as a second signal; replayed practice; approval by a person; a holiday returns policy as drift |
-| D3 | Invoice intake | How does metacognition behave with several procedures and several customers? | A procedure per task and per-customer scopes; routing and blame; `discover`; a vendor changing its layout |
+| D3 | Invoice intake (built offline) | How does metacognition behave with several procedures and several customers? | A procedure per task and per-customer scopes; routing and blame; `discover`; a vendor changing its layout |
 | D4 | Model switch | Do floors and learned procedures carry over between models? | D1 and D3 on `gpt-5.4-mini` and a Claude model: ladders, floors per model, and a procedure written by one model used by another |
 
 I estimate $10 to $20 per domain on `gpt-5.4-mini`, and more for D4's Claude runs.

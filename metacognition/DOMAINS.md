@@ -298,6 +298,43 @@ checks the numbers below.
   - Do per-client procedures learn from their own clients' runs?
   - Does `metacog discover` find the parsing work before anyone declares it?
 
+**Built offline** on 2026-11-06 in `examples/invoices` (`world.py`, `agent.py`, `study.py`, `memories/`), with 15
+tests in `tests/test_invoices.py`. It has not run live yet.
+- **Clients:** Alder & Finch Clinics, Bramblewood Schools and Copperline Builders. Each client's readable terms
+  say: pay for delivered quantities, tax its own categories, take the vendor's discount, and pay freight as
+  invoiced.
+- **Unwritten conventions** show only in each client's verdicts. Alder leaves freight out, Bramblewood rounds
+  down to the dollar, and Copperline withholds 5% on materials. Three payments in four depend on one. This is
+  knowledge the model can't derive, the side of the thesis D2 lacked.
+- **Vendors and layouts:** Kestrel (key and value lines), Marlow (a ruled table), Tern & Daughters (a letter)
+  and Quillon (semicolon rows).
+- **Drift:** from stream request 21 Kestrel writes European dates and decimal commas. The parser written
+  before the change misreads those documents without failing.
+- **Procedures** answer in their action tools' terms, as D2 taught. `parse_invoice` returns `record_invoice`'s
+  arguments and `amount_payable` returns `schedule_payment`'s. Vendor questions are in no procedure's class.
+- **Arms:** `routed` (one shared Metacognition, calibrated routing, blame on what a run called), `unrouted`
+  (both procedures offered to every request and both blamed) and `per_client` (`PerUser`). A relearned
+  version must pass a labeled gate at a bar of 1.0.
+- **What the scripted runs show** (mechanics only, not results):
+  - Routing calibrated from labeled requests sends 16 of 16 test requests to their own class, against 0 of 16
+    without thresholds.
+  - In `routed`, only the parser is quarantined, and the labeled gate readmits it four runs later. In
+    `unrouted`, the payable is quarantined with it and relearned for nothing.
+  - In `per_client`, the shared parsing work is relearned three times over: 3 quarantines and 6 wrong
+    intakes, against 1 and 2 when shared.
+  - `discover` ranks the parsing work first.
+- **Harness limits D3 found,** each with the workaround it uses:
+  - `PerUser` scopes a whole Metacognition, so a parser shared by every client beside per-client payables
+    can't be expressed. The study compares the two scopes instead.
+  - One gate serves every procedure. Each practice passes the other procedure's cases, and gate totals count
+    them, for example 24 of 24 when 6 cases are the parser's.
+  - One learner serves every procedure. The study uses skill synthesis, which writes from all accepted runs
+    (every layout) and repairs from the audit's reasons (the conventions).
+  - Learning draws on the runs routed to a procedure. With calibrated routing that is right, but without
+    routing each procedure also learns from the other's runs.
+- **A live run** of every phase should cost about $1.60 to $1.90 on `gpt-5.4-mini` with the hand-written
+  payable, and about $0.90 more to learn the payable from scratch (`--payable learn`).
+
 ## D4. Model switch: do floors and learned procedures carry over between models?
 
 - **Runs:** D1's floors and memory phases, and D3's, on `claude-haiku-5-5` beside `gpt-5.4-mini`. The keys
