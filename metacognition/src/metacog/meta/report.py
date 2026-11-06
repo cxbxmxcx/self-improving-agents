@@ -50,6 +50,8 @@ def summarize(store: MetaStore) -> dict[str, Any]:
         "learning": learning, "break_even_requests": break_even,
         "procedures": {name: [(v["version"], v["state"], v["created_by"]) for v in store.versions(name)]
                        for name in names},
+        # learners a tournament chose (A5, L2): procedure -> mechanism
+        "learners": {name: chosen["mechanism"] for name, chosen in (store.setting("learners") or {}).items()},
     }
 
 
@@ -62,6 +64,8 @@ def render(summary: dict[str, Any]) -> str:
     skipped = f", {learning['skipped']} skipped by the budget" if learning.get("skipped") else ""
     lines.append(f"  learning: {learning['attempts']} attempts, {learning['writer_calls']} writer calls,"
                  f" ${learning['dollars']:.4f}{skipped}")
+    for name, mechanism in summary.get("learners", {}).items():
+        lines.append(f"  {name} learns by {mechanism}, chosen by a learner tournament")
     if summary["break_even_requests"] is not None:
         lines.append(f"  break-even: about {summary['break_even_requests']:.1f} requests with a procedure")
     for name, versions in summary["procedures"].items():

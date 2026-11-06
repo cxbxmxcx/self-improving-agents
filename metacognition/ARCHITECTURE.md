@@ -308,6 +308,14 @@ conventions.
   - Each choice is an event, a dashboard entry and a store record (the mechanism, its score, the runner-up).
   - *Accept:* scripted, a procedure whose learner keeps failing switches to one that passes. Live, tournaments
     on D2's holiday problem and D3's parser problem.
+  - *Built 2026-11-06, offline* (`metacog.meta.selection`, `Metacognition(selection=LearnerSelection(...))`):
+    - Two refusals in a row, or a learned version quarantined within 8 runs, start a tournament on the
+      procedure's own judged runs, scored on the gate's cases.
+    - The winner is kept in the store's `learners` setting, so every process, the worker included, learns
+      that procedure the same way. Its function is the attempt's candidate under the usual approval rules.
+    - The tournament is logged as one learning attempt (`tournament:<winner>`), reported, and published as
+      `learner_chosen`.
+    - It is opt-in, so recorded studies replay unchanged. The live tournaments have not run yet.
 - **L3. Design learners** (about $3 to $8 live):
   - `metacog design-learners` runs GEPA (or DGM) over mechanism source, with a designer model proposing
     rewrites of the trusted mechanisms.

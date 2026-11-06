@@ -198,6 +198,14 @@ def resolve_mechanism(learner: str | Mechanism, prompts: PromptPack | str = GENE
     return MECHANISMS[learner](pack)
 
 
+def spent(outcome: Any, writer: Writer) -> tuple[int, list[dict[str, Any]]]:
+    """Writer calls and usage a learning attempt spent. A mechanism run in helix's lab writes through the
+    lab's own metered writer and reports its spend on the learned memory, or on the MechanismStopped that
+    ended it; a class mechanism reports the runtime writer's, which is the fallback."""
+    calls, usage = getattr(outcome, "writer_calls", None), getattr(outcome, "usage", None)
+    return (calls if calls else writer.calls), (usage if usage else writer.usage)
+
+
 def writer_cost(usage: list[dict[str, Any]], model: str, prices: dict[str, tuple[float, ...]] | None) -> float:
     from metacog.pricing import call_dollars
 

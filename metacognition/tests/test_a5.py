@@ -3,19 +3,20 @@
 from __future__ import annotations
 
 import ast
+import json
 from pathlib import Path
 
 import pytest
-from basket import CASES, V1, V2, WRITTEN, agent, basket_total, make_meta, practice, serve, uses
+from basket import CASES, PRICES, V1, V2, WRITTEN, agent, basket_total, make_meta, practice, serve, uses
 from helix.memory.learning_mechanisms import Episode, Writer
 from helix.memory.mechanism_runtime import MechanismBudget, UnsafeMechanism, check_mechanism
 
 from examples.expenses import study as expense_study
 from metacog import Recording
-from metacog.meta import CALENDAR, GENERIC, SEEDS, SourceLearner, seed_source
+from metacog.meta import CALENDAR, GENERIC, SEEDS, LearnerSelection, SourceLearner, seed_source
 from metacog.meta.mechanisms import resolve_mechanism
 from metacog.meta.sources import CONTROL, PROMPT_FIELDS, SEEDS_DIR, prompt_constants
-from metacog.testing import RespondingModel, ScriptedModel, text
+from metacog.testing import RespondingModel, ScriptedModel, call, text
 
 CHAPTER_7 = Path(__file__).parents[2] / "chapters" / "ch07" / "mechanisms"
 EVERY = (*SEEDS, CONTROL)
@@ -136,3 +137,51 @@ def test_unsafe_mechanism_source_is_refused_when_it_is_declared():
         SourceLearner("import os\n\n\nasync def learn(lab):\n    return os.getcwd()\n")
     with pytest.raises(ValueError, match="learners name no procedure"):
         make_meta(learners={"no_such_procedure": "skill_synthesis"})
+
+
+# ------------------------------------------------------------------ L2: the loop chooses a learner
+
+def shop_and_writer(request: dict):
+    """The scripted shop and writer. The shop calls the procedure when it is offered and otherwise answers the
+    total with tax (the drift has come). The writer, with no runs to read, writes the function that ignores
+    tax; shown runs, it writes the one that adds it."""
+    if request["messages"][0]["content"].startswith("You are writing a Python function"):
+        shown = "User's verdict:" in json.dumps(request["messages"])
+        return text(f"```python\n{V2 if shown else V1}```")
+    items = request["messages"][1]["content"].removeprefix("What do ").removesuffix(" cost?").split(", ")
+    results = [m for m in request["messages"] if m["role"] == "tool"]
+    offered = {t["function"]["name"] for t in request.get("tools") or []}
+    if "basket_total" in offered and not results:
+        return call("basket_total", {"items": items})
+    if results:
+        return text(str(json.loads(results[-1]["content"])))
+    return text(str(sum(PRICES[item] + 1 for item in items)))
+
+
+async def test_when_learning_keeps_failing_a_tournament_chooses_a_learner_that_works(tmp_path):
+    store = str(tmp_path / "store")
+    meta = make_meta(learner=SourceLearner.seed("no_experience"), store=store,
+                     selection=LearnerSelection(candidates=["no_experience", "skill_synthesis"]))
+    meta.install("basket_total", V1)
+    shop = agent(meta)
+    reports = []
+    with RespondingModel(shop_and_writer).active():
+        for case_id in ("S1", "D1", "D2", "A", "B", "D3", "A", "B", "D3", "A", "B"):
+            reports.append((await serve(shop, case_id)).metacognition)
+    # Learning without runs to read keeps failing the gate; after two refusals the loop holds a tournament.
+    assert [(a["mechanism"], a["outcome"]) for a in meta.store.learning()] == [
+        ("no_experience", "refused"), ("no_experience", "refused"), ("tournament:skill_synthesis", "passed, installed")]
+    tournament = next(e for r in reports for e in r.events if e.startswith("learner: tournament"))
+    assert tournament == ("learner: tournament for basket_total (2 learned versions in a row failed the gate): "
+                          "no_experience 0/2 $0.0000, skill_synthesis 2/2 $0.0000; chose skill_synthesis")
+    assert all(r.offered and r.verdict.accepted for r in reports[-2:])  # the new version serves
+    # The choice is kept in the store, so another process on it learns basket_total the same way.
+    again = make_meta(store=store)
+    assert again.learner_for("basket_total").name == "skill_synthesis"
+    assert again.summary()["learners"] == {"basket_total": "skill_synthesis"}
+    # A learned version quarantined soon after it was trusted starts a tournament too.
+    for report in reports[-2:]:
+        await meta.feedback(report.run_id, False, "a person disagrees")
+    assert meta.store.trusted("basket_total") is None
+    assert meta._tournament_reason("basket_total") == "the last learned version was quarantined after 2 runs"
+    assert make_meta()._tournament_reason("basket_total") is None  # no tournaments without a selection

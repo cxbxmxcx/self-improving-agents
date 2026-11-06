@@ -249,12 +249,17 @@ class Gate:
 
     async def check(self, source: str, practice: Practice, cases: list[str]) -> GateResult:
         if len(cases) < self.min_cases:
-            return GateResult(0, len(cases), False, [f"only {len(cases)} gate cases; {self.min_cases} needed"])
+            return self.verdict(0, len(cases))
         accepted, failures = 0, []
         for case_id in cases:
             reward, reason, _ = await practice(source, case_id)
             accepted += int(reward >= 1.0)
             if reward < 1.0:
                 failures.append(f"{case_id}: {reason}")
-        total = len(cases)
-        return GateResult(accepted, total, total > 0 and accepted / total >= self.bar - 1e-9, failures)
+        return self.verdict(accepted, len(cases), failures)
+
+    def verdict(self, accepted: int, total: int, failures: Sequence[str] = ()) -> GateResult:
+        """The gate's ruling on cases already tried (a learner tournament scores on the gate's cases)."""
+        if total < self.min_cases:
+            return GateResult(0, total, False, [f"only {total} gate cases; {self.min_cases} needed"])
+        return GateResult(accepted, total, total > 0 and accepted / total >= self.bar - 1e-9, list(failures))

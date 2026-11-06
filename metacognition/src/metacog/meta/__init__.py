@@ -34,10 +34,15 @@ from metacog.meta.replay import RecordedWorld, ReplayPractice
 from metacog.meta.runtime import AgentPractice, Metacognition, MetaReport, RunPlan
 from metacog.meta.sandbox import sandboxed_tool
 from metacog.meta.scopes import PerUser
+from metacog.meta.selection import LearnerChoice, LearnerSelection, LearningProblem, run_tournament
 from metacog.meta.sources import SEEDS, SourceLearner, seed_source
 from metacog.meta.store import MetaStore
 
 __all__ = [
+    "LearnerChoice",
+    "LearnerSelection",
+    "LearningProblem",
+    "run_tournament",
     "SEEDS",
     "SourceLearner",
     "seed_source",

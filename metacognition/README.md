@@ -111,7 +111,8 @@ synthesis), `prompts` (`GENERIC`, or the book's `CALENDAR` for replay), `practic
 `AgentPractice` that runs the agent in a rebuilt world, or a `ReplayPractice` that replays an accepted run's
 world with side effects dry-run), `learners` (a learner per procedure; any learner can be a `SourceLearner`,
 chapter 7's form of a mechanism held as source and run through helix's metered lab, such as
-`SourceLearner.seed("skill_synthesis")`), `gate` (held-out case ids or the last accepted runs; with its own `practice`
+`SourceLearner.seed("skill_synthesis")`), `selection` (a `LearnerSelection`: when learning keeps failing for a
+procedure, a tournament of mechanisms on its own runs picks its learner), `gate` (held-out case ids or the last accepted runs; with its own `practice`
 when it checks labeled cases another way than the learner practices), `detector`, `controller`, `router`,
 `attribution`, `approval`
 ("auto" or "human"), `executor` ("guarded" in-process, or "subprocess" for model-written code), and `PerUser`

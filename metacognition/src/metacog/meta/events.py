@@ -42,7 +42,8 @@ async def publish(**fields: object) -> None:
 
 
 # The events a person may need to act on: not every run, only the changes in trust and learning.
-NOTABLE = ("quarantined", "proposed", "installed", "refused", "learning_failed", "skipped", "approved")
+NOTABLE = ("quarantined", "proposed", "installed", "refused", "learning_failed", "skipped", "approved",
+           "learner_chosen")
 
 
 def webhook(url: str, kinds: Sequence[str] = NOTABLE, *, client: httpx.AsyncClient | None = None

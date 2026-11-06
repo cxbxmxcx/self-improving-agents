@@ -46,11 +46,14 @@ from metacog.ladders import ladder_for, most_demanding
 from metacog.meta.api import SkillAPI
 from metacog.meta.events import emit, publish
 from metacog.meta.judge import Judge
-from metacog.meta.mechanisms import Mechanism, resolve_mechanism, writer_cost
+from metacog.meta.mechanisms import Mechanism, resolve_mechanism, spent, writer_cost
 from metacog.meta.parts import Controller, Detector, Gate, GateResult, LearningBudget, Practice, Router, Verdict
 from metacog.meta.procedure import Procedure
-from metacog.meta.prompts import GENERIC, PromptPack
+from metacog.meta.prompts import GENERIC, PACKS, PromptPack
 from metacog.meta.sandbox import sandboxed_tool
+from metacog.meta.selection import LearnerChoice, LearnerSelection, LearningProblem, run_tournament
+from metacog.meta.sources import CONTROL as SEED_CONTROL
+from metacog.meta.sources import SEEDS, SourceLearner
 from metacog.meta.store import MetaStore
 from metacog.model_settings import DEFAULT_MODEL
 from metacog.retrieval.lexical import embed
@@ -153,14 +156,6 @@ class AgentPractice:
         return practice
 
 
-def _spent(outcome: Any, writer: Any) -> tuple[int, list[dict[str, Any]]]:
-    """Writer calls and usage a learning attempt spent. A mechanism run in helix's lab writes through the
-    lab's own metered writer, and reports its spend on the learned memory (or on the MechanismStopped that
-    ended it); a class mechanism reports the runtime writer's, which is the fallback."""
-    calls, usage = getattr(outcome, "writer_calls", None), getattr(outcome, "usage", None)
-    return (calls if calls else writer.calls), (usage if usage else writer.usage)
-
-
 class Metacognition:
     """The online metacognition loop for one agent deployment.
 
@@ -171,6 +166,9 @@ class Metacognition:
     learner         a mechanism name ("value_learning", ...) or instance, such as a SourceLearner
                     (chapter 7's mechanisms as source); `prompts` is its PromptPack
     learners        a learner per procedure name, for the procedures that learn better another way
+    selection       a LearnerSelection: when learning keeps failing for a procedure, hold a tournament
+                    of mechanisms on its own judged runs and keep the winner as its learner (A5, L2).
+                    A learner chosen this way, kept in the store, comes before `learners` and `learner`
     practice        how a candidate is tried on a case: an AgentPractice (through the agent) or a
                     function (source, case_id) -> (reward, reason, observations)
     gate, detector, controller
@@ -205,6 +203,7 @@ class Metacognition:
         verifier: Callable[..., Any] | None = None,
         learner: str | Mechanism = "value_learning",
         learners: Mapping[str, str | Mechanism] | None = None,
+        selection: LearnerSelection | None = None,
         prompts: PromptPack | str = GENERIC,
         writer_model: str | None = None,
         writer_params: dict[str, Any] | None = None,
@@ -243,6 +242,10 @@ class Metacognition:
         if unknown:
             raise ValueError(f"learners name no procedure: {unknown}")
         self.learners = {name: resolve_mechanism(each, prompts) for name, each in (learners or {}).items()}
+        self.prompts = PACKS[prompts] if isinstance(prompts, str) else prompts
+        self.selection = selection
+        self._candidates = [self._as_learner(each) for each in (selection.candidates if selection else ())]
+        self._chosen: dict[str, tuple[str, Mechanism]] = {}  # procedure -> (choice id, learner) from the store
         self.writer_model = writer_model
         self.writer_params = dict(writer_params or {"reasoning_effort": "medium"})
         self.practice = practice
@@ -458,6 +461,8 @@ class Metacognition:
                 count = self.store.count()
                 state.update(recent=[], window=[], counted=[], quarantined_at=count,
                              next_attempt=count + self.relearn_after, reason=verdict.reason)
+                if current.get("created_by") not in (None, "human") and "trusted_at" in state:
+                    state["lasted"] = count - state["trusted_at"]  # runs a learned version served
                 events.append(f"detector: quarantined {name}@{version} ({verdict.reason})")
                 emit(kind="quarantined", procedure=name, version=version, detail=verdict.reason)
             self.store.put_state(name, state)
@@ -550,8 +555,45 @@ class Metacognition:
             await asyncio.gather(*list(self._tasks.values()), return_exceptions=True)
 
     def learner_for(self, name: str) -> Mechanism:
-        """The mechanism that learns procedure `name`: its own (`learners`), else the deployment's."""
-        return self.learners.get(name, self.learner)
+        """The mechanism that learns procedure `name`: the one a tournament chose (kept in the store, so
+        every process sees it), else its own (`learners`), else the deployment's."""
+        chosen = (self.store.setting("learners") or {}).get(name)
+        if not chosen:
+            return self.learners.get(name, self.learner)
+        cached = self._chosen.get(name)
+        if cached is None or cached[0] != chosen["id"]:
+            learner = (SourceLearner(chosen["source"], chosen["mechanism"], self.prompts) if chosen.get("source")
+                       else resolve_mechanism(chosen["mechanism"], self.prompts))
+            cached = self._chosen[name] = (chosen["id"], learner)
+        return cached[1]
+
+    def _as_learner(self, candidate: str | Mechanism) -> Mechanism:
+        if isinstance(candidate, Mechanism):
+            return candidate
+        if candidate in (*SEEDS, SEED_CONTROL):
+            return SourceLearner.seed(candidate, self.prompts)  # chapter 7's form, so designs compete alike
+        return resolve_mechanism(candidate, self.prompts)
+
+    def _tournament_reason(self, name: str) -> str | None:
+        """Why learning `name` should start with a learner tournament now, or None."""
+        if self.selection is None:
+            return None
+        refused = 0
+        for attempt in reversed(self.store.learning(name)):
+            if attempt["mechanism"].startswith("tournament:"):
+                break  # a tournament starts the count again
+            if attempt["outcome"].startswith("skipped"):
+                continue
+            if attempt["outcome"] != "refused":
+                break
+            refused += 1
+        if refused >= self.selection.after_refusals:
+            return f"{refused} learned versions in a row failed the gate"
+        lasted = self.store.state(name).get("lasted")
+        within = self.selection.quarantined_within
+        if lasted is not None and within is not None and lasted <= within:
+            return f"the last learned version was quarantined after {lasted} run{'' if lasted == 1 else 's'}"
+        return None
 
     def _practice_for(self, name: str, practice: Any = None) -> Practice:
         practice = practice if practice is not None else self.practice
@@ -576,6 +618,10 @@ class Metacognition:
         model = self.writer_model or getattr(self.agent, "model", None) or DEFAULT_MODEL
         writer = Writer(model=model, params=dict(self.writer_params))
         practice = self._practice_for(name)
+        reason = self._tournament_reason(name)
+        if reason is not None:
+            await self._tournament(name, learn_from, cases, practice, model, reason, events)
+            return
         learner = self.learner_for(name)
         mechanism = learner.name
         learned = None
@@ -586,7 +632,7 @@ class Metacognition:
         except Exception as exc:  # noqa: BLE001 - a failed attempt is logged; serving goes on
             # A mechanism run in helix's lab writes through the lab's own metered writer; what it spent comes
             # back on the learned memory, or on the MechanismStopped that ended it.
-            calls, usage = _spent(learned or exc, writer)
+            calls, usage = spent(learned or exc, writer)
             dollars = writer_cost(usage, model, self.prices)
             self.store.log_learning(name=name, mechanism=mechanism, version=None, episodes=len(learn_from),
                                     writer_calls=calls, dollars=dollars, gate=None,
@@ -594,7 +640,7 @@ class Metacognition:
             events.append(f"learner: {mechanism} failed for {name}: {type(exc).__name__}: {exc}")
             await publish(kind="learning_failed", procedure=name, detail=f"{type(exc).__name__}: {exc}")
             return
-        calls, usage = _spent(learned, writer)
+        calls, usage = spent(learned, writer)
         dollars = writer_cost(usage, model, self.prices)
         parent = (self.store.versions(name) or [{}])[-1].get("version")
         info = {"mechanism": mechanism, "writer_calls": calls, "dollars": dollars, "gate": gate.to_dict(),
@@ -607,6 +653,51 @@ class Metacognition:
         kind = {"refused": "refused", "proposed for approval": "proposed"}.get(outcome[0], "installed")
         await publish(kind=kind, procedure=name, version=outcome[1],
                       detail=f"{mechanism}, gate {gate.accepted}/{gate.total}, ${dollars:.4f}")
+
+    async def _tournament(self, name: str, learn_from: list[Episode], cases: list[str], practice: Practice,
+                          model: str, reason: str, events: list[str]) -> None:
+        """Let every candidate learn `name` from the same runs, keep the winner as its learner, and take the
+        winner's function as this attempt's candidate, gated on the cases it was scored on."""
+        gate_practice = practice if self.gate.practice is None else self._practice_for(name, self.gate.practice)
+        problem = LearningProblem(name, self.procedures[name].contract, learn_from, practice, cases, gate_practice)
+        choice = await run_tournament(problem, self._candidates, writer_model=model,
+                                      writer_params=self.writer_params, prices=self.prices)
+        winner = choice.winner
+        self._keep_learner(name, choice, reason)
+        state = self.store.state(name)
+        state.pop("lasted", None)
+        self.store.put_state(name, state)
+        events.append(f"learner: tournament for {name} ({reason}): {choice.line()}; chose {winner.mechanism}")
+        await publish(kind="learner_chosen", procedure=name, detail=f"{winner.mechanism}: {choice.line()}")
+        gate = self.gate.verdict(winner.accepted, winner.total, winner.failures)
+        if winner.source is None:  # every candidate failed to learn anything
+            self.store.log_learning(name=name, mechanism=f"tournament:{winner.mechanism}", version=None,
+                                    episodes=len(learn_from), writer_calls=choice.writer_calls,
+                                    dollars=choice.dollars, gate=None, outcome="failed: no candidate learned")
+            return
+        parent = (self.store.versions(name) or [{}])[-1].get("version")
+        info = {"mechanism": winner.mechanism, "writer_calls": choice.writer_calls, "dollars": choice.dollars,
+                "gate": gate.to_dict(), "learned_from": [e.task_id for e in learn_from],
+                "tournament": choice.to_dict(), "notes": [reason]}
+        outcome = self._decide(name, winner.source, gate, parent, info)
+        self.store.log_learning(name=name, mechanism=f"tournament:{winner.mechanism}", version=outcome[1],
+                                episodes=len(learn_from), writer_calls=choice.writer_calls, dollars=choice.dollars,
+                                gate=gate.to_dict(), outcome=outcome[0])
+        events.append(f"learner: {winner.mechanism} wrote {name} from {len(learn_from)} runs; gate {gate.accepted}/"
+                      f"{gate.total} {outcome[0]}")
+        kind = {"refused": "refused", "proposed for approval": "proposed"}.get(outcome[0], "installed")
+        await publish(kind=kind, procedure=name, version=outcome[1],
+                      detail=f"{winner.mechanism} (tournament), gate {gate.accepted}/{gate.total}, "
+                             f"${choice.dollars:.4f}")
+
+    def _keep_learner(self, name: str, choice: LearnerChoice, reason: str) -> None:
+        learner = choice.winner.learner
+        source = learner.source if isinstance(learner, SourceLearner) else None
+        chosen = dict(self.store.setting("learners") or {})
+        chosen[name] = {"mechanism": choice.winner.mechanism, "source": source,
+                        "id": learner.id if isinstance(learner, SourceLearner) else choice.winner.mechanism,
+                        "reason": reason, "chosen_at": datetime.now(UTC).isoformat(), **choice.to_dict()}
+        self.store.put_setting("learners", chosen)
 
     def _decide(self, name: str, source: str, gate: GateResult, parent: int | None, info: dict[str, Any]
                 ) -> tuple[str, int]:
@@ -639,7 +730,7 @@ def trust_version(store: MetaStore, name: str, version: int) -> int:
         store.set_state(name, current["version"], "retired")
     store.set_state(name, version, "trusted")
     state = store.state(name)
-    state.update(recent=[], window=[], counted=[])
+    state.update(recent=[], window=[], counted=[], trusted_at=store.count())
     store.put_state(name, state)
     return version
 
