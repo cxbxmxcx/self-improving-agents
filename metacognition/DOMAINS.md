@@ -243,11 +243,44 @@ checks the numbers below.
     run 9 and run 23 mistakes recur across arms.
   - The people are simulated.
 
-**Follow-ups:**
-- **Act on the procedure.** Re-measure the floors at `none` with a prompt that has the agent act on an
-  offered procedure's answer, not redo its reads. About $0.10.
-- **Detect sooner with scarce reviews.** Rerun the reviewers arm with a detector that quarantines on one
-  rejection from a person. About $0.50.
+**Follow-ups** (2026-11-06: 404 live calls, $0.35, added to the same recording and checked by
+`tests/test_refunds.py`):
+
+- **Act on the procedure.** A third contract, `--contract act`, adds one sentence to the procedure's
+  description: it reads the return, order, customer and policy itself, so call it first and act on its
+  answer without reading them again. Measured at `none` on 76 returns (test and stream) with the
+  hand-written procedure:
+
+  | At `none`, 76 returns | Solved | Model calls a run | Dollars a run | Seconds a run |
+  |---|---|---|---|---|
+  | Tools' terms (second pass) | 74 | 4.17 | $0.0028 | 4.2 |
+  | Tools' terms, and act on its answer | 76 | 3.0 | $0.0019 | 2.5 |
+
+  - Told to act on the answer, the agent calls the procedure, acts and replies. It does no reads of its
+    own, so it has nothing to overrule the procedure with. Both earlier failures (R209, H713) are gone,
+    and runs are a third cheaper and 40% faster.
+  - Every agent-side mistake in D2's later runs had this one cause. In the follow-up below, which still
+    used the second pass's wording, the agent twice took a 15% restocking fee off a right holiday refund
+    after the procedure had answered.
+- **Detect sooner with scarce reviews.** `Detector(limits={"human": 1})` quarantines on one rejection from
+  a person, while a judge's rejections still need two. The per-source limit is new in the harness. The
+  reviewers arm, rerun with it (`--person-limit 1`):
+
+  | Reviewers arm | Second pass | One rejection from a person |
+  |---|---|---|
+  | Wrong actions served | 27 | 15 |
+  | Dollars under-refunded | $310.29 | $192.45 |
+  | Quarantined at run | 33 | 22 |
+  | A relearned version trusted, at run | never | 38 |
+
+  - The first reviewed holiday failure (run 12, reviewed 10 runs late) now quarantines at run 22.
+  - The learner wrote a version at run 33 from the one accepted, reviewed run it had. It passed the 6
+    labeled returns, a person approved it at run 38, and it is right on all 82 returns.
+  - Of the 15 wrong actions, 11 are the stale procedure serving before the first review arrived. With 30%
+    of runs reviewed 10 runs late, the delay itself is now the cost. Two more are the agent overruling the
+    relearned procedure (above).
+  - The simulated reviewers are never wrong. With real people, one rejection should be enough only from a
+    reviewer whose rejections you trust, and a judge keeps the higher limit.
 
 ## D3. Invoice intake: how does metacognition behave with several procedures and several customers?
 

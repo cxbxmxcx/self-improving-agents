@@ -288,11 +288,15 @@ gave four lessons for the harness. A second pass ($1.11) applied the first three
   versions, and all three are right on every return.
 - **Count each run once.** A run judged twice must count once in the detector. That fix is built.
 
-The second pass found two more problems, not yet tested:
-- At `none` the agent sometimes overrules a right procedure after its own reads go wrong. An offered
-  procedure's answer should be acted on, not re-derived.
-- A detector that wants 2 rejections in 4 verdicts reacts slowly when only 30% of runs are reviewed, 10 runs
-  late.
+The second pass found two more problems, and follow-ups ($0.35) tested a fix for each:
+- **Act on the answer.** At `none` the agent sometimes overruled a right procedure after its own reads went
+  wrong. One sentence in the procedure's description, telling it to act on the answer, took it from 74 to 76
+  of 76 returns, a third cheaper. This is the procedure's own wording for now; a harness option to word
+  every offer this way would change the chapter 6 replays, so it would have to be opt-in.
+- **Trust a person's rejection.** A detector that wants 2 rejections in 4 verdicts reacts slowly when only
+  30% of runs are reviewed, 10 runs late. `Detector(limits={"human": 1})` lets one rejection from a person
+  quarantine. It cut the reviewers arm's wrong actions from 27 to 15, and a relearned version was trusted at
+  run 38 instead of never.
 
 Each domain is built with the harness the way a real agent would be: tools, procedures, a verdict source,
 calibration, deployment and then drift. Each answers one question about metacognition. Live runs stop at a

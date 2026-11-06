@@ -45,6 +45,10 @@ tool's terms whenever you can. D2's returns desk showed why: its procedure first
 translated wrongly, and got 13 of 16 returns right. Answering in the tool's terms brought that to 15 of 16
 ([DOMAINS.md](DOMAINS.md), D2).
 
+Let the description also tell the agent to act on the answer instead of redoing the work. Without that, D2's
+agent at `none` sometimes did its own reads first, got one wrong, and overruled a right procedure. With one
+sentence saying so, it solved 76 of 76 returns, in 3 model calls a run instead of 4.2.
+
 Runs are judged by `check`, the finance team's checker. [`examples/expenses/app.py`](examples/expenses/app.py)
 turns the agent into a deployment: a store, learning in a worker, and a gate on trips held back from learning.
 Every command below names it as `examples.expenses.app:agent`.

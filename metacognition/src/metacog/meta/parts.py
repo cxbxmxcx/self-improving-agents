@@ -159,31 +159,39 @@ class Controller:
 
 @dataclass
 class Detector:
-    """Notice when a trusted procedure stops working: `limit` rejections in the last `window` judged uses."""
+    """Notice when a trusted procedure stops working: `limit` rejections in the last `window` judged uses.
+
+    `limits` lowers the bar for a source you trust more: {"human": 1} quarantines on one rejection from
+    a person, while other sources, such as a judge, still need `limit`. When only a sample of runs is
+    reviewed, and late, waiting for a second reviewed failure keeps a stale procedure in service (D2).
+    """
 
     window: int = 4
     limit: int = 2
+    limits: dict[str, int] = field(default_factory=dict)
 
     def observe(self, recent: list[bool], accepted: bool) -> tuple[list[bool], bool]:
         recent = [*recent, accepted][-self.window:]
         return recent, sum(not ok for ok in recent) >= self.limit
 
     def record(self, window: list[list[Any]], run_id: str | None, accepted: bool,
-               counted: Sequence[str] = ()) -> tuple[list[list[Any]], bool]:
-        """`observe`, one verdict per run: the window holds [run_id, accepted] pairs, and a later verdict on
-        a run still in it (a person's review after a judge's) replaces the earlier one. A run counted once
-        and since gone from the window (`counted`) isn't counted again. Returns the window and whether to
-        quarantine."""
-        entries = [list(entry) for entry in window]
+               counted: Sequence[str] = (), source: str | None = None) -> tuple[list[list[Any]], bool]:
+        """`observe`, one verdict per run: the window holds [run_id, accepted, source] entries, and a later
+        verdict on a run still in it (a person's review after a judge's) replaces the earlier one. A run
+        counted once and since gone from the window (`counted`) isn't counted again. Returns the window and
+        whether to quarantine."""
+        entries = [[entry[0], entry[1], entry[2] if len(entry) > 2 else None] for entry in window]
         for entry in entries:
             if run_id is not None and entry[0] == run_id:
-                entry[1] = accepted
+                entry[1], entry[2] = accepted, source
                 break
         else:
             if run_id is not None and run_id in counted:
                 return entries, False
-            entries = [*entries, [run_id, accepted]][-self.window:]
-        return entries, sum(not ok for _, ok in entries) >= self.limit
+            entries = [*entries, [run_id, accepted, source]][-self.window:]
+        rejections = [entry[2] for entry in entries if not entry[1]]
+        return entries, len(rejections) >= self.limit or any(
+            rejections.count(name) >= limit for name, limit in self.limits.items())
 
 
 @dataclass

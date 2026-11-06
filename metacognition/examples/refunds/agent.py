@@ -99,11 +99,25 @@ def refund_decision_in_tool_terms(return_id: str) -> dict:
     ...
 
 
-# The two contracts D2 compares: the first pass's procedure answers in its own words, the second's in the
-# action tools' terms. Each comes with its hand-written procedure and the one written before the holiday policy.
+@procedure(api=READS, name="refund_decision")
+def refund_decision_to_act_on(return_id: str) -> dict:
+    """Work out what a return gets under the store's returns policy, in the terms the action tools take. It
+    reads the return, its order, the customer and the policy itself: call it first and act on its answer,
+    without reading them again.
+
+    Returns: {"method": "card" | "store_credit" | "decline", "amount_usd": float}: the method to pass to
+    issue_refund, or "decline" to call decline_return instead; the amount rounded to the cent (0 for a decline).
+    """
+    ...
+
+
+# The contracts D2 compares: the first pass's procedure answers in its own words, the second's in the action
+# tools' terms, and the third also tells the agent to act on its answer rather than redo its reads. Each comes
+# with its hand-written procedure and the one written before the holiday policy.
 CONTRACTS = {
     "words": (refund_decision, REFERENCE, REGULAR),
     "tool": (refund_decision_in_tool_terms, in_tool_terms(REFERENCE), in_tool_terms(REGULAR)),
+    "act": (refund_decision_to_act_on, in_tool_terms(REFERENCE), in_tool_terms(REGULAR)),
 }
 
 

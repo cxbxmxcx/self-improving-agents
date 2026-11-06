@@ -28,6 +28,12 @@ The first pass ran with the defaults. The second applies its lessons:
                          results (run them first; the no-procedure floors replay free from the first pass)
   --gate cases           the gate checks a candidate on the 6 held-out holiday returns, labeled, with the
                          procedure run in the simulator and the audit; the learner still only replays
+
+Follow-ups to the second pass:
+  --contract act         the procedure's description also tells the agent to act on its answer, not redo
+                         its reads; with --memory-splits test stream the memory phase measures it on 76 returns
+  --person-limit 1       one rejection from a person quarantines a procedure (the detector's limit stays 2
+                         for every other source)
 """
 
 from __future__ import annotations
@@ -47,6 +53,7 @@ from metacog import Recording, RunConfig, Runner
 from metacog.meta import (
     GENERIC,
     Controller,
+    Detector,
     Gate,
     Judge,
     LearningBudget,
@@ -104,11 +111,13 @@ async def phase_memory(args: argparse.Namespace, recording: Recording) -> None:
     contract, reference, _ = CONTRACTS[args.contract]
     meta = Metacognition([contract], verifier=check, recall_k=1, learning="inline")
     meta.install("refund_decision", reference)
-    floors = await calibrate(returns_desk(metacognition=meta), cases("test", args.tasks), verifier=check,
+    measured = [case for split in args.memory_splits for case in cases(split, args.tasks)]
+    floors = await calibrate(returns_desk(metacognition=meta), measured, verifier=check,
                              world=ReturnsWorld, efforts=args.efforts, arms=("memory",),
                              concurrency=args.concurrency, max_turns=12, run_config=RunConfig(max_tool_calls=24),
                              prices=PRICES)
-    show(floors, f"Reasoning floors with the hand-written procedure, contract {args.contract} (test returns)")
+    show(floors, f"Reasoning floors with the hand-written procedure, contract {args.contract} "
+                 f"({' and '.join(args.memory_splits)} returns)")
     floors.save(args.output / f"floors_memory_{args.contract}.json")
     guard(recording, args.budget)
 
@@ -152,6 +161,7 @@ def arm_metacognition(arm: str, store: Path, args: argparse.Namespace) -> Metaco
         practice=ReplayPractice(compare=same_actions, ignore={"decline_return": ["reason"]}), gate=gate,
         controller=Controller({"memory": "none", "no_memory": "high"}), recall_k=1, relearn_after=4,
         learning="inline", gating_sources=("verifier", "human", "harness", *(("judge",) if arm == "judge" else ())),
+        detector=Detector(limits={"human": args.person_limit} if args.person_limit else {}),
         budget=LearningBudget(attempts_per_day=4), store=str(store), prices=PRICES)
     if args.controller == "measured":  # measured floors in the store come before the hand-set table
         for name in ("floors_no_memory.json", f"floors_memory_{args.contract}.json"):
@@ -292,6 +302,10 @@ def parse(argv: list[str] | None = None) -> argparse.Namespace:
                         help="the hand-set settings, or the floors the floors and memory phases measured")
     parser.add_argument("--gate", default="holdout", choices=["holdout", "cases"],
                         help="replay the last 3 accepted runs, or check the 6 labeled holiday returns")
+    parser.add_argument("--memory-splits", nargs="+", default=["test"], choices=["test", "stream"],
+                        help="the returns the memory phase measures the procedure on")
+    parser.add_argument("--person-limit", type=int, default=None,
+                        help="a person's rejections that quarantine a procedure (default: the detector's limit)")
     parser.add_argument("--mode", default="replay", choices=["replay", "record", "live"])
     parser.add_argument("--recording", type=Path, default=HERE / "recorded" / "study.jsonl")
     parser.add_argument("--output", type=Path, default=HERE / "runs")

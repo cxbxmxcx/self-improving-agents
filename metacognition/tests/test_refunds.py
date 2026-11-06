@@ -19,6 +19,7 @@ from examples.refunds.agent import (
     practice,
     refund_decision,
     refund_decision_in_tool_terms,
+    refund_decision_to_act_on,
 )
 from examples.refunds.world import (
     DIAGNOSES,
@@ -249,3 +250,33 @@ async def test_the_recorded_d2_second_pass_replays(tmp_path):
     # The reasoning settings came from the measured floors: none with the procedure, low without.
     rows = json.loads((tmp_path / "online_checker.json").read_text(encoding="utf-8"))
     assert {(bool(r["offered"]), r["effort"]) for r in rows} == {(True, "none"), (False, "low")}
+
+
+def test_the_act_contract_differs_only_in_what_it_tells_the_agent():
+    tool, act = refund_decision_in_tool_terms.contract, refund_decision_to_act_on.contract
+    assert (act.name, act.signature, act.returns) == (tool.name, tool.signature, tool.returns)
+    assert "act on its answer" in act.description and "act on its answer" not in tool.description
+
+
+async def test_the_recorded_d2_follow_ups_replay(tmp_path):
+    """D2's follow-ups (DOMAINS.md), live once on 2026-11-06: an offered procedure acted on, and a person's one
+    rejection enough to quarantine."""
+    if not STUDY.exists():
+        pytest.skip("no recorded D2 study")
+    measured = {}
+    for contract in ("tool", "act"):
+        out = tmp_path / contract
+        await study.main(study.parse(["--recording", str(STUDY), "--output", str(out), "--phases", "memory",
+                                      "--contract", contract, "--efforts", "none", "--memory-splits", "test",
+                                      "stream", "--tasks", "60"]))
+        runs = Floors.load(out / f"floors_memory_{contract}.json").sweeps["memory"].cells["none"].runs
+        calls = sum(r.model_calls for r in runs) / len(runs)
+        measured[contract] = (sum(r.solved for r in runs), len(runs), round(calls, 2))
+    assert measured == {"tool": (74, 76, 4.17), "act": (76, 76, 3.0)}  # fewer reads, no overruled answers
+    out = tmp_path / "person"
+    await study.main(study.parse(["--recording", str(STUDY), "--output", str(out), "--arms", "reviewers",
+                                  "--contract", "tool", "--controller", "measured", "--gate", "cases",
+                                  "--person-limit", "1"]))
+    arm = json.loads((out / "online_summary.json").read_text(encoding="utf-8"))[0]
+    assert (arm["wrong"], arm["quarantined_at"], arm["trusted_again_at"], arm["under_refunded_usd"]) == (15, 22, 38,
+                                                                                                     192.45)

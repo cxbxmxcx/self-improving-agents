@@ -433,10 +433,11 @@ class Metacognition:
             state = self.store.state(name)
             window = state.get("window") or [[None, ok] for ok in state.get("recent", [])]
             counted = state.get("counted", [])
-            window, quarantine = self.detector.record(window, run_id, verdict.accepted, counted)
+            window, quarantine = self.detector.record(window, run_id, verdict.accepted, counted,
+                                                      source=verdict.source)
             if run_id is not None and run_id not in counted:
                 counted = [*counted, run_id][-COUNTED:]
-            state.update(window=window, recent=[ok for _, ok in window], counted=counted)
+            state.update(window=window, recent=[entry[1] for entry in window], counted=counted)
             if quarantine:
                 self.store.set_state(name, version, "quarantined")
                 count = self.store.count()

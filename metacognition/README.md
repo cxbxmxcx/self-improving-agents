@@ -26,14 +26,17 @@ The example domains are under way ([DOMAINS.md](DOMAINS.md)):
 - **D1, the full expense study,** has run live: once through, then its measurements three times over, for $2.00
   in all. It reproduced the study's results on a second domain, and the repeats show a procedure removes
   variance as well as cost. Its recording replays offline.
-- **D2, a returns desk where verdicts are scarce, late and human,** has run live twice, for $3.05 in all.
+- **D2, a returns desk where verdicts are scarce, late and human,** has run live twice, plus follow-ups, for
+  $3.40 in all.
   - **First pass:** without a checker, the procedure stayed stale longest and cost the most in wrong refunds.
     A judge on every run caught problems fast but raised false alarms.
   - **Second pass:** it applied the first pass's lessons. The procedure answered in its action tool's terms,
     the reasoning settings came from measured floors, and the gate checked 6 labeled cases. Wrong actions fell
     from 13 to 3 with a checker and from 11 to 4 with a judge.
-  - Two problems remain: an agent at `none` overruling a right procedure, and slow detection when reviews are
-    scarce.
+  - **Follow-ups** fixed the two problems the second pass found. Telling the agent to act on a procedure's
+    answer stopped it overruling a right one (76 of 76 returns at `none`, a third cheaper). Letting one
+    rejection from a person quarantine (`Detector(limits={"human": 1})`) cut the scarce-review arm's wrong
+    actions from 27 to 15.
 
 The suite has 142 tests and needs no API key. Nothing here is stable yet.
 

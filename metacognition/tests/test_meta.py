@@ -247,13 +247,30 @@ def test_prompt_packs():
 
 def test_a_later_verdict_on_a_run_replaces_its_earlier_one():
     detector = Detector(window=4, limit=2)
-    window, quarantine = detector.record([], "r1", False)
-    assert (window, quarantine) == ([["r1", False]], False)
-    assert detector.record(window, "r1", False) == ([["r1", False]], False)  # the same run: replaced, not added
-    assert detector.record(window, "r1", True) == ([["r1", True]], False)  # a person overturns a judge
+    window, quarantine = detector.record([], "r1", False, source="judge")
+    assert (window, quarantine) == ([["r1", False, "judge"]], False)
+    assert detector.record(window, "r1", False, source="judge") == (window, False)  # the same run: replaced, not added
+    assert detector.record(window, "r1", True, source="human") == ([["r1", True, "human"]], False)  # overturned
     assert detector.record(window, "r2", False)[1]
-    full = [["r3", True], ["r4", True], ["r5", True], ["r6", True]]
-    assert detector.record(full, "r1", False, counted=["r1"]) == (full, False)  # counted once, gone from the window
+    full = [["r3", True], ["r4", True], ["r5", True], ["r6", True]]  # a window stored before sources were kept
+    assert detector.record(full, "r1", False, counted=["r1"]) == ([[*e, None] for e in full], False)
+
+
+def test_a_source_trusted_more_can_quarantine_sooner():
+    detector = Detector(window=4, limit=2, limits={"human": 1})
+    assert not detector.record([], "r1", False, source="judge")[1]  # a judge still needs two
+    assert detector.record([], "r1", False, source="human")[1]  # one rejection from a person is enough
+    window, _ = detector.record([], "r1", False, source="judge")
+    assert detector.record(window, "r1", False, source="human")[1]  # a person confirms the judge's rejection
+
+
+async def test_one_rejection_from_a_person_can_be_enough():
+    meta = make_meta(verifier=None, detector=Detector(limits={"human": 1}))
+    meta.install("basket_total", V1)
+    with ScriptedModel([*uses(["apple", "pear"], 5)]).active():
+        run_id = (await serve(agent(meta), "D1")).metacognition.run_id
+    assert await meta.feedback(run_id, False, "the tax is missing") == [
+        "detector: quarantined basket_total@1 (the tax is missing)"]
 
 
 async def test_feedback_counts_each_run_once_and_says_what_it_set_off():
