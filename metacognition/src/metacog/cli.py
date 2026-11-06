@@ -122,7 +122,8 @@ def _mechanisms(args: argparse.Namespace) -> None:
         print("no designed mechanisms and no learners chosen by a tournament")
     for name, design in designs.items():
         test = "-" if design.get("test") is None else f"{design['test']:.2f}"
-        print(f"{name}  {design['state']}  from {design['parent']}  train {design['train']:.2f}  test {test}  "
+        train = "-" if design.get("train") is None else f"{design['train']:.2f}"
+        print(f"{name}  {design['state']}  from {design['parent'] or '-'}  train {train}  test {test}  "
               f"{design['created_at']}")
     for procedure, choice in chosen.items():
         print(f"{procedure} learns by {choice['mechanism']} ({choice['reason']}; {choice['chosen_at']})")

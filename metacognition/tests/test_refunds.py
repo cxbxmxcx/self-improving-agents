@@ -280,3 +280,22 @@ async def test_the_recorded_d2_follow_ups_replay(tmp_path):
     arm = json.loads((out / "online_summary.json").read_text(encoding="utf-8"))[0]
     assert (arm["wrong"], arm["quarantined_at"], arm["trusted_again_at"], arm["under_refunded_usd"]) == (15, 22, 38,
                                                                                                      192.45)
+
+
+async def test_the_recorded_d2_tournament_with_a_design_replays(tmp_path):
+    """Item 2 of A5's follow-ups (DOMAINS.md): with a no-reasoning writer, reflection fails the gate twice; the
+    tournament, the approved design among its candidates, picks the cheapest of the learners that pass."""
+    if not STUDY.exists():
+        pytest.skip("no recorded D2 study")
+    designed = Path(__file__).parents[1] / "examples" / "learning" / "designed" / "designed_ee25cd476662.py"
+    await study.main(study.parse(["--recording", str(STUDY), "--output", str(tmp_path), "--arms", "checker",
+                                  "--contract", "tool", "--controller", "measured", "--gate", "cases",
+                                  "--writer-effort", "none", "--learner", "reflection", "--selection",
+                                  "--designed", str(designed)]))
+    arm = json.loads((tmp_path / "online_summary.json").read_text(encoding="utf-8"))[0]
+    assert [(a["mechanism"], a["outcome"]) for a in arm["attempts"]] == [
+        ("reflection", "refused"), ("reflection", "refused"), ("tournament:skill_synthesis", "passed, installed")]
+    assert (arm["wrong"], arm["quarantined_at"], arm["trusted_again_at"]) == (4, 11, 23)
+    rows = json.loads((tmp_path / "online_checker.json").read_text(encoding="utf-8"))
+    tournament = next(e for r in rows for e in r["events"] if e.startswith("learner: tournament"))
+    assert "designed_ee25cd476662 6/6" in tournament and "skill_synthesis 6/6" in tournament

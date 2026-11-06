@@ -50,16 +50,16 @@ from typing import Any
 from examples.refunds.agent import CONTRACTS, MODEL, check, practice, returns_desk
 from examples.refunds.world import ReturnsWorld, outcome, task_set
 from metacog import Recording, RunConfig, Runner
+from metacog.design import install_mechanism
 from metacog.meta import (
-    GENERIC,
     Controller,
     Detector,
     Gate,
     Judge,
+    LearnerSelection,
     LearningBudget,
     Metacognition,
     ReplayPractice,
-    ValueLearning,
 )
 from metacog.meta.report import summarize
 from metacog.offline import Case, Floors, calibrate
@@ -157,7 +157,9 @@ def arm_metacognition(arm: str, store: Path, args: argparse.Namespace) -> Metaco
     gate = (Gate(cases=[t["id"] for t in task_set("gate")], practice=practice) if args.gate == "cases" else
             Gate(holdout=3))
     meta = Metacognition(
-        [contract], verifier=verifier, learner=ValueLearning(GENERIC),
+        [contract], verifier=verifier, learner=args.learner,
+        writer_params={"reasoning_effort": args.writer_effort} if args.writer_effort else None,
+        selection=LearnerSelection(designed=True) if args.selection else None,
         practice=ReplayPractice(compare=same_actions, ignore={"decline_return": ["reason"]}), gate=gate,
         controller=Controller({"memory": "none", "no_memory": "high"}), recall_k=1, relearn_after=4,
         learning="inline", gating_sources=("verifier", "human", "harness", *(("judge",) if arm == "judge" else ())),
@@ -170,6 +172,8 @@ def arm_metacognition(arm: str, store: Path, args: argparse.Namespace) -> Metaco
                                "phases first")
             Floors.load(args.output / name).record(meta)
     meta.install("refund_decision", regular)  # written before the holiday policy
+    for path in args.designed:  # mechanisms a person approved for this deployment (A5)
+        install_mechanism(meta, Path(path).read_text(encoding="utf-8"), Path(path).stem)
     return meta
 
 
@@ -251,7 +255,8 @@ def outcome_of(arm: str, rows: list[dict[str, Any]], meta: Metacognition) -> dic
         "judge_agreed": sum(r["verdict"] == r["audit"] for r in judged), "judge_runs": len(judged),
         "judge_false_accepts": sum(r["verdict"] and not r["audit"] for r in judged),
         "learning": summary["learning"], "procedures": summary["procedures"]["refund_decision"],
-        "attempts": [{"outcome": a["outcome"], "gate": a["gate"]} for a in meta.store.learning()],
+        "attempts": [{"mechanism": a["mechanism"], "outcome": a["outcome"], "gate": a["gate"]}
+                     for a in meta.store.learning()],
     }
 
 
@@ -306,6 +311,13 @@ def parse(argv: list[str] | None = None) -> argparse.Namespace:
                         help="the returns the memory phase measures the procedure on")
     parser.add_argument("--person-limit", type=int, default=None,
                         help="a person's rejections that quarantine a procedure (default: the detector's limit)")
+    parser.add_argument("--learner", default="value_learning", help="the arms' learner, before any tournament")
+    parser.add_argument("--writer-effort", default=None, choices=["none", "low", "medium"],
+                        help="the learning writer's effort (default: the harness's, medium)")
+    parser.add_argument("--selection", action="store_true",
+                        help="learner tournaments when learning keeps failing (A5, L2)")
+    parser.add_argument("--designed", nargs="*", default=[],
+                        help="designed mechanisms a person approved, to compete in the tournaments")
     parser.add_argument("--mode", default="replay", choices=["replay", "record", "live"])
     parser.add_argument("--recording", type=Path, default=HERE / "recorded" / "study.jsonl")
     parser.add_argument("--output", type=Path, default=HERE / "runs")

@@ -344,8 +344,18 @@ conventions.
     - The design drafts from accepted and rejected runs, checks itself on its own runs, repairs up to three
       times, and keeps its best attempt.
     - On chapter 6's calendar classes it tied the seed at 0.09, so the gate's "don't lose" accepted it. Both
-      sat at the floor, though, which is no evidence of transfer.
-    - The next search needs test classes where the seeds score in the middle.
+      sat at the floor, which is no evidence of transfer.
+  - *Follow-ups, live 2026-11-06* ($1.18):
+    - On D3's invoices, which it never saw, the design beat every seed: 7 of 12 intakes and 12 of 16 payments,
+      against at most 2 and 0. So it transfers.
+    - Two repeated searches, each with fresh designer samples, also beat the seeds on training. One transferred
+      a little, and one not at all, so one search in three found a design that transfers.
+    - The gate's verdict now says when a design only ties on the test problems.
+    - In D2's online loop the design tied the best seeds on 6 gate cases and lost to the cheaper one.
+  - *Built: the worker designs* (`LearnerSelection(design=DesignPolicy(...))`). When a tournament's winner still
+    fails the gate, the worker runs a design search on that procedure's own learning problem. With
+    `DesignPolicy.tests`, it also checks the design on other classes. An accepted design is proposed for a
+    person to approve. Scripted only so far.
 
 The searches stay offline or in the worker, never in a serving process. Every model call is recorded, so a
 search replays free once it has run.

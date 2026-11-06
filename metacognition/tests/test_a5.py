@@ -30,7 +30,16 @@ from helix.memory.mechanism_runtime import MechanismBudget, UnsafeMechanism, che
 from examples.expenses import study as expense_study
 from metacog import Recording
 from metacog.design import approve_mechanism, design_learners, register_mechanism
-from metacog.meta import CALENDAR, GENERIC, SEEDS, LearnerSelection, LearningProblem, SourceLearner, seed_source
+from metacog.meta import (
+    CALENDAR,
+    GENERIC,
+    SEEDS,
+    DesignPolicy,
+    LearnerSelection,
+    LearningProblem,
+    SourceLearner,
+    seed_source,
+)
 from metacog.meta.mechanisms import resolve_mechanism
 from metacog.meta.sources import CONTROL, PROMPT_FIELDS, SEEDS_DIR, prompt_constants
 from metacog.testing import RespondingModel, ScriptedModel, call, text
@@ -290,3 +299,36 @@ async def test_the_cli_lists_and_approves_designed_mechanisms(tmp_path, capsys):
     assert f"{name}  proposed  from value_learning  train 1.00  test 1.00" in capsys.readouterr().out
     main(["approve-mechanism", store, name])
     assert capsys.readouterr().out.strip() == f"{name} may compete in learner tournaments"
+
+
+async def test_when_no_mechanism_learns_a_procedure_the_worker_designs_one(tmp_path):
+    def respond(request: dict):
+        first = request["messages"][0]["content"]
+        if "learning mechanism" in first:  # the designer
+            return text(f"```python\n{DESIGNED}```")
+        if first.startswith("You are writing a Python function"):  # only asked to consider every run, it adds tax
+            return text(f"```python\n{V2 if MARK in json.dumps(request['messages']) else V1}```")
+        return shop_and_writer(request)  # the shop
+
+    meta = make_meta(learning="worker", store=str(tmp_path / "store"),
+                     selection=LearnerSelection(candidates=["value_learning", "skill_synthesis"],
+                                                design=DesignPolicy(population=2, generations=1)))
+    meta.install("basket_total", V1)
+    shop = agent(meta)
+    events = []
+    with RespondingModel(respond).active():
+        for batch in (("S1", "D1", "D2", "A", "B"), ("D3", "A"), ("B", "D3")):
+            for case_id in batch:
+                await serve(shop, case_id)
+            events += await meta.learn_due()  # the worker's pass
+    [name] = meta.store.setting("mechanisms")
+    # Learning failed twice, the tournament's winner failed too, so the worker designed a mechanism.
+    assert [(a["mechanism"], a["outcome"]) for a in meta.store.learning()] == [
+        ("value_learning", "refused"), ("value_learning", "refused"), ("tournament:value_learning", "refused"),
+        (f"design:{name}", "design proposed")]
+    assert events[-1] == (f"learner: designed {name} for basket_total (beats value_learning on training (1.00 vs "
+                          "0.00); no test problems from other task classes, so a person must judge whether it "
+                          "generalizes); it competes once a person approves it")
+    assert meta.store.setting("mechanisms")[name]["state"] == "proposed"
+    approve_mechanism(meta, name)
+    assert [c.name for c in meta._tournament_candidates()] == ["value_learning", "skill_synthesis", name]

@@ -171,19 +171,23 @@ async def design_learners(train: Sequence[LearningProblem], test: Sequence[Learn
                           seeds: Sequence[str] = SEEDS, prompts: PromptPack | str = GENERIC,
                           designer_model: str | None = None, designer_params: dict[str, Any] | None = None,
                           writer_model: str | None = None, writer_params: dict[str, Any] | None = None,
-                          budget: MechanismBudget | None = None, fixed_effort: bool = False,
+                          budget: MechanismBudget | None = None, fixed_effort: bool = False, label: str | None = None,
                           population: int = 4, generations: int = 3,
                           rng: random.Random | None = None, prices: dict[str, tuple[float, ...]] | None = None,
                           archive: str | Path = ":memory:") -> MechanismDesign:
     """Score the seeds, search from the best one with GEPA, and judge the best design on the test problems.
+    Without test problems a design that beats the best seed is accepted on training alone, and its reason
+    says a person must judge whether it generalizes.
 
     `budget` is the regime every mechanism learns under, seeds included (default: 12 writer calls and 15
     minutes per problem). Chapter 7 lets a design choose the writer's effort per call; `fixed_effort` refuses
     designs that do, so a design can win only by learning better under the regime's writer. Pass a seeded
-    `rng` so a replayed search makes the recorded choices.
+    `rng` so a replayed search makes the recorded choices. A recording keys a call by its request, so repeated
+    searches would replay one another's designer replies; give each repeat its own `label` (named in the
+    designer's prompt) to draw fresh samples.
     """
-    if not train or not test:
-        raise ValueError("design_learners needs training problems and test problems from other task classes")
+    if not train:
+        raise ValueError("design_learners needs training problems")
     budget = budget or MechanismBudget(writer_calls=12, seconds=900)
     spend = {"dollars": 0.0}
     common = dict(prompts=prompts, writer_model=writer_model, writer_params=writer_params, budget=budget,
@@ -222,10 +226,11 @@ async def design_learners(train: Sequence[LearningProblem], test: Sequence[Learn
 
     writer_calls = budget.writer_calls if budget.writer_calls is not None else "unlimited"
     effort = EFFORT_FIXED if fixed_effort else EFFORT_CHOSEN
+    run = f"\n\nThis is design search {label}." if label else ""
     search = GEPA(proposer_model=designer_model or writer_model or DEFAULT_MODEL, eval_source=_NoQuestions(),
                   population_size=population, generations=generations,
-                  mutation_prompt=DESIGN_MUTATION_PROMPT.format(writer_calls=writer_calls, effort=effort),
-                  crossover_prompt=DESIGN_CROSSOVER_PROMPT.format(writer_calls=writer_calls, effort=effort),
+                  mutation_prompt=DESIGN_MUTATION_PROMPT.format(writer_calls=writer_calls, effort=effort) + run,
+                  crossover_prompt=DESIGN_CROSSOVER_PROMPT.format(writer_calls=writer_calls, effort=effort) + run,
                   evaluator=evaluate, validate=validate,
                   proposer_params=dict(designer_params or {"reasoning_effort": "medium"}), rng=rng)
     store = SQLiteArchive(archive)
@@ -242,22 +247,33 @@ async def design_learners(train: Sequence[LearningProblem], test: Sequence[Learn
     train_rate = (best.measurement.score or 0.0) if best is not None else mean_rate(seed_scores[best_seed])
     seed_train = mean_rate(seed_scores[best_seed])
 
-    seed_test = mean_rate(await scored(seed_source(best_seed, prompts), test, best_seed))
-    seeds_report = {name: {"train": mean_rate(seed_scores[name]), "test": seed_test if name == best_seed else None}
-                    for name in seeds}
+    seeds_report: dict[str, dict[str, float | None]] = {name: {"train": mean_rate(seed_scores[name]), "test": None}
+                                                         for name in seeds}
+    name = f"designed_{source_id(source)}"
     if train_rate <= seed_train:
-        return MechanismDesign(f"designed_{source_id(source)}", source, train_rate, None, best_seed, seeds_report,
-                               False, f"no design beat {best_seed} on the training problems ({train_rate:.2f} vs "
+        return MechanismDesign(name, source, train_rate, None, best_seed, seeds_report, False,
+                               f"no design beat {best_seed} on the training problems ({train_rate:.2f} vs "
                                f"{seed_train:.2f})", spend["dollars"], lineage)
+    if not test:  # the worker's search on one procedure's own problem, with no other task classes to hand
+        return MechanismDesign(name, source, train_rate, None, best_seed, seeds_report, True,
+                               f"beats {best_seed} on training ({train_rate:.2f} vs {seed_train:.2f}); no test "
+                               "problems from other task classes, so a person must judge whether it generalizes",
+                               spend["dollars"], lineage)
+    seed_test = mean_rate(await scored(seed_source(best_seed, prompts), test, best_seed))
+    seeds_report[best_seed]["test"] = seed_test
     test_scores = await scored(source, test, "design")
     test_rate = mean_rate(test_scores)
     accepted = test_rate >= seed_test
-    reason = (f"beats {best_seed} on training ({train_rate:.2f} vs {seed_train:.2f}) and holds on the test problems "
-              f"({test_rate:.2f} vs {seed_test:.2f})" if accepted else
-              f"beats {best_seed} on training ({train_rate:.2f} vs {seed_train:.2f}) but loses on the test problems "
-              f"({test_rate:.2f} vs {seed_test:.2f})")
-    return MechanismDesign(f"designed_{source_id(source)}", source, train_rate, test_rate, best_seed, seeds_report,
-                           accepted, reason, spend["dollars"], lineage,
+    trained = f"beats {best_seed} on training ({train_rate:.2f} vs {seed_train:.2f})"
+    tested = f"({test_rate:.2f} vs {seed_test:.2f})"
+    # A tie passes the gate (the design does no harm where it was never searched) but is no sign that it
+    # transfers. Of three searches on D1 and D2, one design beat the best seed on D3 by far, one by a little,
+    # and one tied it at zero (DOMAINS.md).
+    reason = (f"{trained} and on the test problems {tested}" if test_rate > seed_test else
+              f"{trained} and ties it on the test problems {tested}, so there is no sign it transfers" if accepted
+              else f"{trained} but loses on the test problems {tested}")
+    return MechanismDesign(name, source, train_rate, test_rate, best_seed, seeds_report, accepted, reason,
+                           spend["dollars"], lineage,
                            {"test": [asdict(s) for s in test_scores]})
 
 
@@ -274,6 +290,20 @@ def register_mechanism(store: Any, design: MechanismDesign, *, state: str = "pro
                                "created_at": datetime.now(UTC).isoformat()}
     store.put_setting("mechanisms", mechanisms)
     return design.name
+
+
+def install_mechanism(store: Any, source: str, name: str | None = None, *, state: str = "approved",
+                      note: str = "installed by a person") -> str:
+    """Bring a mechanism's source into a deployment, say one a search designed elsewhere: approved, it competes
+    in learner tournaments; "proposed", it waits for `approve_mechanism`. Returns its name."""
+    check_mechanism(source)
+    store = getattr(store, "store", store)
+    name = name or f"designed_{source_id(source)}"
+    mechanisms = dict(store.setting("mechanisms") or {})
+    mechanisms[name] = {"source": source, "state": state, "parent": None, "train": None, "test": None,
+                        "reason": note, "created_at": datetime.now(UTC).isoformat()}
+    store.put_setting("mechanisms", mechanisms)
+    return name
 
 
 def approve_mechanism(store: Any, name: str) -> None:

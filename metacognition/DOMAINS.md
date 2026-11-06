@@ -395,26 +395,71 @@ design choose.
   - It keeps whichever candidate the practice accepted most, not the last one written.
   - Its prompts target the failures the search's feedback showed: invented API names, and refusals the
     policy doesn't call for.
-- **The test classes couldn't tell it apart from the seed.**
-  - On chapter 6's calendar classes, which no design saw, it scored 2 of 16 and 1 of 16. That is 0.09, the
-    same as transition distillation's 0.09.
-  - The gate's rule (don't lose on the test problems) accepted it. But both sit at the floor there: with no
-    reasoning, no learner learns the calendar classes' unwritten conventions from 4 or 2 accepted runs.
-  - So this is no evidence of transfer. The design learns better where it was searched, and neither helps
-    nor hurts elsewhere.
+- **Chapter 6's calendar classes couldn't tell it apart from the seed.** No design saw them. It scored 2 of 16
+  and 1 of 16, 0.09, the same as transition distillation. With no reasoning, no learner learns those classes'
+  unwritten conventions from 4 or 2 accepted runs. The gate's rule (don't lose on the test problems) accepted
+  it on that tie.
+
+**Follow-ups** (2026-11-06, $1.18 in all, replayed by `tests/test_learning.py` and `tests/test_refunds.py`):
+
+- **A test that discriminates: D3, and the design transfers.** D3's intake and payment requests became learning
+  problems (`--test invoices_intake invoices_payment`). Every seed and the design learned each one with the
+  writer at `none` (`--phases transfer`), held-out cases accepted:
+
+  | Learner | D3 intake (of 12) | D3 payment (of 16) |
+  |---|---|---|
+  | value learning, reflection, success distillation, transition distillation | 0 | 0 |
+  | skill synthesis | 2 | 0 |
+  | the design, searched on D1 and D2 only | 7 | 12 |
+
+  - D3 is a domain the design never saw, and on it the design learned more than every seed.
+  - On payments it learned 12 of 16 from 3 accepted runs, by checking itself and repairing from the audit's
+    reasons, which name each client's unwritten convention as it breaks.
+- **The design competes in D2's online loop** (`--writer-effort none --learner reflection --selection
+  --designed ...`, the checker arm):
+  - Reflection failed the gate twice, 0 of 6 both times, at runs 15 and 19.
+  - At run 23 the tournament scored value learning, skill synthesis and the design each 6 of 6 on the gate's
+    labeled returns.
+  - It chose skill synthesis as the cheapest ($0.027 against the design's $0.039). That version was trusted
+    at run 23, and the arm served 4 wrong actions.
+  - On 6 gate cases the design ties the best seeds, and cost decides. It wins where the seeds fail, as on D3.
+- **Repeated searches vary a great deal.** These are two more searches from other random starting points,
+  each with fresh designer samples. A label in the designer's prompt keeps the recording from replaying one
+  search's replies into the next.
+
+  | Search (random starting point) | Best on training | On D3 (intake, payment) |
+  |---|---|---|
+  | 7, the first | 1.00 | 0.67 (7/12, 12/16) |
+  | 11 | 0.75 | 0.21 (5/12, 0/16) |
+  | 23 | 0.91 | 0.00 (0/12, 0/16) |
+
+  - Every search beat the best seed's 0.50 on training, but only the first transferred well.
+  - The search from 23 did second best on training and transferred nothing, so training score doesn't predict
+    transfer.
+  - The gate's verdict now says when a design only ties on the test problems: "no sign it transfers".
+- **The worker designs a learner when none can learn a procedure.** `LearnerSelection(design=DesignPolicy())`
+  starts a design search in the worker, never in a serving process. It fires when a tournament's winner still
+  fails the gate.
+  - The search trains on the procedure's own learning problem, and optionally tests on problems from other task
+    classes.
+  - An accepted design is registered as proposed, and logged and published (`mechanism_proposed`). A person
+    approves it before it competes.
+  - This is scripted in `tests/test_a5.py` and hasn't run live.
 - **Lessons:**
-  - A search can design a learner that makes up for a cheaper writer, by checking itself on its own runs and
-    keeping its best attempt.
-  - A generalization gate needs test problems on which the seeds score in the middle. "Didn't lose" at 3 of
-    32 is not a test.
-  - Because tournaments still measure each learner per procedure, letting this design compete is safe. A
-    person approves it first.
+  - Choose a learner per procedure, by measurement. No seed was best everywhere, and the default failed D2
+    outright.
+  - A search can design a learner that makes up for a cheaper writer and transfers to a domain it never saw.
+    The gain came from checking against its own runs and keeping its best attempt.
+  - It doesn't happen every time. One search in three found such a design, and training scores didn't show
+    which. Judge designs on test problems where the seeds score low but above zero, and prefer a design that
+    beats the seed there over one that ties.
+  - A tournament on a few gate cases breaks ties by cost. That is right for serving, but it can hide a stronger
+    learner until the cases are harder.
 - **Caveats:**
-  - There is one search, from one random seed.
+  - There is one sample of each search and tournament.
   - Scores are acceptance on held-out cases, not chapter 7's match against a reference.
-  - The design has not yet served a deployment.
-- **Follow-ups:**
-  - Test on a class where the seeds score in the middle: D3 after its live run, or the calendar classes under
-    `low_writer`.
-  - Repeat the search from other random seeds.
-  - Approve the design, and let it compete in D2's online loop.
+  - The worker's own design search is tested only with scripted models.
+- **Next:**
+  - Run D3's full study live (about $2), with the design and tournaments in its loop.
+  - Make the gate prefer a design that beats the seed on test.
+  - Search with test problems in the loop, keeping a final held-out class for the verdict.

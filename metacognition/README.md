@@ -41,13 +41,18 @@ The example domains are under way ([DOMAINS.md](DOMAINS.md)):
   run live yet. It found three things the harness can't yet set per procedure: its scope, its gate and its
   learner.
 
-Learning about learning (A5, [DOMAINS.md](DOMAINS.md)) has run live for $0.92. Learner tournaments on D1 and D2
-found no learner best on both, so the loop now picks one per procedure. A design search then wrote a new
-learning mechanism, `examples/learning/designed/`, that learns both with the cheapest writer, which no
-existing mechanism did. It neither helped nor hurt on chapter 6's calendar classes, where every learner
-nearly fails.
+Learning about learning (A5, [DOMAINS.md](DOMAINS.md)) has run live for $2.10.
+- **Tournaments:** learner tournaments on D1 and D2 found no learner best on both, so the loop picks one per
+  procedure.
+- **A designed learner:** a design search wrote a new learning mechanism (`examples/learning/designed/`) that
+  learns both with the cheapest writer, which no existing mechanism did.
+- **Transfer:** on D3's invoices, which it never saw, it learned 7 of 12 intakes and 12 of 16 payments, where
+  every existing mechanism learned at most 2 and 0.
+- **Repeats:** two repeated searches varied widely, and only one transferred.
+- **The worker designs:** when no mechanism can learn a procedure, the worker now designs one for a person to
+  approve.
 
-The suite has 186 tests and needs no API key. Nothing here is stable yet.
+The suite has 190 tests and needs no API key. Nothing here is stable yet.
 
 ## A plain agent
 

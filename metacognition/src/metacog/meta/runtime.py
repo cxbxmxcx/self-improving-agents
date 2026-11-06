@@ -29,6 +29,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import inspect
+import random
 import uuid
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
@@ -674,6 +675,7 @@ class Metacognition:
             self.store.log_learning(name=name, mechanism=f"tournament:{winner.mechanism}", version=None,
                                     episodes=len(learn_from), writer_calls=choice.writer_calls,
                                     dollars=choice.dollars, gate=None, outcome="failed: no candidate learned")
+            await self._design(name, problem, model, events)
             return
         parent = (self.store.versions(name) or [{}])[-1].get("version")
         info = {"mechanism": winner.mechanism, "writer_calls": choice.writer_calls, "dollars": choice.dollars,
@@ -689,6 +691,33 @@ class Metacognition:
         await publish(kind=kind, procedure=name, version=outcome[1],
                       detail=f"{winner.mechanism} (tournament), gate {gate.accepted}/{gate.total}, "
                              f"${choice.dollars:.4f}")
+        if outcome[0] == "refused":  # no candidate learns this procedure well enough
+            await self._design(name, problem, model, events)
+
+    async def _design(self, name: str, problem: LearningProblem, model: str, events: list[str]) -> None:
+        """No mechanism learns `name`: design one on its own learning problem, in the worker, and propose it."""
+        policy = self.selection.design if self.selection is not None else None
+        if policy is None or self.learning != "worker":
+            return  # a design search never runs in a serving process
+        from metacog.design import design_learners, register_mechanism
+
+        tests = list(await policy.tests()) if policy.tests is not None else []
+        design = await design_learners(
+            [problem], tests, prompts=self.prompts, designer_model=policy.designer_model or model,
+            designer_params=policy.designer_params, writer_model=model, writer_params=self.writer_params,
+            budget=policy.budget, fixed_effort=policy.fixed_effort, population=policy.population,
+            generations=policy.generations, rng=random.Random(self.store.count()), prices=self.prices)
+        outcome = "design proposed" if design.accepted else f"design refused: {design.reason}"
+        self.store.log_learning(name=name, mechanism=f"design:{design.name}", version=None,
+                                episodes=len(problem.episodes), writer_calls=0, dollars=design.dollars, gate=None,
+                                outcome=outcome)
+        if not design.accepted:
+            events.append(f"learner: no design learns {name} better: {design.reason}")
+            return
+        register_mechanism(self.store, design)
+        events.append(f"learner: designed {design.name} for {name} ({design.reason}); it competes once a person "
+                      f"approves it")
+        await publish(kind="mechanism_proposed", procedure=name, detail=f"{design.name}: {design.reason}")
 
     def _tournament_candidates(self) -> list[Mechanism]:
         """The selection's candidates, and the designed mechanisms a person approved (metacog.design)."""

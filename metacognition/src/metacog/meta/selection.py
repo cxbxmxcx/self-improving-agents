@@ -15,15 +15,40 @@ counts against the learning budget as one attempt.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
 from helix.memory.learning_mechanisms import Contract, Episode, Writer
+from helix.memory.mechanism_runtime import MechanismBudget
 
 from metacog.meta.mechanisms import Mechanism, spent, writer_cost
 from metacog.meta.parts import Practice
 from metacog.meta.sources import SEEDS
+
+
+@dataclass
+class DesignPolicy:
+    """When no mechanism can learn a procedure, the worker designs one (A5, level 3, in the loop).
+
+    A tournament whose winner still fails the gate shows that no candidate learns the procedure. The worker
+    (never a serving process) then runs a design search on that procedure's own learning problem. A design
+    that beats the best seed is registered as proposed: a person approves it before it competes.
+
+    tests           async () -> learning problems from other task classes, for the generalization gate; None
+                    judges a design on its own problem only, and the proposal says so
+    population, generations, budget (per problem), designer_model, designer_params
+                    the search's settings
+    fixed_effort    designs may not set the writer's effort (they must learn better, not buy a better writer)
+    """
+
+    tests: Callable[[], Awaitable[Sequence[Any]]] | None = None
+    population: int = 4
+    generations: int = 2
+    budget: MechanismBudget | None = None
+    designer_model: str | None = None
+    designer_params: dict[str, Any] | None = None
+    fixed_effort: bool = True
 
 
 @dataclass
@@ -36,12 +61,15 @@ class LearnerSelection:
     quarantined_within  a learned version quarantined within this many runs of being trusted starts
                         one too (None: never)
     designed            also let the designed mechanisms a person approved compete (metacog.design)
+    design              a DesignPolicy: when a tournament's winner still fails the gate, the worker designs
+                        a new mechanism (learning="worker" only; searches never run in a serving process)
     """
 
     candidates: Sequence[str | Mechanism] = SEEDS
     after_refusals: int = 2
     quarantined_within: int | None = 8
     designed: bool = True
+    design: DesignPolicy | None = None
 
 
 @dataclass

@@ -9,6 +9,8 @@ answer get accepted?). Every problem here comes from runs the agent made without
                   last 16 returns of the holiday stream
   multi_attendee  chapter 6's calendar classes: the assistant's runs on the 16 development requests; scored on
   same_time       the 16 validation requests
+  invoices_intake D3: the invoice desk's runs on intake (four vendor layouts) or payment requests (three clients'
+  invoices_payment terms and unwritten conventions); scored on 12 intakes or 16 payments it never saw
 
 Every problem learns under one regime (REGIMES): chapter 7's "low_writer" (runs at low effort, a writer at low
 effort, 12 writer calls), or "weak_writer", the same with a writer that does no reasoning. A regime that leaves
@@ -128,3 +130,20 @@ async def calendar_problem(task_class: str, regime: Regime = LOW_WRITER) -> Lear
     tier.close()
     held_out = [t["id"] for t in behavior_cases("validation", task_class)]
     return LearningProblem(task_class, CLASSES[task_class].contract, recalled, act, held_out, act)
+
+
+async def invoices_problem(kind: str, regime: Regime = LOW_WRITER) -> LearningProblem:
+    """D3: learn invoice intake (`parse_invoice`, four vendor layouts) or payment (`amount_payable`, three
+    clients' terms and their unwritten conventions) from runs on the development and routing requests of that
+    kind; scored on the validation and test requests of that kind (12 intakes, 16 payments)."""
+    from examples.invoices.agent import amount_payable, ap_desk, check, parse_invoice, practice
+    from examples.invoices.world import InvoiceWorld, task_set
+
+    def of_kind(splits: Sequence[str]) -> list[dict[str, Any]]:
+        return [t for split in splits for t in task_set(split) if t["kind"] == kind]
+
+    contract = (parse_invoice if kind == "intake" else amount_payable).contract
+    episodes = await runs_without_a_procedure(ap_desk(), of_kind(("dev", "routing"))[: regime.tasks], InvoiceWorld,
+                                              check, regime.efforts)
+    held_out = [t["id"] for t in of_kind(("validation", "test"))[:16]]
+    return LearningProblem(f"invoices_{kind}", contract, episodes, practice, held_out, practice)
