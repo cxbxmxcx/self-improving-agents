@@ -21,6 +21,7 @@ honest mistakes and is not a security sandbox, which is one reason a person appr
 
 from __future__ import annotations
 
+import ast
 import random
 from collections.abc import Sequence
 from dataclasses import asdict, dataclass, field
@@ -57,7 +58,7 @@ What `lab` offers, every call metered (a mechanism over budget stops and scores 
 - `lab.episodes`: the judged runs, each with .task_id, .request, .steps, .success and .reason;
 - `lab.render(episode)`: a run as text; `lab.contract`: the function's contract as text;
 - `await lab.write(prompt, effort=None)`: the writer's function for a prompt, already checked by the code
-  guard (it raises lab.Refused for unsafe code); effort is "none", "low" or "medium";
+  guard (it raises lab.Refused for unsafe code); {effort}
 - `await lab.ask(prompt, effort=None)`: the writer's text reply;
 - `await lab.practice(source, task_id)`: try a function on a run's case, returning (reward, reason,
   observations);
@@ -65,6 +66,18 @@ What `lab` offers, every call metered (a mechanism over budget stops and scores 
 - `lab.note(text)`: keep a note.
 
 Writer calls are the cost: the budget is {writer_calls} per procedure."""
+
+EFFORT_CHOSEN = 'effort is "none", "low" or "medium";'
+EFFORT_FIXED = "pass no effort: this regime fixes the writer's effort;"
+
+
+def passes_effort(source: str) -> bool:
+    """Whether a mechanism sets the writer's effort itself (`lab.write(..., effort=...)` or a second argument)."""
+    for node in ast.walk(ast.parse(source)):
+        if (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr in ("write", "ask")
+                and (len(node.args) > 1 or any(k.arg == "effort" for k in node.keywords))):
+            return True
+    return False
 
 DESIGN_MUTATION_PROMPT = """You are improving a learning mechanism by reflective mutation in a
 population-based search.
@@ -158,13 +171,16 @@ async def design_learners(train: Sequence[LearningProblem], test: Sequence[Learn
                           seeds: Sequence[str] = SEEDS, prompts: PromptPack | str = GENERIC,
                           designer_model: str | None = None, designer_params: dict[str, Any] | None = None,
                           writer_model: str | None = None, writer_params: dict[str, Any] | None = None,
-                          budget: MechanismBudget | None = None, population: int = 4, generations: int = 3,
+                          budget: MechanismBudget | None = None, fixed_effort: bool = False,
+                          population: int = 4, generations: int = 3,
                           rng: random.Random | None = None, prices: dict[str, tuple[float, ...]] | None = None,
                           archive: str | Path = ":memory:") -> MechanismDesign:
     """Score the seeds, search from the best one with GEPA, and judge the best design on the test problems.
 
     `budget` is the regime every mechanism learns under, seeds included (default: 12 writer calls and 15
-    minutes per problem). Pass a seeded `rng` so a replayed search makes the recorded choices.
+    minutes per problem). Chapter 7 lets a design choose the writer's effort per call; `fixed_effort` refuses
+    designs that do, so a design can win only by learning better under the regime's writer. Pass a seeded
+    `rng` so a replayed search makes the recorded choices.
     """
     if not train or not test:
         raise ValueError("design_learners needs training problems and test problems from other task classes")
@@ -179,7 +195,9 @@ async def design_learners(train: Sequence[LearningProblem], test: Sequence[Learn
         return result
 
     seed_scores = {name: await scored(seed_source(name, prompts), train, name) for name in seeds}
-    best_seed = max(seeds, key=lambda n: (mean_rate(seed_scores[n]), -seeds.index(n)))
+    # The best seed learns the most; of equals, the one that spent least; then the first named.
+    best_seed = max(seeds, key=lambda n: (mean_rate(seed_scores[n]), -sum(s.dollars for s in seed_scores[n]),
+                                          -seeds.index(n)))
 
     async def evaluate(candidate: Any, questions: Any = None) -> GapMeasurement:
         source = candidate.content if hasattr(candidate, "content") else candidate
@@ -198,13 +216,16 @@ async def design_learners(train: Sequence[LearningProblem], test: Sequence[Learn
             check_mechanism(source)
         except UnsafeMechanism as exc:
             return str(exc)
+        if fixed_effort and passes_effort(source):
+            return "this regime fixes the writer's effort: call lab.write and lab.ask without an effort"
         return None
 
     writer_calls = budget.writer_calls if budget.writer_calls is not None else "unlimited"
+    effort = EFFORT_FIXED if fixed_effort else EFFORT_CHOSEN
     search = GEPA(proposer_model=designer_model or writer_model or DEFAULT_MODEL, eval_source=_NoQuestions(),
                   population_size=population, generations=generations,
-                  mutation_prompt=DESIGN_MUTATION_PROMPT.format(writer_calls=writer_calls),
-                  crossover_prompt=DESIGN_CROSSOVER_PROMPT.format(writer_calls=writer_calls),
+                  mutation_prompt=DESIGN_MUTATION_PROMPT.format(writer_calls=writer_calls, effort=effort),
+                  crossover_prompt=DESIGN_CROSSOVER_PROMPT.format(writer_calls=writer_calls, effort=effort),
                   evaluator=evaluate, validate=validate,
                   proposer_params=dict(designer_params or {"reasoning_effort": "medium"}), rng=rng)
     store = SQLiteArchive(archive)

@@ -41,7 +41,13 @@ The example domains are under way ([DOMAINS.md](DOMAINS.md)):
   run live yet. It found three things the harness can't yet set per procedure: its scope, its gate and its
   learner.
 
-The suite has 167 tests and needs no API key. Nothing here is stable yet.
+Learning about learning (A5, [DOMAINS.md](DOMAINS.md)) has run live for $0.92. Learner tournaments on D1 and D2
+found no learner best on both, so the loop now picks one per procedure. A design search then wrote a new
+learning mechanism, `examples/learning/designed/`, that learns both with the cheapest writer, which no
+existing mechanism did. It neither helped nor hurt on chapter 6's calendar classes, where every learner
+nearly fails.
+
+The suite has 186 tests and needs no API key. Nothing here is stable yet.
 
 ## A plain agent
 
@@ -260,5 +266,6 @@ examples/calendar/    chapter 6's assistant on metacog, and the drift demo for t
 examples/expenses/    the second task class (D1): world, agent, app, study, recorded runs
 examples/refunds/     D2's returns desk: world, agent, study with reviewers, a judge and replayed practice
 examples/invoices/    D3's invoice intake: two procedures, three clients, routing, discover, and scopes
+examples/learning/    A5 live: learning problems from the domains, learner tournaments, and a design search
 tests/                unit tests, and parity tests that replay the study's experiments
 ```

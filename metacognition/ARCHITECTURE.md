@@ -315,7 +315,10 @@ conventions.
       that procedure the same way. Its function is the attempt's candidate under the usual approval rules.
     - The tournament is logged as one learning attempt (`tournament:<winner>`), reported, and published as
       `learner_chosen`.
-    - It is opt-in, so recorded studies replay unchanged. The live tournaments have not run yet.
+    - It is opt-in, so recorded studies replay unchanged.
+  - *Live 2026-11-06* (`examples/learning`, DOMAINS.md): on learning problems built from D1's and D2's
+    recordings, no seed was best on both. The tournament chose reflection for D1 and success distillation
+    for D2, and the default learner, value learning, ran out of its writer calls on D2.
 - **L3. Design learners** (about $3 to $8 live):
   - `metacog design-learners` runs GEPA (or DGM) over mechanism source, with a designer model proposing
     rewrites of the trusted mechanisms.
@@ -335,7 +338,14 @@ conventions.
       accepted. A one-shot design that learns the training class but never checks itself loses on an
       unseen class and is refused. Skill synthesis with the same prompt repairs itself on that class and
       holds, a small lesson in why checking against the runs you learn from generalizes.
-    - Not yet built: learning problems drawn from the domain recordings, and the live search itself.
+  - *Live 2026-11-06*, with the writer at `none` and designs not allowed to raise its effort:
+    - From transition distillation, three GEPA rewrites reached a design that learns both training problems
+      (1.00 against the seeds' best 0.50).
+    - The design drafts from accepted and rejected runs, checks itself on its own runs, repairs up to three
+      times, and keeps its best attempt.
+    - On chapter 6's calendar classes it tied the seed at 0.09, so the gate's "don't lose" accepted it. Both
+      sat at the floor, though, which is no evidence of transfer.
+    - The next search needs test classes where the seeds score in the middle.
 
 The searches stay offline or in the worker, never in a serving process. Every model call is recorded, so a
 search replays free once it has run.

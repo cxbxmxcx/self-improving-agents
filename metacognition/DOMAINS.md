@@ -345,3 +345,76 @@ tests in `tests/test_invoices.py`. It has not run live yet.
   - What does each model cost per accepted run?
 - **Machinery:** floors are kept per model, so both sets sit in one store, and the effort ladders send each
   provider its own reasoning settings.
+
+## Learning about learning (A5): which learner, and can a search design a better one?
+
+Built in `examples/learning`: `problems.py` builds learning problems from the domains' recordings, and
+`study.py` runs the loop's learner tournament (A5, L2) and the design search (L3). The mechanism the search
+designed is kept in `designed/`. It ran live on 2026-11-06 for $0.92 (108 live calls), and
+`tests/test_learning.py` replays the whole study.
+
+A learning problem holds the runs an agent made without a procedure, and the held-out cases the learned
+function is scored on (does its answer get accepted?).
+
+| Problem | Role | Runs to learn from (accepted) | Held-out cases |
+|---|---|---|---|
+| D1 expenses: the reimbursable total | training | 16 development trips at `low` (6) | 16 validation trips |
+| D2 refunds: what a holiday return gets | training | the first 16 holiday returns at `low` (14) | the last 16 |
+| Chapter 6's `multi_attendee` class | test | 16 development requests at `low` (4) | 16 validation requests |
+| Chapter 6's `same_time` class | test | 16 development requests at `low` (2) | 16 validation requests |
+
+Each learner works under a regime that sets the writer's effort and allows 12 writer calls a problem. Chapter
+7's `low_writer` gives the writer `low`. `weak_writer` gives it `none`, the cheapest setting chapter 7 lets a
+design choose.
+
+**L2, learner tournaments** (held-out cases accepted, of 16):
+
+| Seed | D1, `low_writer` | D2, `low_writer` | D1, `weak_writer` | D2, `weak_writer` |
+|---|---|---|---|---|
+| value learning | 16 | 0 (ran out of writer calls) | 16 | 0 (ran out) |
+| reflection | 16 (cheapest) | 0 | 16 (cheapest) | 0 |
+| success distillation | 16 | 16 (cheapest) | 0 | 8 (best) |
+| transition distillation | 16 | 16 | 16 | 0 |
+| skill synthesis | 16 | 16 | 16 | 0 |
+
+- **No learner is best everywhere, so choosing one per procedure pays.** The tournament picked reflection for
+  D1 and success distillation for D2.
+- **The default learner failed D2.** Value learning writes one candidate per accepted run, and D2's 14 runs
+  overran a 12-call budget. Reflection learned D1 in one call but never learned D2.
+- **With a weak writer, D2 defeats every seed.** The best scored 8 of 16.
+
+**L3, a design search** under `weak_writer`, where no seed learns both training problems: the best average 0.5.
+- GEPA started from transition distillation, the cheapest of the seeds tied at 0.5.
+- Three rewrites took it to 0.59, 0.75 and then 1.00: the design learns both D1 and D2 perfectly with the
+  writer at `none`.
+- New spend was $0.44, against a $6 cap.
+- **What the design does** (`designed/designed_ee25cd476662.py`, written by the search):
+  - It drafts from the accepted and the rejected runs, as transition distillation does.
+  - It checks the draft on every run it learned from, as skill synthesis does.
+  - It repairs from those failures at most three times, the last time from scratch.
+  - It keeps whichever candidate the practice accepted most, not the last one written.
+  - Its prompts target the failures the search's feedback showed: invented API names, and refusals the
+    policy doesn't call for.
+- **The test classes couldn't tell it apart from the seed.**
+  - On chapter 6's calendar classes, which no design saw, it scored 2 of 16 and 1 of 16. That is 0.09, the
+    same as transition distillation's 0.09.
+  - The gate's rule (don't lose on the test problems) accepted it. But both sit at the floor there: with no
+    reasoning, no learner learns the calendar classes' unwritten conventions from 4 or 2 accepted runs.
+  - So this is no evidence of transfer. The design learns better where it was searched, and neither helps
+    nor hurts elsewhere.
+- **Lessons:**
+  - A search can design a learner that makes up for a cheaper writer, by checking itself on its own runs and
+    keeping its best attempt.
+  - A generalization gate needs test problems on which the seeds score in the middle. "Didn't lose" at 3 of
+    32 is not a test.
+  - Because tournaments still measure each learner per procedure, letting this design compete is safe. A
+    person approves it first.
+- **Caveats:**
+  - There is one search, from one random seed.
+  - Scores are acceptance on held-out cases, not chapter 7's match against a reference.
+  - The design has not yet served a deployment.
+- **Follow-ups:**
+  - Test on a class where the seeds score in the middle: D3 after its live run, or the calendar classes under
+    `low_writer`.
+  - Repeat the search from other random seeds.
+  - Approve the design, and let it compete in D2's online loop.

@@ -42,7 +42,9 @@ pythonpath = ["."]
 
 [tool.ruff]
 line-length = 120
-extend-exclude = ["src/metacog/meta/seeds"]
+# Chapter 7's seeds and the mechanisms a search designed are kept exactly as written: the code they hold is
+# data a search reads and rewrites, and a lint fix would change it.
+extend-exclude = ["src/metacog/meta/seeds", "examples/learning/designed"]
 target-version = "py311"
 
 [tool.ruff.lint]
