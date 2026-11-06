@@ -268,6 +268,60 @@ A3 was built next (`tests/test_a3.py`, 11 tests; 111 in all), with the dashboard
   - **Tests:** the guide's free steps run through the CLI in `tests/test_a4.py` and reproduce the smoke
     study's numbers.
 
+**A5. Learning about learning** (planned 2026-11-06; chapter 7's search, inside the loop)
+
+Today a Metacognition has one learner, a Python class fixed when it is built, and `search_learners` is an
+offline tournament the loop never calls. Chapter 7 holds the learning mechanisms as source with one entry
+point, `async def learn(lab)`, run through helix's metered lab and mechanism guard, so a search can rewrite
+them. A5 brings that into the loop at three levels:
+
+- **Level 1, learn procedures:** what the loop does now.
+- **Level 2, choose a learner:** pick, per procedure, which mechanism learns it best, by measurement.
+- **Level 3, design a learner:** a search writes new mechanisms as code, a code task in its own right, and
+  keeps one only when it learns better on task classes it never saw.
+
+The unit both searches measure is a **learning problem**: a procedure's contract, the judged runs it must learn
+from, how a candidate is tried (replayed runs or labeled cases), the held-out cases it is scored on, and a
+regime (writer effort and a writer-call budget). Problems come from the store, from any past relearning, and
+from the domain studies: calendar E5, D1's rate change, D2's holiday policy, and D3's layout change and
+conventions.
+
+- **L1. Mechanisms as source** (free):
+  - `SourceLearner` runs a mechanism's source through `helix.memory.mechanism_runtime` (the lab, its budget and
+    guard) with the deployment's practice, writer and prompts.
+  - The seeds are chapter 7's mechanisms with the domain-neutral prompts swapped in. A test checks that their
+    code matches chapter 7's, constant for constant, apart from the prompts.
+  - The store gets a mechanisms table (versions, source, who wrote each, scores) and a learner per procedure.
+    `Metacognition(learners={...})` sets one by hand, which also closes D3's "one learner for every procedure".
+  - *Accept:* each seed, run as source, writes what its class wrote on the recorded D1 and E5 runs.
+  - *Built 2026-11-06* (`metacog.meta.sources`, `tests/test_a5.py`): the seeds sit in `meta/seeds/`, verbatim,
+    and a test keeps them equal to chapter 7's files. Run as source, every seed sends its class's writer
+    prompts and learns its function; on D1's recording, the value-learning seed replays all 14 writer calls.
+    `Metacognition(learners={...})` gives a procedure its own learner. A lab-run mechanism's spend now comes
+    back on what it learned, so learning costs stay right. The store-backed choice moves to L2, where the loop
+    makes it.
+- **L2. Choose a learner in the loop** (free offline, about $0.50 live):
+  - A learning policy notices when learning keeps failing for a procedure: its gate failing twice running, or
+    a relearned version quarantined within a few runs. It then runs a tournament of the trusted mechanisms on
+    that procedure's own learning problem and keeps the winner for it. This runs inline, in the background or
+    in the worker, like learning, within the learning budget.
+  - Each choice is an event, a dashboard entry and a store record (the mechanism, its score, the runner-up).
+  - *Accept:* scripted, a procedure whose learner keeps failing switches to one that passes. Live, tournaments
+    on D2's holiday problem and D3's parser problem.
+- **L3. Design learners** (about $3 to $8 live):
+  - `metacog design-learners` runs GEPA (or DGM) over mechanism source, with a designer model proposing
+    rewrites of the trusted mechanisms.
+  - Candidates are scored on meta-training problems (for example D1 and D2) under a regime that leaves
+    headroom, as chapter 7's regime sweep chooses one. A winner must also not lose on meta-test problems from
+    a domain it never saw (D3): a gate for learners.
+  - Designer-written source runs in the subprocess executor, and a person approves a new mechanism before
+    the loop may use it.
+  - *Accept:* scripted, a designed mechanism that beats the seeds is proposed, and one that wins only on
+    meta-training is refused. Live, one search with its lineage and costs reported in DOMAINS.md.
+
+The searches stay offline or in the worker, never in a serving process. Every model call is recorded, so a
+search replays free once it has run.
+
 ## 6. Example domains
 
 Protocols and results live in [DOMAINS.md](DOMAINS.md). D1 ran live on 2026-11-05 for $1.05 and repeated the

@@ -34,9 +34,13 @@ from metacog.meta.replay import RecordedWorld, ReplayPractice
 from metacog.meta.runtime import AgentPractice, Metacognition, MetaReport, RunPlan
 from metacog.meta.sandbox import sandboxed_tool
 from metacog.meta.scopes import PerUser
+from metacog.meta.sources import SEEDS, SourceLearner, seed_source
 from metacog.meta.store import MetaStore
 
 __all__ = [
+    "SEEDS",
+    "SourceLearner",
+    "seed_source",
     "ADEQUATE", "CALENDAR", "CONTROL", "EFFORTS", "GENERIC", "MECHANISMS", "SOLID", "AgentPractice", "Controller",
     "Detector", "Gate", "GateResult", "Judge", "LearningBudget", "Mechanism", "MetaReport", "MetaStore",
     "Metacognition", "MetacognitionEvent", "NoExperience", "PerUser", "Practice", "Procedure", "PromptPack",

@@ -9,12 +9,14 @@ on:
       - "metacognition/**"
       - "helix/**"
       - "chapters/ch06/**"
+      - "chapters/ch07/**"
       - ".github/workflows/metacognition.yml"
   pull_request:
     paths:
       - "metacognition/**"
       - "helix/**"
       - "chapters/ch06/**"
+      - "chapters/ch07/**"
       - ".github/workflows/metacognition.yml"
   workflow_dispatch:
 

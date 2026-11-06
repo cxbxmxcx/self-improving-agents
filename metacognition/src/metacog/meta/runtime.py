@@ -30,7 +30,7 @@ import asyncio
 import hashlib
 import inspect
 import uuid
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -153,6 +153,14 @@ class AgentPractice:
         return practice
 
 
+def _spent(outcome: Any, writer: Any) -> tuple[int, list[dict[str, Any]]]:
+    """Writer calls and usage a learning attempt spent. A mechanism run in helix's lab writes through the
+    lab's own metered writer, and reports its spend on the learned memory (or on the MechanismStopped that
+    ended it); a class mechanism reports the runtime writer's, which is the fallback."""
+    calls, usage = getattr(outcome, "writer_calls", None), getattr(outcome, "usage", None)
+    return (calls if calls else writer.calls), (usage if usage else writer.usage)
+
+
 class Metacognition:
     """The online metacognition loop for one agent deployment.
 
@@ -160,7 +168,9 @@ class Metacognition:
     verifier        `verifier(context, result)` -> Verdict, bool, (bool, reason), checker dict, or None
                     (None: wait for `feedback`); sync or async. A `Judge` is a model-based verifier
                     whose verdicts never install code on their own
-    learner         a mechanism name ("value_learning", ...) or instance; `prompts` is its PromptPack
+    learner         a mechanism name ("value_learning", ...) or instance, such as a SourceLearner
+                    (chapter 7's mechanisms as source); `prompts` is its PromptPack
+    learners        a learner per procedure name, for the procedures that learn better another way
     practice        how a candidate is tried on a case: an AgentPractice (through the agent) or a
                     function (source, case_id) -> (reward, reason, observations)
     gate, detector, controller
@@ -194,6 +204,7 @@ class Metacognition:
         *,
         verifier: Callable[..., Any] | None = None,
         learner: str | Mechanism = "value_learning",
+        learners: Mapping[str, str | Mechanism] | None = None,
         prompts: PromptPack | str = GENERIC,
         writer_model: str | None = None,
         writer_params: dict[str, Any] | None = None,
@@ -228,6 +239,10 @@ class Metacognition:
         self.procedures = {p.name: p for p in procedures}
         self.verifier = verifier
         self.learner = resolve_mechanism(learner, prompts)
+        unknown = sorted(set(learners or {}) - set(self.procedures))
+        if unknown:
+            raise ValueError(f"learners name no procedure: {unknown}")
+        self.learners = {name: resolve_mechanism(each, prompts) for name, each in (learners or {}).items()}
         self.writer_model = writer_model
         self.writer_params = dict(writer_params or {"reasoning_effort": "medium"})
         self.practice = practice
@@ -474,7 +489,8 @@ class Metacognition:
         refusal = self.budget.refusal(self.store.learning(name, within=timedelta(days=1)))
         if refusal is None:
             return False
-        self.store.log_learning(name=name, mechanism=self.learner.name, version=None, episodes=0, writer_calls=0,
+        self.store.log_learning(name=name, mechanism=self.learner_for(name).name, version=None, episodes=0,
+                                writer_calls=0,
                                 dollars=0.0, gate=None, outcome=f"skipped: {refusal}")
         events.append(f"learner: skipped {name}: {refusal}")
         await publish(kind="skipped", procedure=name, detail=refusal)
@@ -533,6 +549,10 @@ class Metacognition:
         while self._tasks:
             await asyncio.gather(*list(self._tasks.values()), return_exceptions=True)
 
+    def learner_for(self, name: str) -> Mechanism:
+        """The mechanism that learns procedure `name`: its own (`learners`), else the deployment's."""
+        return self.learners.get(name, self.learner)
+
     def _practice_for(self, name: str, practice: Any = None) -> Practice:
         practice = practice if practice is not None else self.practice
         if hasattr(practice, "bind"):  # AgentPractice or ReplayPractice: through the agent
@@ -556,26 +576,32 @@ class Metacognition:
         model = self.writer_model or getattr(self.agent, "model", None) or DEFAULT_MODEL
         writer = Writer(model=model, params=dict(self.writer_params))
         practice = self._practice_for(name)
-        mechanism = self.learner.name
+        learner = self.learner_for(name)
+        mechanism = learner.name
+        learned = None
         try:
-            learned = await self.learner.learn(learn_from, practice, writer, proc.contract)
+            learned = await learner.learn(learn_from, practice, writer, proc.contract)
             gate_practice = practice if self.gate.practice is None else self._practice_for(name, self.gate.practice)
             gate = await self.gate.check(learned.source, gate_practice, cases)
         except Exception as exc:  # noqa: BLE001 - a failed attempt is logged; serving goes on
-            dollars = writer_cost(writer.usage, model, self.prices)
+            # A mechanism run in helix's lab writes through the lab's own metered writer; what it spent comes
+            # back on the learned memory, or on the MechanismStopped that ended it.
+            calls, usage = _spent(learned or exc, writer)
+            dollars = writer_cost(usage, model, self.prices)
             self.store.log_learning(name=name, mechanism=mechanism, version=None, episodes=len(learn_from),
-                                    writer_calls=writer.calls, dollars=dollars, gate=None,
+                                    writer_calls=calls, dollars=dollars, gate=None,
                                     outcome=f"failed: {type(exc).__name__}: {exc}")
             events.append(f"learner: {mechanism} failed for {name}: {type(exc).__name__}: {exc}")
             await publish(kind="learning_failed", procedure=name, detail=f"{type(exc).__name__}: {exc}")
             return
-        dollars = writer_cost(writer.usage, model, self.prices)
+        calls, usage = _spent(learned, writer)
+        dollars = writer_cost(usage, model, self.prices)
         parent = (self.store.versions(name) or [{}])[-1].get("version")
-        info = {"mechanism": mechanism, "writer_calls": writer.calls, "dollars": dollars, "gate": gate.to_dict(),
+        info = {"mechanism": mechanism, "writer_calls": calls, "dollars": dollars, "gate": gate.to_dict(),
                 "learned_from": [e.task_id for e in learn_from], "notes": learned.notes[-20:]}
         outcome = self._decide(name, learned.source, gate, parent, info)
         self.store.log_learning(name=name, mechanism=mechanism, version=outcome[1], episodes=len(learn_from),
-                                writer_calls=writer.calls, dollars=dollars, gate=gate.to_dict(), outcome=outcome[0])
+                                writer_calls=calls, dollars=dollars, gate=gate.to_dict(), outcome=outcome[0])
         events.append(f"learner: {mechanism} wrote {name} from {len(learn_from)} runs; gate {gate.accepted}/"
                       f"{gate.total} {outcome[0]}")
         kind = {"refused": "refused", "proposed for approval": "proposed"}.get(outcome[0], "installed")

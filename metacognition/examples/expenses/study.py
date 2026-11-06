@@ -21,6 +21,7 @@ import asyncio
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 from helix.memory.learning_mechanisms import Writer
 
@@ -73,7 +74,7 @@ async def phase_floors(args, recording) -> Floors:
     return floors
 
 
-async def phase_learn(args, recording) -> str:
+async def phase_learn(args, recording, learner: Any = None) -> str:
     meta = Metacognition([reimbursable_total], verifier=check, learning="inline", relearn_after=10**9, recall_k=1)
     agent = assistant(metacognition=meta)
     for task in task_set("dev")[: args.tasks]:
@@ -85,14 +86,16 @@ async def phase_learn(args, recording) -> str:
     episodes = meta.store.episodes()
     print(f"\nExperience: {len(episodes)} runs, {sum(e.success for e in episodes)} accepted")
     writer = Writer(model=MODEL, params={"reasoning_effort": "medium"})
-    learned = await ValueLearning(GENERIC).learn(episodes, practice, writer, reimbursable_total.contract)
+    learner = learner or ValueLearning(GENERIC)
+    learned = await learner.learn(episodes, practice, writer, reimbursable_total.contract)
     validation = task_set("validation")[: args.tasks]
     accepted = [(await practice(learned.source, t["id"]))[0] for t in validation]
     reference = [await run_on_case(REFERENCE, t) for t in validation]
     outputs = [await run_on_case(learned.source, t) for t in validation]
     matched = sum(out == ref for out, ref in zip(outputs, reference, strict=True))
-    print(f"Learned by value learning: {learned.writer_calls} writer calls, "
-          f"${writer_cost(writer.usage, MODEL, PRICES):.4f}; validation {sum(accepted):.0f}/{len(validation)} "
+    spent = writer_cost(learned.usage or writer.usage, MODEL, PRICES)
+    print(f"Learned by {learned.mechanism.replace('_', ' ')}: {learned.writer_calls} writer calls, "
+          f"${spent:.4f}; validation {sum(accepted):.0f}/{len(validation)} "
           f"accepted, {matched}/{len(validation)} match the hand-written reference")
     (args.output / "learned_reimbursable_total.py").write_text(learned.source, encoding="utf-8")
     return learned.source
