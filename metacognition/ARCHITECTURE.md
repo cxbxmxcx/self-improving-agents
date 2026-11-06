@@ -326,6 +326,16 @@ conventions.
     the loop may use it.
   - *Accept:* scripted, a designed mechanism that beats the seeds is proposed, and one that wins only on
     meta-training is refused. Live, one search with its lineage and costs reported in DOMAINS.md.
+  - *Built 2026-11-06, offline* (`metacog.design`, `metacog mechanisms`, `metacog approve-mechanism`):
+    - `design_learners(train, test)` scores the seeds, runs GEPA from the best one with a designer prompt that
+      teaches the lab's form and API, and judges the best design against that seed on the test problems.
+    - `register_mechanism` keeps an accepted design as proposed. Once a person approves it,
+      `LearnerSelection(designed=True)` lets it compete in tournaments.
+    - The scripted tests show both outcomes. A design that learns better and holds on an unseen class is
+      accepted. A one-shot design that learns the training class but never checks itself loses on an
+      unseen class and is refused. Skill synthesis with the same prompt repairs itself on that class and
+      holds, a small lesson in why checking against the runs you learn from generalizes.
+    - Not yet built: learning problems drawn from the domain recordings, and the live search itself.
 
 The searches stay offline or in the worker, never in a serving process. Every model call is recorded, so a
 search replays free once it has run.

@@ -4,16 +4,33 @@ from __future__ import annotations
 
 import ast
 import json
+import random
 from pathlib import Path
 
 import pytest
-from basket import CASES, PRICES, V1, V2, WRITTEN, agent, basket_total, make_meta, practice, serve, uses
+from basket import (
+    CASES,
+    PRICES,
+    V1,
+    V2,
+    WRITTEN,
+    CaseAPI,
+    agent,
+    basket_total,
+    make_meta,
+    practice,
+    serve,
+    uses,
+    world,
+)
+from helix.memory.code_skills import skill_tool
 from helix.memory.learning_mechanisms import Episode, Writer
 from helix.memory.mechanism_runtime import MechanismBudget, UnsafeMechanism, check_mechanism
 
 from examples.expenses import study as expense_study
 from metacog import Recording
-from metacog.meta import CALENDAR, GENERIC, SEEDS, LearnerSelection, SourceLearner, seed_source
+from metacog.design import approve_mechanism, design_learners, register_mechanism
+from metacog.meta import CALENDAR, GENERIC, SEEDS, LearnerSelection, LearningProblem, SourceLearner, seed_source
 from metacog.meta.mechanisms import resolve_mechanism
 from metacog.meta.sources import CONTROL, PROMPT_FIELDS, SEEDS_DIR, prompt_constants
 from metacog.testing import RespondingModel, ScriptedModel, call, text
@@ -56,8 +73,8 @@ def test_with_the_books_prompts_a_seed_is_chapter_7s_seed():
         assert prompt_constants(seed_source(name, CALENDAR)) == prompt_constants(original), name
 
 
-def episode(case_id: str, success: bool) -> Episode:
-    case = CASES[case_id]
+def episode(case_id: str, success: bool, cases: dict = CASES) -> Episode:
+    case = cases[case_id]
     steps = [{"tool": "price", "arguments": {"item": item}, "result": case["prices"][item]} for item in case["items"]]
     if case["tax"]:
         steps.append({"tool": "tax", "arguments": {}, "result": case["tax"]})
@@ -185,3 +202,91 @@ async def test_when_learning_keeps_failing_a_tournament_chooses_a_learner_that_w
     assert meta.store.trusted("basket_total") is None
     assert meta._tournament_reason("basket_total") == "the last learned version was quarantined after 2 runs"
     assert make_meta()._tournament_reason("basket_total") is None  # no tournaments without a selection
+
+
+# ------------------------------------------------------------------ L3: designing a learner
+
+# A design the scripted designer proposes: skill synthesis whose writer prompt asks the writer to consider every
+# run. The scripted writer adds the tax only when asked that way, so only this design learns the tax classes.
+MARK = "Consider every run."
+DESIGNED = seed_source("skill_synthesis").replace("{contract}", "{contract}\n\n" + MARK, 1)
+# The same writer prompt in a mechanism that writes once and never checks itself on the runs it learns from.
+ONE_SHOT = seed_source("success_distillation").replace("{contract}", "{contract}\n\n" + MARK, 1)
+# Exempt baskets: the tax tool reports a tax, but these baskets are paid without it.
+EXEMPT = {"X1": {**world(["apple"], 1), "expected": 2}, "X2": {**world(["pear", "pear"], 1), "expected": 6},
+          "X3": {**world(["apple", "pear"], 1), "expected": 5}}
+MORE_TAX = {"T1": world(["apple"], 1), "T2": world(["pear", "pear"], 1), "T3": world(["apple", "apple"], 1)}
+
+
+def practice_on(cases: dict):
+    """Function-level practice on a class of baskets of its own."""
+    async def tried(source: str, case_id: str):
+        case = cases[case_id]
+        got = await skill_tool("basket_total", "", source, bind={"api": CaseAPI(case)}).call(items=case["items"])
+        ok = got == case["expected"]
+        return (1.0 if ok else 0.0), "accepted" if ok else f"returned {got}, expected {case['expected']}", ""
+    return tried
+
+
+def problem(cases: dict, learn: list[str], held_out: list[str]) -> LearningProblem:
+    tried = practice_on(cases)
+    return LearningProblem("basket_total", basket_total.contract, [episode(c, True, cases) for c in learn], tried,
+                           held_out, tried)
+
+
+TAX = problem(CASES, ["A", "B"], ["G1", "G2"])
+
+
+def designer_and_writer(design: str):
+    """The scripted designer proposes `design`; the scripted writer adds the tax only when asked to consider
+    every run."""
+    def respond(request: dict):
+        first = request["messages"][0]["content"]
+        if "learning mechanism" in first:  # GEPA's mutation or crossover
+            return text(f"```python\n{design}```")
+        if first.startswith("You are writing a Python function"):
+            return text(f"```python\n{V2 if MARK in json.dumps(request['messages']) else V1}```")
+        raise AssertionError(f"an unexpected model call: {first[:80]!r}")
+    return respond
+
+
+async def test_a_design_that_learns_better_and_generalizes_is_accepted_and_competes(tmp_path):
+    with RespondingModel(designer_and_writer(DESIGNED)).active():
+        design = await design_learners([TAX], [problem(MORE_TAX, ["T1"], ["T2", "T3"])], population=2,
+                                       generations=1, rng=random.Random(7))
+    assert design.accepted and design.source.strip() == DESIGNED.strip(), design.reason
+    assert (design.train, design.test) == (1.0, 1.0)
+    assert all(scores["train"] == 0.0 for scores in design.seeds.values())  # every seed writes the tax-free total
+    assert design.reason.startswith(f"beats {design.best_seed} on training (1.00 vs 0.00)")
+    # Registered, it waits for a person; approved, it competes in the loop's learner tournaments.
+    meta = make_meta(store=str(tmp_path / "store"), selection=LearnerSelection(candidates=["skill_synthesis"]))
+    name = register_mechanism(meta, design)
+    assert [c.name for c in meta._tournament_candidates()] == ["skill_synthesis"]
+    approve_mechanism(meta, name)
+    assert [c.name for c in meta._tournament_candidates()] == ["skill_synthesis", name]
+
+
+async def test_a_design_that_only_wins_on_training_is_refused():
+    with RespondingModel(designer_and_writer(ONE_SHOT)).active():
+        design = await design_learners([TAX], [problem(EXEMPT, ["X1"], ["X2", "X3"])], population=2,
+                                       generations=1, rng=random.Random(7))
+    # It learns the training class but never checks itself, and on exempt baskets the best seed was right.
+    # (Skill synthesis with the same prompt repairs itself on an exempt basket it learns from, and holds.)
+    assert not design.accepted and (design.train, design.test) == (1.0, 0.0)
+    assert "loses on the test problems (0.00 vs 1.00)" in design.reason
+    with pytest.raises(ValueError, match="was not accepted"):
+        register_mechanism(make_meta(), design)
+
+
+async def test_the_cli_lists_and_approves_designed_mechanisms(tmp_path, capsys):
+    from metacog.cli import main
+
+    with RespondingModel(designer_and_writer(DESIGNED)).active():
+        design = await design_learners([TAX], [problem(MORE_TAX, ["T1"], ["T2", "T3"])], population=2,
+                                       generations=1, rng=random.Random(7))
+    store = str(tmp_path / "store")
+    name = register_mechanism(make_meta(store=store), design)
+    main(["mechanisms", store])
+    assert f"{name}  proposed  from value_learning  train 1.00  test 1.00" in capsys.readouterr().out
+    main(["approve-mechanism", store, name])
+    assert capsys.readouterr().out.strip() == f"{name} may compete in learner tournaments"

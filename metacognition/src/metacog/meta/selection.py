@@ -35,11 +35,13 @@ class LearnerSelection:
     after_refusals      learned versions refused by the gate in a row that start a tournament
     quarantined_within  a learned version quarantined within this many runs of being trusted starts
                         one too (None: never)
+    designed            also let the designed mechanisms a person approved compete (metacog.design)
     """
 
     candidates: Sequence[str | Mechanism] = SEEDS
     after_refusals: int = 2
     quarantined_within: int | None = 8
+    designed: bool = True
 
 
 @dataclass

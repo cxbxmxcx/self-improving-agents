@@ -114,6 +114,27 @@ def _approve(args: argparse.Namespace) -> None:
     print(f"{args.name}@{args.version} is trusted")
 
 
+def _mechanisms(args: argparse.Namespace) -> None:
+    store = _open(args.store)
+    designs = store.setting("mechanisms") or {}
+    chosen = store.setting("learners") or {}
+    if not designs and not chosen:
+        print("no designed mechanisms and no learners chosen by a tournament")
+    for name, design in designs.items():
+        test = "-" if design.get("test") is None else f"{design['test']:.2f}"
+        print(f"{name}  {design['state']}  from {design['parent']}  train {design['train']:.2f}  test {test}  "
+              f"{design['created_at']}")
+    for procedure, choice in chosen.items():
+        print(f"{procedure} learns by {choice['mechanism']} ({choice['reason']}; {choice['chosen_at']})")
+
+
+def _approve_mechanism(args: argparse.Namespace) -> None:
+    from metacog.design import approve_mechanism
+
+    approve_mechanism(_open(args.store), args.name)
+    print(f"{args.name} may compete in learner tournaments")
+
+
 def _install(args: argparse.Namespace) -> None:
     from metacog.meta.procedure import _check_source
     from metacog.meta.runtime import trust_version
@@ -320,6 +341,8 @@ def main(argv: list[str] | None = None) -> int:
     approve = command("approve", _approve)
     approve.add_argument("name")
     approve.add_argument("version", type=int)
+    command("mechanisms", _mechanisms)
+    command("approve-mechanism", _approve_mechanism).add_argument("name")
     install = command("install", _install)
     install.add_argument("name")
     install.add_argument("source", help="a .py file holding the procedure's function, taking `api` first")

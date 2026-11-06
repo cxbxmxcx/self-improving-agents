@@ -200,6 +200,8 @@ kept = await search_learners(reimbursable_total, episodes, practice=practice, re
 metacog status runs/jordan.meta          procedures, trust states, and economics
 metacog runs runs/jordan.meta            recent runs: model, effort, procedures offered and called, verdict
 metacog show runs/jordan.meta NAME       a version's source and provenance
+metacog mechanisms runs/jordan.meta       designed mechanisms, and the learner a tournament chose per procedure
+metacog approve-mechanism runs/jordan.meta NAME   let a designed mechanism compete in learner tournaments
 metacog approve runs/jordan.meta NAME V  trust a version the gate proposed
 metacog quarantine runs/jordan.meta NAME stop trusting a procedure
 metacog report runs/jordan.meta --html report.html

@@ -660,7 +660,7 @@ class Metacognition:
         winner's function as this attempt's candidate, gated on the cases it was scored on."""
         gate_practice = practice if self.gate.practice is None else self._practice_for(name, self.gate.practice)
         problem = LearningProblem(name, self.procedures[name].contract, learn_from, practice, cases, gate_practice)
-        choice = await run_tournament(problem, self._candidates, writer_model=model,
+        choice = await run_tournament(problem, self._tournament_candidates(), writer_model=model,
                                       writer_params=self.writer_params, prices=self.prices)
         winner = choice.winner
         self._keep_learner(name, choice, reason)
@@ -689,6 +689,16 @@ class Metacognition:
         await publish(kind=kind, procedure=name, version=outcome[1],
                       detail=f"{winner.mechanism} (tournament), gate {gate.accepted}/{gate.total}, "
                              f"${choice.dollars:.4f}")
+
+    def _tournament_candidates(self) -> list[Mechanism]:
+        """The selection's candidates, and the designed mechanisms a person approved (metacog.design)."""
+        candidates = list(self._candidates)
+        if self.selection is not None and self.selection.designed:
+            names = {c.name for c in candidates}
+            for name, design in (self.store.setting("mechanisms") or {}).items():
+                if design.get("state") == "approved" and name not in names:
+                    candidates.append(SourceLearner(design["source"], name, self.prompts))
+        return candidates
 
     def _keep_learner(self, name: str, choice: LearnerChoice, reason: str) -> None:
         learner = choice.winner.learner
