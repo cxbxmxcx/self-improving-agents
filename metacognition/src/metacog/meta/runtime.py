@@ -52,7 +52,7 @@ from metacog.meta.parts import Controller, Detector, Gate, GateResult, LearningB
 from metacog.meta.procedure import Procedure
 from metacog.meta.prompts import GENERIC, PACKS, PromptPack
 from metacog.meta.sandbox import sandboxed_tool
-from metacog.meta.selection import LearnerChoice, LearnerSelection, LearningProblem, run_tournament
+from metacog.meta.selection import LearnerChoice, LearnerSelection, LearningProblem, design_rank, run_tournament
 from metacog.meta.sources import CONTROL as SEED_CONTROL
 from metacog.meta.sources import SEEDS, SourceLearner
 from metacog.meta.store import MetaStore
@@ -724,7 +724,8 @@ class Metacognition:
         candidates = list(self._candidates)
         if self.selection is not None and self.selection.designed:
             names = {c.name for c in candidates}
-            for name, design in (self.store.setting("mechanisms") or {}).items():
+            designs = sorted((self.store.setting("mechanisms") or {}).items(), key=lambda item: design_rank(item[1]))
+            for name, design in designs:  # the best standing first: one that transfers before one that ties
                 if design.get("state") == "approved" and name not in names:
                     candidates.append(SourceLearner(design["source"], name, self.prompts))
         return candidates

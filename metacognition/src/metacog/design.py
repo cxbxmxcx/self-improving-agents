@@ -7,7 +7,12 @@ it learns do on held-out cases, across several learning problems.
 
 A design must generalize, so the search has a gate for learners too:
 - it must beat the best seed on the training problems;
-- it must not lose to that seed on test problems from task classes it never saw.
+- it must beat that seed on test problems from task classes it never saw. A tie there is no sign it transfers
+  (of three searches on D1 and D2, one design beat the seed on D3 by far, one a little, and one tied it at
+  zero), so a tie is accepted only with `ties=True`, and ranks below a design that transfers.
+
+With `validation` problems, every candidate is also scored on other task classes while the search runs, and the
+design submitted to the gate is the best there; the test problems stay held out for the verdict.
 
 A design that passes is registered in a deployment's store as proposed. Once a person approves it
 (`approve_mechanism`, or `metacog approve-mechanism`), the loop's learner tournaments (LearnerSelection) let it
@@ -37,7 +42,7 @@ from helix.search.gepa import GEPA
 from helix.signal import GapMeasurement
 
 from metacog.meta.prompts import GENERIC, PromptPack
-from metacog.meta.selection import LearningProblem, run_tournament
+from metacog.meta.selection import LearningProblem, design_rank, run_tournament
 from metacog.meta.sources import SEEDS, SourceLearner, seed_source, source_id
 from metacog.model_settings import DEFAULT_MODEL
 
@@ -165,6 +170,8 @@ class MechanismDesign:
     dollars: float
     lineage: list[dict[str, Any]] = field(default_factory=list)
     scores: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
+    standing: str = "refused"  # transfers, untested, ties or refused (see STANDINGS)
+    validation: float | None = None
 
 
 async def design_learners(train: Sequence[LearningProblem], test: Sequence[LearningProblem], *,
@@ -172,6 +179,7 @@ async def design_learners(train: Sequence[LearningProblem], test: Sequence[Learn
                           designer_model: str | None = None, designer_params: dict[str, Any] | None = None,
                           writer_model: str | None = None, writer_params: dict[str, Any] | None = None,
                           budget: MechanismBudget | None = None, fixed_effort: bool = False, label: str | None = None,
+                          validation: Sequence[LearningProblem] = (), ties: bool = False,
                           population: int = 4, generations: int = 3,
                           rng: random.Random | None = None, prices: dict[str, tuple[float, ...]] | None = None,
                           archive: str | Path = ":memory:") -> MechanismDesign:
@@ -185,6 +193,11 @@ async def design_learners(train: Sequence[LearningProblem], test: Sequence[Learn
     `rng` so a replayed search makes the recorded choices. A recording keys a call by its request, so repeated
     searches would replay one another's designer replies; give each repeat its own `label` (named in the
     designer's prompt) to draw fresh samples.
+
+    `validation` problems (other task classes) are scored for every candidate during the search. GEPA keeps
+    the Pareto front of training and validation, though the designer's feedback shows training only, and the
+    design submitted is the best on validation of those that beat the best seed on training. `ties` accepts a
+    design that only ties the seed on the test problems; by default it must beat it.
     """
     if not train:
         raise ValueError("design_learners needs training problems")
@@ -211,9 +224,13 @@ async def design_learners(train: Sequence[LearningProblem], test: Sequence[Learn
             return GapMeasurement(score=0.0, signal_id="learning_acceptance", signal_version=1, triggered=True,
                                   raw_value=0.0, feedback=f"refused by the mechanism guard: {exc}", metadata={})
         rate = mean_rate(result)
+        metadata: dict[str, Any] = {"problems": [asdict(s) for s in result]}
+        if validation:  # scored for selection; the designer's feedback stays training only
+            checked = await scored(source, validation, "design")
+            metadata["objectives"] = {"train": rate, "validation": mean_rate(checked)}
+            metadata["validation"] = [asdict(s) for s in checked]
         return GapMeasurement(score=rate, signal_id="learning_acceptance", signal_version=1, triggered=rate < 1.0,
-                              raw_value=rate, feedback=_feedback(result),
-                              metadata={"problems": [asdict(s) for s in result]})
+                              raw_value=rate, feedback=_feedback(result), metadata=metadata)
 
     def validate(source: str) -> str | None:
         try:
@@ -232,6 +249,7 @@ async def design_learners(train: Sequence[LearningProblem], test: Sequence[Learn
                   mutation_prompt=DESIGN_MUTATION_PROMPT.format(writer_calls=writer_calls, effort=effort) + run,
                   crossover_prompt=DESIGN_CROSSOVER_PROMPT.format(writer_calls=writer_calls, effort=effort) + run,
                   evaluator=evaluate, validate=validate,
+                  objectives={"train": "maximize", "validation": "maximize"} if validation else None,
                   proposer_params=dict(designer_params or {"reasoning_effort": "medium"}), rng=rng)
     store = SQLiteArchive(archive)
     seed = genesis("learning_mechanism", ArtifactKind.CODE, seed_source(best_seed, prompts), created_by=best_seed)
@@ -239,42 +257,60 @@ async def design_learners(train: Sequence[LearningProblem], test: Sequence[Learn
         pass
     measured = [v for v in await store.all_artifacts_with_measurements() if v.measurement is not None]
     store.close()
-    lineage = [{"version": v.artifact.version, "parent": v.artifact.parent_id[1] if v.artifact.parent_id else None,
-                "created_by": v.artifact.created_by, "score": v.measurement.score or 0.0} for v in
-               sorted(measured, key=lambda v: v.artifact.version)]
-    best = max(measured, key=lambda v: ((v.measurement.score or 0.0), -v.artifact.version), default=None)
-    source = best.artifact.content if best is not None else seed_source(best_seed, prompts)
-    train_rate = (best.measurement.score or 0.0) if best is not None else mean_rate(seed_scores[best_seed])
-    seed_train = mean_rate(seed_scores[best_seed])
+    def train_of(v: Any) -> float:
+        return v.measurement.score or 0.0
 
+    def validation_of(v: Any) -> float:
+        return (v.measurement.metadata.get("objectives") or {}).get("validation", 0.0)
+
+    lineage = [{"version": v.artifact.version, "parent": v.artifact.parent_id[1] if v.artifact.parent_id else None,
+                "created_by": v.artifact.created_by, "score": train_of(v),
+                **({"validation": validation_of(v)} if validation else {})}
+               for v in sorted(measured, key=lambda v: v.artifact.version)]
+    seed_train = mean_rate(seed_scores[best_seed])
     seeds_report: dict[str, dict[str, float | None]] = {name: {"train": mean_rate(seed_scores[name]), "test": None}
                                                          for name in seeds}
-    name = f"designed_{source_id(source)}"
-    if train_rate <= seed_train:
-        return MechanismDesign(name, source, train_rate, None, best_seed, seeds_report, False,
-                               f"no design beat {best_seed} on the training problems ({train_rate:.2f} vs "
+    # The design submitted to the gate beats the best seed on training; of those, the best on validation when
+    # there is any, else on training.
+    better = [v for v in measured if train_of(v) > seed_train]
+    best = max(better, key=lambda v: ((validation_of(v),) if validation else ()) + (train_of(v), -v.artifact.version),
+               default=None)
+    if best is None:
+        top = max(measured, key=lambda v: (train_of(v), -v.artifact.version), default=None)
+        source = top.artifact.content if top is not None else seed_source(best_seed, prompts)
+        train_rate = train_of(top) if top is not None else seed_train
+        return MechanismDesign(f"designed_{source_id(source)}", source, train_rate, None, best_seed, seeds_report,
+                               False, f"no design beat {best_seed} on the training problems ({train_rate:.2f} vs "
                                f"{seed_train:.2f})", spend["dollars"], lineage)
+    source, train_rate = best.artifact.content, train_of(best)
+    name = f"designed_{source_id(source)}"
+    validation_rate = validation_of(best) if validation else None
+    if validation:
+        seeds_report[best_seed]["validation"] = mean_rate(await scored(seed_source(best_seed, prompts), validation,
+                                                                       best_seed))
+    trained = f"beats {best_seed} on training ({train_rate:.2f} vs {seed_train:.2f})"
     if not test:  # the worker's search on one procedure's own problem, with no other task classes to hand
         return MechanismDesign(name, source, train_rate, None, best_seed, seeds_report, True,
-                               f"beats {best_seed} on training ({train_rate:.2f} vs {seed_train:.2f}); no test "
-                               "problems from other task classes, so a person must judge whether it generalizes",
-                               spend["dollars"], lineage)
+                               f"{trained}; no test problems from other task classes, so a person must judge "
+                               "whether it generalizes", spend["dollars"], lineage, standing="untested",
+                               validation=validation_rate)
     seed_test = mean_rate(await scored(seed_source(best_seed, prompts), test, best_seed))
     seeds_report[best_seed]["test"] = seed_test
     test_scores = await scored(source, test, "design")
     test_rate = mean_rate(test_scores)
-    accepted = test_rate >= seed_test
-    trained = f"beats {best_seed} on training ({train_rate:.2f} vs {seed_train:.2f})"
     tested = f"({test_rate:.2f} vs {seed_test:.2f})"
-    # A tie passes the gate (the design does no harm where it was never searched) but is no sign that it
-    # transfers. Of three searches on D1 and D2, one design beat the best seed on D3 by far, one by a little,
-    # and one tied it at zero (DOMAINS.md).
-    reason = (f"{trained} and on the test problems {tested}" if test_rate > seed_test else
-              f"{trained} and ties it on the test problems {tested}, so there is no sign it transfers" if accepted
-              else f"{trained} but loses on the test problems {tested}")
+    if test_rate > seed_test:
+        standing, accepted, reason = "transfers", True, f"{trained} and on the test problems {tested}"
+    elif test_rate == seed_test:
+        standing, accepted = "ties", ties
+        reason = (f"{trained} and ties it on the test problems {tested}, so there is no sign it transfers"
+                  + ("; accepted, since ties are allowed" if ties else ""))
+    else:
+        standing, accepted, reason = "refused", False, f"{trained} but loses on the test problems {tested}"
     return MechanismDesign(name, source, train_rate, test_rate, best_seed, seeds_report, accepted, reason,
-                           spend["dollars"], lineage,
-                           {"test": [asdict(s) for s in test_scores]})
+                           spend["dollars"], lineage, {"test": [asdict(s) for s in test_scores]},
+                           standing=standing if accepted or standing != "ties" else "refused",
+                           validation=validation_rate)
 
 
 # ------------------------------------------------------------------ the registry of designed mechanisms
@@ -286,7 +322,8 @@ def register_mechanism(store: Any, design: MechanismDesign, *, state: str = "pro
     store = getattr(store, "store", store)
     mechanisms = dict(store.setting("mechanisms") or {})
     mechanisms[design.name] = {"source": design.source, "state": state, "parent": design.best_seed,
-                               "train": design.train, "test": design.test, "reason": design.reason,
+                               "train": design.train, "test": design.test, "validation": design.validation,
+                               "standing": design.standing, "reason": design.reason,
                                "created_at": datetime.now(UTC).isoformat()}
     store.put_setting("mechanisms", mechanisms)
     return design.name
@@ -301,9 +338,15 @@ def install_mechanism(store: Any, source: str, name: str | None = None, *, state
     name = name or f"designed_{source_id(source)}"
     mechanisms = dict(store.setting("mechanisms") or {})
     mechanisms[name] = {"source": source, "state": state, "parent": None, "train": None, "test": None,
-                        "reason": note, "created_at": datetime.now(UTC).isoformat()}
+                        "standing": "installed", "reason": note, "created_at": datetime.now(UTC).isoformat()}
     store.put_setting("mechanisms", mechanisms)
     return name
+
+
+def ranked_mechanisms(store: Any) -> list[tuple[str, dict[str, Any]]]:
+    """A store's designed mechanisms, the best standing first (see STANDINGS)."""
+    store = getattr(store, "store", store)
+    return sorted((store.setting("mechanisms") or {}).items(), key=lambda item: design_rank(item[1]))
 
 
 def approve_mechanism(store: Any, name: str) -> None:

@@ -43,12 +43,15 @@ async def test_the_recorded_learning_study_replays(tmp_path):
             assert {problem: result["winner"] for problem, result in report.items()} == {
                 "expenses": "reflection", "refunds": "success_distillation"}
         # L3 under the weak writer: GEPA from transition distillation, three rewrites to a design that learns
-        # both training problems; on chapter 6's calendar classes it neither helps nor hurts.
+        # both training problems; on chapter 6's calendar classes it only ties the seed.
         args.regime = "weak_writer"
         design = await study.phase_design(problems, args)
     assert design["best_seed"] == "transition_distillation"
     assert [round(row["score"], 3) for row in design["lineage"]] == [0.594, 0.75, 1.0]
-    assert (design["accepted"], design["train"], round(design["test"], 3)) == (True, 1.0, 0.094)
+    # On the calendar classes it only tied the seed (0.09 each): under the stricter gate a tie is no sign of
+    # transfer, so it is refused there. On D3 it does transfer (test_the_design_transfers_to_d3s_invoices).
+    assert (design["accepted"], design["standing"], design["train"], round(design["test"], 3)) == (
+        False, "refused", 1.0, 0.094)
     assert [(s["problem"], s["accepted"]) for s in design["scores"]["test"]] == [("multi_attendee", 2),
                                                                                  ("same_time", 1)]
     replayed = (tmp_path / f"{design['name']}.py").read_text(encoding="utf-8")
@@ -91,3 +94,20 @@ async def test_repeated_design_searches_vary(tmp_path):
     assert found[11][:3] == ([0.5, 0.75, 0.5, 0.5], 0.75, [("invoices_intake", 5), ("invoices_payment", 0)])
     assert found[23][:3] == ([0.906, 0.0], 0.90625, [("invoices_intake", 0), ("invoices_payment", 0)])
     assert found[23][3].endswith("ties it on the test problems (0.00 vs 0.00), so there is no sign it transfers")
+
+
+async def test_a_search_with_validation_is_judged_on_a_class_it_never_touched(tmp_path):
+    """Every candidate is also scored on D3 intake while the search runs; D3 payment stays held out. The pick
+    transfers to intake (5 of 12, where the seed learns none) but ties the seed at zero on payments, so the
+    stricter gate refuses it."""
+    if not LEARNING.exists():
+        pytest.skip("no recorded learning study")
+    args = study.parse(["--output", str(tmp_path), "--regime", "weak_writer", "--validation", "invoices_intake",
+                        "--test", "invoices_payment", "--seed", "31", "--label", "v31", "--generations", "3"])
+    problems = await study.build_problems(args, study.Spend(0.0))
+    with Recording(LEARNING).active():
+        design = await study.phase_design(problems, args)
+    assert [(round(row["score"], 3), round(row["validation"], 3)) for row in design["lineage"]] == [
+        (0.0, 0.0), (0.5, 0.0), (0.0, 0.0), (0.906, 0.417)]
+    assert (design["standing"], design["accepted"], design["train"], round(design["validation"], 3),
+            design["test"]) == ("refused", False, 0.90625, 0.417, 0.0)

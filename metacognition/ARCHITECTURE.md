@@ -352,6 +352,14 @@ conventions.
       a little, and one not at all, so one search in three found a design that transfers.
     - The gate's verdict now says when a design only ties on the test problems.
     - In D2's online loop the design tied the best seeds on 6 gate cases and lost to the cheaper one.
+  - *Built: a stricter gate, and validation in the search.*
+    - A design must beat the best seed on the test problems, and a tie is accepted only with `ties=True`.
+    - Designs keep a standing (`transfers`, `untested`, `ties`) that orders them wherever they are listed or
+      compete.
+    - `design_learners(validation=...)` scores every candidate on other classes during the search, through
+      GEPA's Pareto front, and submits the best on validation; the test problems stay held out.
+  - *D3 live*: in a real loop, the tournament chose the design for D3's payable (18 of 18 labeled payments,
+    where every seed got none). That is the first time a designed learner earned its place in a deployment.
   - *Built: the worker designs* (`LearnerSelection(design=DesignPolicy(...))`). When a tournament's winner still
     fails the gate, the worker runs a design search on that procedure's own learning problem. With
     `DesignPolicy.tests`, it also checks the design on other classes. An accepted design is proposed for a
@@ -404,7 +412,7 @@ set budget.
 |---|---|---|---|
 | D1 | Expense claims (built) | Does the study's result hold on a second domain, with repeated trials and the domain-neutral prompts? | The full M5 study: floors, learning, and drift when the exchange-rate month changes |
 | D2 | Store refunds (built) | Can an agent learn safely when verdicts are scarce, late and human? | Simulated reviewers who judge a sample of runs a day later; a judge as a second signal; replayed practice; approval by a person; a holiday returns policy as drift |
-| D3 | Invoice intake (built offline) | How does metacognition behave with several procedures and several customers? | A procedure per task and per-customer scopes; routing and blame; `discover`; a vendor changing its layout |
+| D3 | Invoice intake (live, partly) | How does metacognition behave with several procedures and several customers? | A procedure per task and per-customer scopes; routing and blame; `discover`; a vendor changing its layout |
 | D4 | Model switch | Do floors and learned procedures carry over between models? | D1 and D3 on `gpt-5.4-mini` and a Claude model: ladders, floors per model, and a procedure written by one model used by another |
 
 I estimate $10 to $20 per domain on `gpt-5.4-mini`, and more for D4's Claude runs.

@@ -29,7 +29,13 @@ from helix.memory.mechanism_runtime import MechanismBudget, UnsafeMechanism, che
 
 from examples.expenses import study as expense_study
 from metacog import Recording
-from metacog.design import approve_mechanism, design_learners, register_mechanism
+from metacog.design import (
+    approve_mechanism,
+    design_learners,
+    install_mechanism,
+    ranked_mechanisms,
+    register_mechanism,
+)
 from metacog.meta import (
     CALENDAR,
     GENERIC,
@@ -296,7 +302,7 @@ async def test_the_cli_lists_and_approves_designed_mechanisms(tmp_path, capsys):
     store = str(tmp_path / "store")
     name = register_mechanism(make_meta(store=store), design)
     main(["mechanisms", store])
-    assert f"{name}  proposed  from value_learning  train 1.00  test 1.00" in capsys.readouterr().out
+    assert f"{name}  proposed  transfers  from value_learning  train 1.00  test 1.00" in capsys.readouterr().out
     main(["approve-mechanism", store, name])
     assert capsys.readouterr().out.strip() == f"{name} may compete in learner tournaments"
 
@@ -332,3 +338,54 @@ async def test_when_no_mechanism_learns_a_procedure_the_worker_designs_one(tmp_p
     assert meta.store.setting("mechanisms")[name]["state"] == "proposed"
     approve_mechanism(meta, name)
     assert [c.name for c in meta._tournament_candidates()] == ["value_learning", "skill_synthesis", name]
+
+
+NO_TAX = {"N1": world(["apple"]), "N2": world(["pear", "pear"]), "N3": world(["apple", "pear"])}
+
+
+async def test_a_tie_on_the_test_problems_is_refused_unless_ties_are_allowed_and_ranks_below_transfer(tmp_path):
+    # On baskets without tax, adding a tax of zero is right too, so the design and the seed tie there.
+    verdicts = {}
+    for ties in (False, True):
+        with RespondingModel(designer_and_writer(DESIGNED)).active():
+            verdicts[ties] = await design_learners([TAX], [problem(NO_TAX, ["N1"], ["N2", "N3"])], population=2,
+                                                   generations=1, rng=random.Random(7), ties=ties)
+    assert (verdicts[False].accepted, verdicts[False].standing) == (False, "refused")
+    assert verdicts[False].reason.endswith("ties it on the test problems (1.00 vs 1.00), so there is no sign it "
+                                           "transfers")
+    assert (verdicts[True].accepted, verdicts[True].standing) == (True, "ties")
+    with RespondingModel(designer_and_writer(DESIGNED)).active():
+        transfers = await design_learners([TAX], [problem(MORE_TAX, ["T1"], ["T2", "T3"])], population=2,
+                                          generations=1, rng=random.Random(7))
+    # Registered side by side, the design that transfers ranks first, in listings and in tournaments.
+    meta = make_meta(store=str(tmp_path / "store"), selection=LearnerSelection(candidates=["skill_synthesis"]))
+    tie = install_mechanism(meta, verdicts[True].source, "tied")
+    mechanisms = meta.store.setting("mechanisms")
+    mechanisms["tied"].update(standing="ties", test=1.0, train=1.0)
+    meta.store.put_setting("mechanisms", mechanisms)
+    winner = register_mechanism(meta, transfers)
+    approve_mechanism(meta, winner)
+    assert [name for name, _ in ranked_mechanisms(meta)] == [winner, tie]
+    assert [c.name for c in meta._tournament_candidates()] == ["skill_synthesis", winner, tie]
+
+
+async def test_validation_inside_the_search_picks_the_design_that_generalizes():
+    # The designer first proposes the one-shot design, then the self-checking one. Both learn the tax class
+    # perfectly; only the self-checking one also learns the exempt class, which validates every candidate.
+    proposals = iter([ONE_SHOT, *[DESIGNED] * 20])
+
+    def respond(request: dict):
+        first = request["messages"][0]["content"]
+        if "learning mechanism" in first:
+            return text(f"```python\n{next(proposals)}```")
+        return designer_and_writer(DESIGNED)(request)
+
+    with RespondingModel(respond).active():
+        design = await design_learners([TAX], [problem(MORE_TAX, ["T1"], ["T2", "T3"])],
+                                       validation=[problem(EXEMPT, ["X1"], ["X2", "X3"])], population=2,
+                                       generations=2, rng=random.Random(7))
+    assert design.source.strip() == DESIGNED.strip() and design.validation == 1.0
+    assert (design.accepted, design.standing, design.train, design.test) == (True, "transfers", 1.0, 1.0)
+    # The one-shot design was measured too: as good on training, and nothing on validation.
+    assert {(row["score"], row["validation"]) for row in design.lineage if row["created_by"] != "value_learning"} >= {
+        (1.0, 0.0), (1.0, 1.0)}

@@ -116,15 +116,17 @@ def _approve(args: argparse.Namespace) -> None:
 
 def _mechanisms(args: argparse.Namespace) -> None:
     store = _open(args.store)
-    designs = store.setting("mechanisms") or {}
+    from metacog.design import ranked_mechanisms
+
+    designs = ranked_mechanisms(store)
     chosen = store.setting("learners") or {}
     if not designs and not chosen:
         print("no designed mechanisms and no learners chosen by a tournament")
-    for name, design in designs.items():
+    for name, design in designs:  # the best standing first
         test = "-" if design.get("test") is None else f"{design['test']:.2f}"
         train = "-" if design.get("train") is None else f"{design['train']:.2f}"
-        print(f"{name}  {design['state']}  from {design['parent'] or '-'}  train {train}  test {test}  "
-              f"{design['created_at']}")
+        print(f"{name}  {design['state']}  {design.get('standing') or 'untested'}  from {design['parent'] or '-'}  "
+              f"train {train}  test {test}  {design['created_at']}")
     for procedure, choice in chosen.items():
         print(f"{procedure} learns by {choice['mechanism']} ({choice['reason']}; {choice['chosen_at']})")
 

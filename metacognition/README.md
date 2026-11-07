@@ -37,11 +37,13 @@ The example domains are under way ([DOMAINS.md](DOMAINS.md)):
     answer stopped it overruling a right one (76 of 76 returns at `none`, a third cheaper). Letting one
     rejection from a person quarantine (`Detector(limits={"human": 1})`) cut the scarce-review arm's wrong
     actions from 27 to 15.
-- **D3, invoice intake with several procedures and several clients,** is built and tested offline, and has not
-  run live yet. It found three things the harness can't yet set per procedure: its scope, its gate and its
-  learner.
+- **D3, invoice intake with several procedures and several clients,** has run live in part, for $2.75. Routing
+  sent every test request to its own procedure. Hand-written procedures solved everything at `none`, where the
+  agent alone solved 9 of 16 at best. In the online loop, a designed learner learned the client payments that
+  every built-in learner failed. The run stopped at its budget 37 requests into the first of three arms. D3
+  also found three things the harness can't yet set per procedure: its scope, its gate and its learner.
 
-Learning about learning (A5, [DOMAINS.md](DOMAINS.md)) has run live for $2.10.
+Learning about learning (A5, [DOMAINS.md](DOMAINS.md)) has run live for $2.46.
 - **Tournaments:** learner tournaments on D1 and D2 found no learner best on both, so the loop picks one per
   procedure.
 - **A designed learner:** a design search wrote a new learning mechanism (`examples/learning/designed/`) that
@@ -51,8 +53,11 @@ Learning about learning (A5, [DOMAINS.md](DOMAINS.md)) has run live for $2.10.
 - **Repeats:** two repeated searches varied widely, and only one transferred.
 - **The worker designs:** when no mechanism can learn a procedure, the worker now designs one for a person to
   approve.
+- **A stricter gate:** a design must beat the existing learners on unseen classes. A tie is no longer enough,
+  and designs rank by standing. A search can also check candidates on validation classes, keeping one class
+  aside for the verdict.
 
-The suite has 190 tests and needs no API key. Nothing here is stable yet.
+The suite has 194 tests and needs no API key. Nothing here is stable yet.
 
 ## A plain agent
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import re
+from pathlib import Path
 
 import pytest
 
@@ -31,6 +32,7 @@ from examples.invoices.world import (
 )
 from metacog import Recording
 from metacog.meta import MetaStore
+from metacog.offline import Floors
 from metacog.testing import RespondingModel, call, text
 
 WORK = ("intake", "payment")
@@ -222,3 +224,32 @@ async def test_discover_finds_the_parsing_work_before_anyone_declares_it(tmp_pat
     tools = [g["tools"] for g in found["groups"]]
     assert tools[:2] == [["read_document", "record_invoice"],
                          ["read_client_terms", "read_invoice", "read_purchase_order", "schedule_payment"]]
+
+
+D3_STUDY = Path(__file__).parents[1] / "examples" / "invoices" / "recorded" / "study.jsonl"
+DESIGNED = Path(__file__).parents[1] / "examples" / "learning" / "designed"
+
+
+async def test_the_recorded_d3_study_replays_as_far_as_it_ran(tmp_path):
+    """D3 live on 2026-11-06 (DOMAINS.md), with the payable learned from scratch, learner tournaments, and the two
+    designs that transferred approved as candidates. It stopped at its $3 budget, 37 requests into the routed
+    arm; those 37 replay."""
+    if not D3_STUDY.exists():
+        pytest.skip("no recorded D3 study")
+    designs = [str(DESIGNED / f"{name}.py") for name in ("designed_ee25cd476662", "designed_e48a9701c5e3")]
+    await study.main(study.parse(["--recording", str(D3_STUDY), "--output", str(tmp_path), "--payable", "learn",
+                                  "--selection", "--designed", *designs, "--arms", "routed", "--requests", "37"]))
+    without = Floors.load(tmp_path / "floors_no_memory.json").sweeps["no_memory"]
+    assert [without.cells[e].solved for e in ("none", "low", "medium", "high")] == [4, 8, 9, 8]
+    with_procedures = Floors.load(tmp_path / "floors_memory.json").sweeps["memory"]
+    assert [with_procedures.cells[e].solved for e in ("none", "low", "medium", "high")] == [16, 16, 16, 16]
+    assert json.loads((tmp_path / "discover.json").read_text(encoding="utf-8"))["parsing_rank"] == 2
+    rows = json.loads((tmp_path / "online_routed.json").read_text(encoding="utf-8"))
+    tournament = next(e for r in rows for e in r["events"] if e.startswith("learner: tournament for amount_payable"))
+    # Every seed, and the second design, gets none of the 18 labeled payments (6 of 24 are the parser's cases);
+    # the design searched on D1 and D2 gets all of them, and its version serves from then on.
+    assert "designed_ee25cd476662 24/24" in tournament and tournament.endswith("chose designed_ee25cd476662")
+    assert all(f"{seed} 6/24" in tournament for seed in ("value_learning", "reflection", "success_distillation",
+                                                         "transition_distillation", "skill_synthesis"))
+    arm = json.loads((tmp_path / "online_summary.json").read_text(encoding="utf-8"))[0]
+    assert arm["payable_learned_at"] == 16

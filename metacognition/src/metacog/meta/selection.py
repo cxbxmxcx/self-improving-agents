@@ -26,6 +26,18 @@ from metacog.meta.mechanisms import Mechanism, spent, writer_cost
 from metacog.meta.parts import Practice
 from metacog.meta.sources import SEEDS
 
+# A designed mechanism's standing after the generalization gate, best first: it beat the best seed on test
+# problems from task classes it never saw; it was judged on its own problem only (or installed by a person);
+# it only tied the seed on the test problems (accepted only when ties are allowed). Designs rank in this
+# order, then by test and training scores, wherever they are listed or compete.
+STANDINGS = {"transfers": 0, "untested": 1, "installed": 1, "ties": 2}
+
+
+def design_rank(design: dict[str, Any]) -> tuple[float, float, float]:
+    """Sort key for designed mechanisms, as kept in a store's "mechanisms" setting: the best first."""
+    return (STANDINGS.get(design.get("standing") or "untested", 3), -(design.get("test") or 0.0),
+            -(design.get("train") or 0.0))
+
 
 @dataclass
 class DesignPolicy:

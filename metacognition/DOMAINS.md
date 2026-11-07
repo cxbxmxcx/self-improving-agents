@@ -335,6 +335,34 @@ tests in `tests/test_invoices.py`. It has not run live yet.
 - **A live run** of every phase should cost about $1.60 to $1.90 on `gpt-5.4-mini` with the hand-written
   payable, and about $0.90 more to learn the payable from scratch (`--payable learn`).
 
+**Live, partly** (2026-11-06, `gpt-5.4-mini`: 521 calls, $2.75; `tests/test_invoices.py` replays it):
+- **The setup:** `--payable learn --selection --designed ...`. The payable starts untrusted, learner tournaments
+  are on, and the two designs that transferred are approved as candidates.
+- **It ran over the estimate.** It stopped at its $3 budget, 37 requests into the first arm (routed), before the
+  unrouted and per-client arms ran. Learning with the default writer (`medium`) on long payment prompts cost
+  most of it.
+
+| Requests solved | `none` | `low` | `medium` | `high` |
+|---|---|---|---|---|
+| No procedure (development requests) | 4/16 | 8/16 | 9/16 | 8/16 |
+| Hand-written procedures (test requests) | 16/16 | 16/16 | 16/16 | 16/16 |
+
+- **Memory pays here, unlike in D2.** Without a procedure the agent never solves more than 2 of 8 payments: the
+  clients' conventions are written nowhere. With the hand-written procedures it solves every request at `none`.
+- **Routing** calibrated from 48 labeled requests sends 16 of 16 test requests to their own class.
+- **`discover` ranks the payment work first and parsing second.** Payments spend the most reasoning and are
+  accepted least often. The scripted test assumed parsing would come first.
+- **In the online loop, a designed learner learned what no seed could.**
+  - Skill synthesis, the arm's learner, wrote the payable twice, and the gate refused it twice: none of the
+    18 labeled payments right.
+  - At request 16 the tournament gave every seed and the second design none of the 18. The design searched
+    on D1 and D2 got all 18.
+  - The tournament chose it. Its version has served every payment right since.
+- **The parser after Kestrel's layout change.** Skill synthesis came close to relearning it (20 and then 22 of
+  24 gate cases), but the gate refused both. The run stopped at the next step, a parser tournament.
+- **Next:** finish the routed arm (about $1 more), then the unrouted and per-client arms (about $2 to $3, less
+  with a cheaper writer).
+
 ## D4. Model switch: do floors and learned procedures carry over between models?
 
 - **Runs:** D1's floors and memory phases, and D3's, on `claude-haiku-5-5` beside `gpt-5.4-mini`. The keys
@@ -459,7 +487,25 @@ design choose.
   - There is one sample of each search and tournament.
   - Scores are acceptance on held-out cases, not chapter 7's match against a reference.
   - The worker's own design search is tested only with scripted models.
+- **D3 live (see D3 above): the design wins a tournament in a real loop.**
+  - It learned D3's payable when the default writer, every seed and the second design could not: 18 of 18
+    labeled payments, against none.
+- **A stricter gate.** A design is now accepted only if it beats the best seed on the test problems.
+  - A tie is no sign of transfer: it is refused unless `ties=True`, and then ranks below a design that
+    transfers.
+  - Each design keeps a standing (`transfers`, `untested`, `ties`), and listings and tournaments order designs
+    by it.
+  - Two earlier verdicts changed. The first design is refused on the calendar classes, where it only tied,
+    though it transfers to D3. The repeat from random starting point 23 is refused too, and was dropped from
+    `designed/`.
+- **Validation inside the search** (`--validation invoices_intake --test invoices_payment`, $0.36):
+  - Every candidate was also scored on D3 intake while the search ran (GEPA's Pareto front of training and
+    validation; the designer saw training only), and D3 payment stayed held out.
+  - The pick learned training at 0.91 and intake at 5 of 12, where the seed learns none.
+  - On payments it tied the seed at zero, so the gate refused it.
+  - Transfer to one unseen class didn't carry to another. Choosing on validation helps pick, but the verdict
+    belongs to a class the search never touched.
 - **Next:**
-  - Run D3's full study live (about $2), with the design and tournaments in its loop.
-  - Make the gate prefer a design that beats the seed on test.
-  - Search with test problems in the loop, keeping a final held-out class for the verdict.
+  - Finish D3's online arms.
+  - Search under the default writer, where D3 shows the design matters most.
+  - Repeat each search more times, to put a rate on transfer.

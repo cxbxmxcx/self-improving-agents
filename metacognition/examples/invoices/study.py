@@ -58,8 +58,18 @@ from examples.invoices.agent import (
 )
 from examples.invoices.world import CLIENT_ORDER, InvoiceWorld, task_by_id, task_set
 from metacog import ModelSettings, Reasoning, Recording, RunConfig, Runner
+from metacog.design import install_mechanism
 from metacog.discover import discover, skeleton
-from metacog.meta import GENERIC, Controller, Gate, LearningBudget, Metacognition, PerUser, Router
+from metacog.meta import (
+    GENERIC,
+    Controller,
+    Gate,
+    LearnerSelection,
+    LearningBudget,
+    Metacognition,
+    PerUser,
+    Router,
+)
 from metacog.meta.report import summarize
 from metacog.offline import Case, Floors, calibrate, calibrate_routing
 from metacog.pricing import PRICES
@@ -217,10 +227,14 @@ def build(arm: str, args: argparse.Namespace, store: Path, client: str | None) -
         gate=Gate(cases=gate_cases(client), practice=labeled_practice, bar=1.0), router=router,
         attribution="offered" if arm == "unrouted" else "called",
         controller=Controller({"memory": "none", "no_memory": "medium"}), relearn_after=4, learning="inline",
+        writer_params={"reasoning_effort": args.writer_effort} if args.writer_effort else None,
+        selection=LearnerSelection(designed=True) if args.selection else None,
         budget=LearningBudget(attempts_per_day=4), store=str(store), prices=PRICES, executor=args.executor)
     meta.install("parse_invoice", PARSER_BEFORE)  # written before Kestrel's European layout
     if args.payable == "reference":
         meta.install("amount_payable", PAYABLE)
+    for path in args.designed:  # mechanisms a person approved for this deployment (A5)
+        install_mechanism(meta, Path(path).read_text(encoding="utf-8"), Path(path).stem)
     return meta
 
 
@@ -344,6 +358,12 @@ def parse(argv: list[str] | None = None) -> argparse.Namespace:
                         help="start from the hand-written payable, or learn it from the runs")
     parser.add_argument("--learner", default="skill_synthesis", choices=list(LEARNERS))
     parser.add_argument("--executor", default="auto", choices=["auto", "guarded", "subprocess"])
+    parser.add_argument("--writer-effort", default=None, choices=["none", "low", "medium"],
+                        help="the learning writer's effort (default: the harness's, medium)")
+    parser.add_argument("--selection", action="store_true",
+                        help="learner tournaments when learning keeps failing (A5, L2)")
+    parser.add_argument("--designed", nargs="*", default=[],
+                        help="designed mechanisms a person approved, to compete in the tournaments")
     parser.add_argument("--mode", default="replay", choices=["replay", "record", "live"])
     parser.add_argument("--recording", type=Path, default=HERE / "recorded" / "study.jsonl")
     parser.add_argument("--output", type=Path, default=HERE / "runs")
