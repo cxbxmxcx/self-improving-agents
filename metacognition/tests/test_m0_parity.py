@@ -1,7 +1,7 @@
 """M0 acceptance: the study's E1 reasoning floors, replayed through metacog's recording layer.
 
 The agent side is still the book's chapter 6 harness; only the model calls
-go through `metacog.recording`. Matching the study's table here proves the
+go through `helix.metacognition.recording`. Matching the study's table here proves the
 replay layer serves the book's recordings exactly, which every later parity
 test (and the SDK itself) depends on.
 """
@@ -9,9 +9,8 @@ test (and the SDK itself) depends on.
 from __future__ import annotations
 
 from helix.eval.effort import EFFORTS, SOLID, sweep
-
-from metacog.pricing import PRICES
-from metacog.recording import Recording
+from helix.metacognition.pricing import PRICES
+from helix.metacognition.recording import Recording
 
 # Study table E1: solved of 16, mean reasoning tokens, and mean dollars per task.
 EXPECTED = {

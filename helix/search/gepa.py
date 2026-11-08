@@ -139,6 +139,7 @@ class GEPA:
         max_invalid: int = 2,
         proposer_params: dict | None = None,
         rng: random.Random | None = None,
+        distinct_proposals: bool = False,
     ) -> None:
         if agent is None and evaluator is None:
             raise ValueError("GEPA requires an agent to clone for each candidate via agent.with_artifacts(...), "
@@ -166,6 +167,10 @@ class GEPA:
         # a program well may need more thought than rewording a prompt.
         self.proposer_params = dict(proposer_params or {})
         self.rng = rng or random
+        # Numbers each proposal in its prompt, so a generation's identical prompts can't be answered with one
+        # reply from a recording or a cached model. Off by default: the number is part of a recording's key.
+        self.distinct_proposals = distinct_proposals
+        self.proposals = 0
         # Proposals `validate` rejected, kept so a run can report them.
         self.discarded: list[dict[str, str]] = []
 
@@ -386,6 +391,10 @@ class GEPA:
         """One proposal from the proposer; while `validate` rejects it, the
         proposer is told why and tries again, up to `max_invalid` times."""
         tokens, reason = 0, None
+        if self.distinct_proposals:
+            self.proposals += 1
+            system = (f"{system}\n\nThis is proposal {self.proposals} of the search. Other proposals start from the "
+                      "same parent, so take your own line on the feedback.")
         for _ in range(1 + (self.max_invalid if self.validate else 0)):
             message = user_msg if reason is None else (
                 f"{user_msg}\n\nYour previous proposal was rejected: {reason}\nCorrect it and answer again.")

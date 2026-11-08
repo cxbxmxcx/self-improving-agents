@@ -27,11 +27,11 @@ from typing import Any
 
 from helix.memory.learning_mechanisms import Episode
 from helix.memory.mechanism_runtime import MechanismBudget
+from helix.metacognition import LearningProblem, Verdict
+from helix.metacognition.exceptions import AgentsException
+from helix.metacognition.model_settings import ModelSettings, Reasoning
 
 from metacog import RunConfig, Runner
-from metacog.exceptions import AgentsException
-from metacog.meta import LearningProblem, Verdict
-from metacog.model_settings import ModelSettings, Reasoning
 
 REPO = Path(__file__).resolve().parents[3]
 CH06 = REPO / "chapters" / "ch06" / "assistant" / "recorded"

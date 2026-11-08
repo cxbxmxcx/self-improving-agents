@@ -8,9 +8,7 @@ import threading
 import pytest
 from basket import CASES, V1, V2, WRITTEN, agent, basket_total, make_meta, practice, serve, tax, uses, verifier
 from basket import price as price_tool
-
-from metacog import RunConfig, RunContextWrapper, Runner, UserError, function_tool
-from metacog.meta import (
+from helix.metacognition import (
     CALENDAR,
     GENERIC,
     AgentPractice,
@@ -23,7 +21,9 @@ from metacog.meta import (
     Verdict,
     procedure,
 )
-from metacog.meta.mechanisms import contract_text
+from helix.metacognition.mechanisms import contract_text
+
+from metacog import RunConfig, RunContextWrapper, Runner, UserError, function_tool
 from metacog.testing import ScriptedModel, text
 
 
@@ -212,10 +212,11 @@ def basket_total_stub(items: list[str]) -> int:
 
 def test_policy_parts():
     detector = Detector(window=4, limit=2)
-    recent, quarantine = detector.observe([True, True, True], False)
-    assert (recent, quarantine) == ([True, True, True, False], False)
-    recent, quarantine = detector.observe(recent, False)
-    assert (recent, quarantine) == ([True, True, False, False], True)
+    assert not any(detector.observe(True) for _ in range(3))
+    assert not detector.observe(False)
+    assert detector.observe(False) and list(detector.recent) == [True, True, False, False]
+    detector.reset()
+    assert not detector.recent
     assert Controller().effort("p", trusted=True) == "none" and Controller().effort("p", trusted=False) is None
     controller = Controller.from_floors({"p": {"memory": "low", "no_memory": "medium"}})
     assert (controller.effort("p", True), controller.effort("p", False)) == ("low", "medium")

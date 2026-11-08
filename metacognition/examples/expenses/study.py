@@ -7,10 +7,12 @@ Phases (choose with --phases):
   floors   the no-memory reasoning floors on the development trips (the study's E1 baseline)
   learn    value learning with the domain-neutral prompts, from the medium and high development runs
            (replayed from the floors phase), checked on the validation trips
-  memory   the floors with a procedure: the learned one, or the hand-written one with --memory reference
+  memory   the floors with a procedure: the learned one, the hand-written one with --memory reference,
+           or one from a file with --memory file --procedure-file (D4: a procedure another model wrote)
   online   the online loop through the policy change: 6 test trips, then 14 drift trips
 
 Every model call goes through a metacog Recording, so a recorded study replays without an API key.
+--model runs the agent on another model (D4), and its writer too unless --writer-model names one.
 --repeats N runs each case N times (one at a time, each repeat its own reply) to see variance.
 """
 
@@ -24,15 +26,15 @@ from pathlib import Path
 from typing import Any
 
 from helix.memory.learning_mechanisms import Writer
+from helix.metacognition import GENERIC, Controller, Gate, Metacognition, ValueLearning
+from helix.metacognition.mechanisms import writer_cost
+from helix.metacognition.offline import Case, Floors, calibrate
+from helix.metacognition.pricing import PRICES
+from helix.metacognition.report import render
 
 from examples.expenses.agent import MODEL, REFERENCE, assistant, check, practice, reimbursable_total, run_on_case
 from examples.expenses.world import ExpenseWorld, task_set
 from metacog import ModelSettings, Reasoning, Recording, RunConfig, Runner
-from metacog.meta import GENERIC, Controller, Gate, Metacognition, ValueLearning
-from metacog.meta.mechanisms import writer_cost
-from metacog.meta.report import render
-from metacog.offline import Case, Floors, calibrate
-from metacog.pricing import PRICES
 
 HERE = Path(__file__).parent
 EFFORTS = ("none", "low", "medium", "high")
@@ -64,7 +66,7 @@ def cases(split: str, n: int) -> list[Case]:
 
 
 async def phase_floors(args, recording) -> Floors:
-    floors = await calibrate(assistant(), cases("dev", args.tasks), verifier=check, world=ExpenseWorld,
+    floors = await calibrate(assistant(args.model), cases("dev", args.tasks), verifier=check, world=ExpenseWorld,
                              efforts=args.efforts, arms=("no_memory",), repeats=args.repeats,
                              concurrency=1 if args.repeats > 1 else args.concurrency, max_turns=12,
                              run_config=RunConfig(max_tool_calls=24), prices=PRICES)
@@ -76,7 +78,7 @@ async def phase_floors(args, recording) -> Floors:
 
 async def phase_learn(args, recording, learner: Any = None) -> str:
     meta = Metacognition([reimbursable_total], verifier=check, learning="inline", relearn_after=10**9, recall_k=1)
-    agent = assistant(metacognition=meta)
+    agent = assistant(args.model, metacognition=meta)
     for task in task_set("dev")[: args.tasks]:
         for effort in ("medium", "high"):
             config = RunConfig(model_settings=ModelSettings(reasoning=Reasoning(effort)), max_tool_calls=24,
@@ -85,7 +87,8 @@ async def phase_learn(args, recording, learner: Any = None) -> str:
             guard(recording, args.budget)
     episodes = meta.store.episodes()
     print(f"\nExperience: {len(episodes)} runs, {sum(e.success for e in episodes)} accepted")
-    writer = Writer(model=MODEL, params={"reasoning_effort": "medium"})
+    writer_model = args.writer_model or args.model
+    writer = Writer(model=writer_model, params={"reasoning_effort": "medium"})
     learner = learner or ValueLearning(GENERIC)
     learned = await learner.learn(episodes, practice, writer, reimbursable_total.contract)
     validation = task_set("validation")[: args.tasks]
@@ -93,7 +96,7 @@ async def phase_learn(args, recording, learner: Any = None) -> str:
     reference = [await run_on_case(REFERENCE, t) for t in validation]
     outputs = [await run_on_case(learned.source, t) for t in validation]
     matched = sum(out == ref for out, ref in zip(outputs, reference, strict=True))
-    spent = writer_cost(learned.usage or writer.usage, MODEL, PRICES)
+    spent = writer_cost(learned.usage or writer.usage, writer_model, PRICES)
     print(f"Learned by {learned.mechanism.replace('_', ' ')}: {learned.writer_calls} writer calls, "
           f"${spent:.4f}; validation {sum(accepted):.0f}/{len(validation)} "
           f"accepted, {matched}/{len(validation)} match the hand-written reference")
@@ -104,6 +107,10 @@ async def phase_learn(args, recording, learner: Any = None) -> str:
 def procedure_source(args) -> tuple[str, str]:
     if args.memory == "reference":
         return REFERENCE, "human"
+    if args.memory == "file":
+        if args.procedure_file is None:
+            raise SystemExit("--memory file needs --procedure-file")
+        return args.procedure_file.read_text(encoding="utf-8"), f"file:{args.procedure_file.stem}"
     path = args.output / "learned_reimbursable_total.py"
     if not path.exists():
         raise SystemExit("no learned procedure yet: run the learn phase first, or pass --memory reference")
@@ -115,12 +122,12 @@ async def phase_memory(args, recording) -> Floors:
     meta = Metacognition([reimbursable_total], verifier=check, recall_k=1, learning="inline")
     meta.install("reimbursable_total", source, created_by=by)
     split = "dev" if args.memory == "reference" else "test"
-    floors = await calibrate(assistant(metacognition=meta), cases(split, args.tasks), verifier=check,
+    floors = await calibrate(assistant(args.model, metacognition=meta), cases(split, args.tasks), verifier=check,
                              world=ExpenseWorld, efforts=args.efforts, arms=("memory",), repeats=args.repeats,
                              concurrency=1 if args.repeats > 1 else args.concurrency, max_turns=12,
                              run_config=RunConfig(max_tool_calls=24), prices=PRICES)
-    show(floors, f"Reasoning floors with the {'hand-written' if by == 'human' else 'learned'} procedure "
-                 f"({split} trips)")
+    kind = {"human": "hand-written", "value_learning": "learned"}.get(by, f"file {by[5:]}")
+    show(floors, f"Reasoning floors with the {kind} procedure ({split} trips, agent {args.model})")
     floors.save(args.output / f"floors_memory_{args.memory}.json")
     guard(recording, args.budget)
     return floors
@@ -132,15 +139,15 @@ async def phase_online(args, recording) -> None:
     meta = Metacognition([reimbursable_total], verifier=check, practice=practice,
                          gate=Gate(cases=[t["id"] for t in task_set("gate")]),
                          controller=Controller({"memory": "none", "no_memory": "high"}), recall_k=1, relearn_after=4,
-                         learning="inline")
+                         learning="inline", writer_model=args.writer_model)
     for name in ("floors_no_memory.json", f"floors_memory_{args.memory}.json"):
         if (args.output / name).exists():
             floors = Floors.load(args.output / name)
-            floors.model = floors.model or MODEL  # floors saved before they named their model
+            floors.model = floors.model or args.model  # floors saved before they named their model
             floors.record(meta)
     meta.install("reimbursable_total", source, created_by=by)
-    agent = assistant(metacognition=meta)
-    with_memory, without = (meta.setting("reimbursable_total", trusted, MODEL) for trusted in (True, False))
+    agent = assistant(args.model, metacognition=meta)
+    with_memory, without = (meta.setting("reimbursable_total", trusted, args.model) for trusted in (True, False))
     print(f"\nOnline loop: {with_memory} with a trusted procedure, {without} without")
     print(f"{'#':>3} {'case':<5} {'offered':<9} {'effort':<7} verdict")
     stream = task_set("test")[:6] + task_set("stream")[:14]
@@ -186,7 +193,10 @@ def parse(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--efforts", nargs="+", default=list(EFFORTS), choices=list(EFFORTS))
     parser.add_argument("--repeats", type=int, default=1)
     parser.add_argument("--concurrency", type=int, default=4)
-    parser.add_argument("--memory", default="learned", choices=["learned", "reference"])
+    parser.add_argument("--memory", default="learned", choices=["learned", "reference", "file"])
+    parser.add_argument("--procedure-file", type=Path, default=None, help="the procedure --memory file installs")
+    parser.add_argument("--model", default=MODEL, help="the agent's model (D4); its writer's too by default")
+    parser.add_argument("--writer-model", default=None, help="the learning writer's model (default: --model)")
     parser.add_argument("--budget", type=float, default=1.0, help="dollars of live calls before stopping")
     return parser.parse_args(argv)
 

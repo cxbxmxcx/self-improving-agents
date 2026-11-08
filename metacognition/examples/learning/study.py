@@ -30,6 +30,10 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
+from helix.metacognition import GENERIC, SEEDS, LearningProblem, SourceLearner, run_tournament
+from helix.metacognition.design import design_learners
+from helix.metacognition.pricing import PRICES
+
 from examples.learning.problems import (
     REGIMES,
     Regime,
@@ -39,9 +43,6 @@ from examples.learning.problems import (
     refunds_problem,
 )
 from metacog import Recording
-from metacog.design import design_learners
-from metacog.meta import GENERIC, SEEDS, LearningProblem, SourceLearner, run_tournament
-from metacog.pricing import PRICES
 
 HERE = Path(__file__).parent
 EXAMPLES = HERE.parent

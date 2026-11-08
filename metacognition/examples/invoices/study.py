@@ -8,7 +8,7 @@ Phases (choose with --phases):
   memory    the floors with the hand-written procedures, on the test requests
   routing   calibrate_routing from labeled requests: thresholds, leave-one-out accuracy, and accuracy on the test
             requests (free)
-  discover  serve the development requests with no procedure declared, then metacog.discover: is the parsing
+  discover  serve the development requests with no procedure declared, then helix.metacognition.discover: is the parsing
             work found before anyone declares it?
   online    one stream per arm: --requests mixed requests from three clients; from request 21 Kestrel bills
             in its European layout, which the parser written before it misreads without failing
@@ -44,8 +44,25 @@ from pathlib import Path
 from typing import Any
 
 from helix.memory.base import MemoryContext
+from helix.metacognition import (
+    GENERIC,
+    Controller,
+    Gate,
+    LearnerSelection,
+    LearningBudget,
+    Metacognition,
+    PerUser,
+    Router,
+)
+from helix.metacognition.design import install_mechanism
+from helix.metacognition.discover import discover, skeleton
+from helix.metacognition.offline import Case, Floors, calibrate, calibrate_routing
+from helix.metacognition.pricing import PRICES
+from helix.metacognition.report import summarize
 
 from examples.invoices.agent import (
+    CONTRACTS,
+    MODEL,
     PARSER,
     PARSER_BEFORE,
     PAYABLE,
@@ -58,21 +75,6 @@ from examples.invoices.agent import (
 )
 from examples.invoices.world import CLIENT_ORDER, InvoiceWorld, task_by_id, task_set
 from metacog import ModelSettings, Reasoning, Recording, RunConfig, Runner
-from metacog.design import install_mechanism
-from metacog.discover import discover, skeleton
-from metacog.meta import (
-    GENERIC,
-    Controller,
-    Gate,
-    LearnerSelection,
-    LearningBudget,
-    Metacognition,
-    PerUser,
-    Router,
-)
-from metacog.meta.report import summarize
-from metacog.offline import Case, Floors, calibrate, calibrate_routing
-from metacog.pricing import PRICES
 
 HERE = Path(__file__).parent
 EFFORTS = ("none", "low", "medium", "high")
@@ -130,9 +132,9 @@ def labeled(split: str) -> list[tuple[str, str | None]]:
     return [(t["text"], LABEL[t["kind"]]) for t in task_set(split)]
 
 
-def routing_calibration() -> Any:
+def routing_calibration(procedures: list[Any] = PROCEDURES) -> Any:
     """Thresholds and example requests from the labeled routing requests (deterministic, free)."""
-    return calibrate_routing(PROCEDURES, labeled("routing"))
+    return calibrate_routing(procedures, labeled("routing"))
 
 
 def routed_right(router: Router, split: str) -> tuple[int, int]:
@@ -160,7 +162,7 @@ async def phase_routing(args: argparse.Namespace, recording: Recording) -> None:
 # ------------------------------------------------------------------ floors and memory
 
 async def phase_floors(args: argparse.Namespace, recording: Recording) -> None:
-    floors = await calibrate(ap_desk(), cases("dev", args.tasks), verifier=check, world=InvoiceWorld,
+    floors = await calibrate(ap_desk(args.model), cases("dev", args.tasks), verifier=check, world=InvoiceWorld,
                              efforts=args.efforts, arms=("no_memory",), concurrency=args.concurrency,
                              max_turns=12, run_config=RunConfig(max_tool_calls=24), prices=PRICES)
     show(floors, "Reasoning floors without a procedure (development requests)")
@@ -169,10 +171,12 @@ async def phase_floors(args: argparse.Namespace, recording: Recording) -> None:
 
 
 async def phase_memory(args: argparse.Namespace, recording: Recording) -> None:
-    meta = Metacognition(PROCEDURES, verifier=check, router=routing_calibration().router, learning="inline")
+    procedures = CONTRACTS[args.contract]
+    meta = Metacognition(procedures, verifier=check, router=routing_calibration(procedures).router, learning="inline")
     meta.install("parse_invoice", PARSER)
-    meta.install("amount_payable", PAYABLE)
-    floors = await calibrate(ap_desk(metacognition=meta), cases("test", args.tasks), verifier=check,
+    payable = args.payable_file.read_text(encoding="utf-8") if args.payable_file else PAYABLE
+    meta.install("amount_payable", payable)  # D4: --payable-file installs a payable another model's writer wrote
+    floors = await calibrate(ap_desk(args.model, metacognition=meta), cases("test", args.tasks), verifier=check,
                              world=InvoiceWorld, efforts=args.efforts, arms=("memory",),
                              concurrency=args.concurrency, max_turns=12, run_config=RunConfig(max_tool_calls=24),
                              prices=PRICES)
@@ -188,7 +192,7 @@ async def phase_discover(args: argparse.Namespace, recording: Recording) -> dict
     if store.exists():
         shutil.rmtree(store)
     meta = Metacognition([], verifier=check, learning="worker", store=str(store), prices=PRICES)
-    agent = ap_desk(metacognition=meta)
+    agent = ap_desk(args.model, metacognition=meta)
     settings = ModelSettings(reasoning=Reasoning(args.discover_effort))
     for task in task_set("dev")[: args.tasks]:
         await Runner.run(agent, task["text"], context=InvoiceWorld(task), max_turns=12,
@@ -221,13 +225,15 @@ def gate_cases(client: str | None) -> list[str]:
 
 
 def build(arm: str, args: argparse.Namespace, store: Path, client: str | None) -> Metacognition:
-    router = Router(k=2) if arm == "unrouted" else routing_calibration().router
+    procedures = CONTRACTS[args.contract]
+    router = Router(k=2) if arm == "unrouted" else routing_calibration(procedures).router
     meta = Metacognition(
-        PROCEDURES, verifier=check, learner=args.learner, prompts=GENERIC, practice=practice,
+        procedures, verifier=check, learner=args.learner, prompts=GENERIC, practice=practice,
         gate=Gate(cases=gate_cases(client), practice=labeled_practice, bar=1.0), router=router,
         attribution="offered" if arm == "unrouted" else "called",
         controller=Controller({"memory": "none", "no_memory": "medium"}), relearn_after=4, learning="inline",
         writer_params={"reasoning_effort": args.writer_effort} if args.writer_effort else None,
+        writer_model=args.writer_model,
         selection=LearnerSelection(designed=True) if args.selection else None,
         budget=LearningBudget(attempts_per_day=4), store=str(store), prices=PRICES, executor=args.executor)
     meta.install("parse_invoice", PARSER_BEFORE)  # written before Kestrel's European layout
@@ -254,7 +260,7 @@ async def run_arm(arm: str, args: argparse.Namespace, recording: Recording) -> d
         shutil.rmtree(root)
     root.mkdir(parents=True)
     scope = scope_for(arm, args, root)
-    agent = ap_desk(metacognition=scope)
+    agent = ap_desk(args.model, metacognition=scope)
     stream = task_set("stream")[: args.requests]
     rows: list[dict[str, Any]] = []
     print(f"\nArm {arm}: {len(stream)} requests from {', '.join(CLIENT_ORDER)}; Kestrel's European layout from "
@@ -364,6 +370,12 @@ def parse(argv: list[str] | None = None) -> argparse.Namespace:
                         help="learner tournaments when learning keeps failing (A5, L2)")
     parser.add_argument("--designed", nargs="*", default=[],
                         help="designed mechanisms a person approved, to compete in the tournaments")
+    parser.add_argument("--model", default=MODEL, help="the agent's model (D4); its writer's too by default")
+    parser.add_argument("--writer-model", default=None, help="the learning writer's model (default: --model)")
+    parser.add_argument("--contract", default="tool", choices=list(CONTRACTS),
+                        help="act: the payable's description also tells the agent to act on its answer")
+    parser.add_argument("--payable-file", type=Path, default=None,
+                        help="the memory phase's payable procedure, instead of the hand-written one")
     parser.add_argument("--mode", default="replay", choices=["replay", "record", "live"])
     parser.add_argument("--recording", type=Path, default=HERE / "recorded" / "study.jsonl")
     parser.add_argument("--output", type=Path, default=HERE / "runs")

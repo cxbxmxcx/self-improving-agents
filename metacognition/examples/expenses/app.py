@@ -18,11 +18,12 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from helix.metacognition import Gate, Metacognition
+from helix.metacognition.offline import Case, save_cases
+
 from examples.expenses.agent import assistant, check, practice, reimbursable_total
 from examples.expenses.world import ExpenseWorld, task_by_id, task_set
 from metacog import Agent
-from metacog.meta import Gate, Metacognition
-from metacog.offline import Case, save_cases
 
 STORE = Path(__file__).resolve().parents[1] / "runs" / "jordan.meta"
 

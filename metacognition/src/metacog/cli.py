@@ -31,10 +31,10 @@ import textwrap
 from pathlib import Path
 from typing import Any
 
-from metacog.exceptions import UserError
-from metacog.meta.report import render, summarize
-from metacog.meta.runtime import approve_version, quarantine_procedure
-from metacog.meta.store import MetaStore
+from helix.metacognition.exceptions import UserError
+from helix.metacognition.report import render, summarize
+from helix.metacognition.runtime import approve_version, quarantine_procedure
+from helix.metacognition.store import MetaStore
 
 TARGET = re.compile(r"^[A-Za-z_][\w.]*:[A-Za-z_]\w*$")
 
@@ -46,7 +46,7 @@ def _is_target(where: str) -> bool:
 def _deployment(where: str) -> tuple[Any, MetaStore]:
     """The agent (None for a bare store path) and its store."""
     if _is_target(where):
-        from metacog.meta.worker import load_agent
+        from helix.metacognition.worker import load_agent
 
         agent = load_agent(where)
         store = getattr(agent.metacognition, "store", None)
@@ -116,7 +116,7 @@ def _approve(args: argparse.Namespace) -> None:
 
 def _mechanisms(args: argparse.Namespace) -> None:
     store = _open(args.store)
-    from metacog.design import ranked_mechanisms
+    from helix.metacognition.design import ranked_mechanisms
 
     designs = ranked_mechanisms(store)
     chosen = store.setting("learners") or {}
@@ -132,15 +132,15 @@ def _mechanisms(args: argparse.Namespace) -> None:
 
 
 def _approve_mechanism(args: argparse.Namespace) -> None:
-    from metacog.design import approve_mechanism
+    from helix.metacognition.design import approve_mechanism
 
     approve_mechanism(_open(args.store), args.name)
     print(f"{args.name} may compete in learner tournaments")
 
 
 def _install(args: argparse.Namespace) -> None:
-    from metacog.meta.procedure import _check_source
-    from metacog.meta.runtime import trust_version
+    from helix.metacognition.procedure import _check_source
+    from helix.metacognition.runtime import trust_version
 
     source = Path(args.source).read_text(encoding="utf-8")
     _check_source(source, args.name)  # the code-skill guard, and a def with the procedure's name
@@ -168,8 +168,8 @@ def _report(args: argparse.Namespace) -> None:
 
 
 def _worker(args: argparse.Namespace) -> None:
-    from metacog.meta.events import webhook
-    from metacog.meta.worker import load_agent, work
+    from helix.metacognition.events import webhook
+    from helix.metacognition.worker import load_agent, work
 
     _env()  # the worker's writer calls are paid calls
     agent = load_agent(args.store)
@@ -194,9 +194,9 @@ def _feedback(args: argparse.Namespace) -> None:
 
 
 def _calibrate(args: argparse.Namespace) -> None:
-    from metacog.meta.worker import load_agent, load_object
-    from metacog.offline import calibrate_deployment, load_cases
-    from metacog.recording import Recording
+    from helix.metacognition.offline import calibrate_deployment, load_cases
+    from helix.metacognition.recording import Recording
+    from helix.metacognition.worker import load_agent, load_object
 
     _env()
     agent = load_agent(args.store)
@@ -228,14 +228,14 @@ def _calibrate(args: argparse.Namespace) -> None:
         print(f"recorded routing: {result.routing.accuracy:.0%} of labeled cases routed right; "
               f"thresholds {thresholds}")
     if recording is not None and recording.live_calls:
-        from metacog.pricing import PRICES
+        from helix.metacognition.pricing import PRICES
 
         print(f"{recording.live_calls} live calls, ${recording.spent(PRICES):.4f}, saved to {recording.path}")
 
 
 def _discover(args: argparse.Namespace) -> None:
-    from metacog.discover import discover, draft_stub, skeleton
-    from metacog.model_settings import DEFAULT_MODEL
+    from helix.metacognition.discover import discover, draft_stub, skeleton
+    from helix.metacognition.model_settings import DEFAULT_MODEL
 
     agent, store = _deployment(args.store)
     procedures = list(agent.metacognition.procedures) if agent is not None else []
@@ -261,11 +261,11 @@ def _discover(args: argparse.Namespace) -> None:
 
 def _serve(args: argparse.Namespace) -> None:
     import uvicorn
+    from helix.metacognition.events import webhook
+    from helix.metacognition.recording import Recording
+    from helix.metacognition.run import RunConfig
+    from helix.metacognition.worker import load_agent, load_object
 
-    from metacog.meta.events import webhook
-    from metacog.meta.worker import load_agent, load_object
-    from metacog.recording import Recording
-    from metacog.run import RunConfig
     from metacog.service import create_app
 
     _env()
@@ -325,7 +325,7 @@ ${learning['dollars']:.4f}.{pays_back}</p>
 
 
 def main(argv: list[str] | None = None) -> int:
-    from metacog.meta.parts import EFFORTS
+    from helix.metacognition.parts import EFFORTS
 
     parser = argparse.ArgumentParser(prog="metacog", description=__doc__.splitlines()[0])
     sub = parser.add_subparsers(dest="command", required=True)

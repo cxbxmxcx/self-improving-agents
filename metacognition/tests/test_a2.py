@@ -14,12 +14,12 @@ from basket import CASES, PRICES, V1, V2, WRITTEN, agent, make_meta, serve, uses
 from helix.eval.effort import EffortCell, EffortSweep, RunRecord
 from helix.memory.base import MemoryContext
 from helix.memory.learning_mechanisms import Episode
+from helix.metacognition import Controller, Judge, LearningBudget, MetaStore, Verdict, sandbox
+from helix.metacognition.offline import Floors
+from helix.metacognition.report import summarize
+from helix.metacognition.worker import load_agent, work
 
 from metacog import RunConfig, RunContextWrapper, cli
-from metacog.meta import Controller, Judge, LearningBudget, MetaStore, Verdict, sandbox
-from metacog.meta.report import summarize
-from metacog.meta.worker import load_agent, work
-from metacog.offline import Floors
 from metacog.testing import RespondingModel, ScriptedModel, call, text
 
 # Two rejected runs quarantine v1 (relearn_after=2), then two accepted runs make an attempt due.

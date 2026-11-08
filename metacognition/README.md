@@ -57,7 +57,20 @@ Learning about learning (A5, [DOMAINS.md](DOMAINS.md)) has run live for $2.46.
   and designs rank by standing. A search can also check candidates on validation classes, keeping one class
   aside for the verdict.
 
-The suite has 194 tests and needs no API key. Nothing here is stable yet.
+- **D4, other models,** ran D1 and D3 on Claude Haiku 5.5 and Sonnet 5.5 for $6.66, with Claude called
+  through Anthropic's SDK (`helix.metacognition.claude`).
+  - Procedures carried over: any model served any model's learned procedure with the same results.
+  - Reasoning made models overrule procedures. Sonnet got at most 11 of 16 D3 requests right with the
+    hand-written procedures, until the payable's description said to act on its answer; then every model got
+    every request right.
+  - A procedure saved most on the model that needed it: on D1, 73% of the cost on gpt-5.4-mini and 9% on
+    Haiku, while on Sonnet, which already solved D1, it cost 19% more.
+
+- **Replacing the LLM** (`helix/metacognition/decide.py`, [DOMAINS.md](DOMAINS.md)): a learning mechanism writes a decision
+  program from the agent's runs. Code does the work and Jev answers the judgments. On held-out varied wordings of
+  D1 and D3 it got everything it kept right, at about a twelfth of the LLM's cost and a tenth of its latency.
+
+The suite has 229 tests and needs no API key. Nothing here is stable yet.
 
 ## A plain agent
 
@@ -86,7 +99,7 @@ Declare the procedure worth learning as a typed stub, say how a run is judged, a
 
 ```python
 from metacog import Agent, Runner, RunContextWrapper, function_tool
-from metacog.meta import Metacognition, procedure
+from helix.metacognition import Metacognition, procedure
 
 @function_tool(read_only=True)          # learned procedures may call read-only tools through `api`
 def read_trip(ctx: RunContextWrapper[Expenses], trip_id: str) -> dict:
@@ -147,7 +160,7 @@ With more than one procedure, three things matter:
 
 Floors belong to a model. `calibrate` records the model it measured, and the controller uses those floors
 only for that model; a model without floors runs at the agent's own setting until it is calibrated. Settings
-reach each provider through its effort ladder (`metacog.ladders`). OpenAI and Anthropic models both take
+reach each provider through its effort ladder (`helix.metacognition.ladders`). OpenAI and Anthropic models both take
 LiteLLM's `reasoning_effort`, which LiteLLM turns into Claude's thinking settings.
 
 ## Deploying an agent
@@ -203,7 +216,7 @@ keep the default localhost binding, or put the service behind your own. It needs
 ## Offline toolkit and CLI
 
 ```python
-from metacog.offline import calibrate, calibrate_routing, search_learners, search_procedure
+from helix.metacognition.offline import calibrate, calibrate_routing, search_learners, search_procedure
 
 floors = await calibrate(agent, cases, verifier=check, world=Expenses)   # reasoning floors per arm, one model
 floors.save("runs/jordan.meta")                                           # Controller.from_floors reads it
@@ -267,11 +280,12 @@ model as `{"error": ...}` unless the tool sets `failure_error_function`.
 ## Layout
 
 ```text
-src/metacog/          the SDK: agent, run, tool, model_settings, ladders (effort per model family), guardrail,
-                      lifecycle, session, stream, tracing, recording (record/replay), offline (calibrate,
-                      routing, case files, searches), discover, service and dashboard.html, cli, testing
-src/metacog/meta/     metacognition: procedure, runtime, parts (router, controller, detector, gate, budget),
-                      mechanisms, prompts, store, api, sandbox, replay, scopes, events, judge, worker, report
+src/metacog/          the package name people import, the `metacog` command (cli), the service and dashboard,
+                      and testing helpers. Everything else is the framework's
+../helix/metacognition/  the framework: procedure, runtime, parts (recorder, router, controller, detector, gate,
+                      budget), mechanisms, prompts, store, api, sandbox, replay, scopes, events, judge, worker,
+                      report, agent, run, tool, guardrail, lifecycle, session, stream, tracing, model_settings,
+                      ladders, recording, offline, discover, decide, decisions, design
 examples/calendar/    chapter 6's assistant on metacog, and the drift demo for the dashboard
 examples/expenses/    the second task class (D1): world, agent, app, study, recorded runs
 examples/refunds/     D2's returns desk: world, agent, study with reviewers, a judge and replayed practice

@@ -22,11 +22,11 @@ from chapters.ch06.assistant.learning import (
     remember,
     run_on_case,
 )
+from helix.metacognition import CALENDAR, Metacognition
+from helix.metacognition.offline import Case, calibrate, search_learners, search_procedure
 
 from examples.calendar.agent import FIND_SHARED_STARTS, assistant, check
 from metacog import Recording, RunConfig
-from metacog.meta import CALENDAR, Metacognition
-from metacog.offline import Case, calibrate, search_learners, search_procedure
 
 
 async def test_e1_floors_and_the_controller_table_through_calibrate(ch06_recording):

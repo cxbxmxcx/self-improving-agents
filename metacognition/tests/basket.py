@@ -11,9 +11,9 @@ from __future__ import annotations
 import asyncio
 
 from helix.memory.code_skills import skill_tool
+from helix.metacognition import GENERIC, Controller, Gate, Metacognition, ValueLearning, Verdict, procedure
 
 from metacog import Agent, RunConfig, RunContextWrapper, Runner, function_tool
-from metacog.meta import GENERIC, Controller, Gate, Metacognition, ValueLearning, Verdict, procedure
 from metacog.testing import call, text
 
 

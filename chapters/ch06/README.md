@@ -65,7 +65,7 @@ From the table, the bootstrapped functions support all measured development task
 
 ## The online metacognition loop
 
-Listing 6.5 runs the parts in [online.py](assistant/online.py) around the same `run_task` call the other listings use. The controller looks up its setting from listing 6.2's floors, the detector quarantines the memory after two rejections in the last four runs that used it, and the learner relearns from the runs recorded since quarantine. The gate installs a relearned function only when it passes the [drift tasks'](assistant/generator_drift.py) six held-back cases.
+Listing 6.5 configures the framework's recorder, controller, detector, and gate ([helix/metacognition/parts.py](../../helix/metacognition/parts.py)) around the same `run_task` call the other listings use. The controller looks up its setting from listing 6.2's floors, the detector quarantines the memory after two rejections in the last four runs that used it, and the learner relearns from the runs recorded since quarantine. The gate installs a relearned function only when it passes the [drift tasks'](assistant/generator_drift.py) six held-back cases.
 
 | Requests | Memory | Setting | Accepted | Per request |
 |---|---|---|---:|---:|
@@ -89,7 +89,7 @@ Each class contributes 32 development episodes from medium- and high-effort runs
 | [harness.py](assistant/harness.py) | Build the assistant with procedural memory, callable functions, and an effort setting |
 | [context_search.py](assistant/context_search.py) | The evaluator, validation hook, and prompts that let GEPA search code |
 | [learning.py](assistant/learning.py) | Build episodes and contracts, provide development practice, and compare outputs |
-| [online.py](assistant/online.py) | The recorder, controller, detector, and gate of the online loop |
+| [online.py](assistant/online.py) | The recorder configured for this assistant; the loop's parts are the framework's |
 | [learning_mechanisms.py](../../helix/memory/learning_mechanisms.py) | Implement the five mechanisms and the no-experience control |
 | [recording.py](assistant/recording.py) | Serve recorded replies or append missing live replies |
 

@@ -6,13 +6,13 @@ from pathlib import Path
 
 import httpx
 import pytest
+from helix.metacognition import MetaStore
+from helix.metacognition.run import RunConfig
+from helix.metacognition.worker import load_agent
 
 from examples.expenses.app import context, write_cases
 from examples.expenses.world import task_set
 from metacog import Recording, cli
-from metacog.meta import MetaStore
-from metacog.meta.worker import load_agent
-from metacog.run import RunConfig
 from metacog.service import create_app
 
 EXAMPLES = Path(__file__).parents[1] / "examples" / "expenses"

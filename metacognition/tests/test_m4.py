@@ -8,6 +8,8 @@ import re
 
 import pytest
 from basket import CASES, V1, V2, agent, make_meta, price, serve, tax, uses, verifier
+from helix.metacognition import Metacognition, PerUser, ReplayPractice, SkillAPI, procedure, sandboxed_tool
+from helix.metacognition.sandbox import run_sandboxed
 from helix.observability.bus import get_bus
 
 from metacog import (
@@ -18,8 +20,6 @@ from metacog import (
     Runner,
     function_tool,
 )
-from metacog.meta import Metacognition, PerUser, ReplayPractice, SkillAPI, procedure, sandboxed_tool
-from metacog.meta.sandbox import run_sandboxed
 from metacog.testing import Reply, RespondingModel, ScriptedModel, call, text
 
 # ------------------------------------------------------------------ the sandbox

@@ -104,6 +104,7 @@ class Archive(Protocol):
         strategy: SamplingStrategy,
         kind: Any | None = None,
         artifact_id: str | None = None,
+        rng: Any | None = None,
     ) -> Variant: ...
 
     async def lineage(self, artifact: Artifact) -> list[Artifact]: ...

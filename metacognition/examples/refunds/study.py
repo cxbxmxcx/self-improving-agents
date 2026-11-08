@@ -47,11 +47,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from examples.refunds.agent import CONTRACTS, MODEL, check, practice, returns_desk
-from examples.refunds.world import ReturnsWorld, outcome, task_set
-from metacog import Recording, RunConfig, Runner
-from metacog.design import install_mechanism
-from metacog.meta import (
+from helix.metacognition import (
     Controller,
     Detector,
     Gate,
@@ -61,9 +57,14 @@ from metacog.meta import (
     Metacognition,
     ReplayPractice,
 )
-from metacog.meta.report import summarize
-from metacog.offline import Case, Floors, calibrate
-from metacog.pricing import PRICES
+from helix.metacognition.design import install_mechanism
+from helix.metacognition.offline import Case, Floors, calibrate
+from helix.metacognition.pricing import PRICES
+from helix.metacognition.report import summarize
+
+from examples.refunds.agent import CONTRACTS, MODEL, check, practice, returns_desk
+from examples.refunds.world import ReturnsWorld, outcome, task_set
+from metacog import Recording, RunConfig, Runner
 
 HERE = Path(__file__).parent
 EFFORTS = ("none", "low", "medium", "high")

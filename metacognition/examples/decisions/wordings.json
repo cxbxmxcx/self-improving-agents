@@ -1,0 +1,2342 @@
+[
+ {
+  "id": "E001~casual",
+  "base": "E001",
+  "domain": "d1",
+  "split": "dev",
+  "style": "casual",
+  "text": "Hey, can you file my expense claim for trip T-001: London, 2026-09-18 to 2026-09-21?",
+  "expect": "act"
+ },
+ {
+  "id": "E001~shorthand",
+  "base": "E001",
+  "domain": "d1",
+  "split": "dev",
+  "style": "shorthand",
+  "text": "Please file my expense claim for trip 001: London, 2026-09-18 to 2026-09-21.",
+  "expect": "act"
+ },
+ {
+  "id": "E001~distractor",
+  "base": "E001",
+  "domain": "d1",
+  "split": "dev",
+  "style": "distractor",
+  "text": "T-41 is the other trip, and it needs nothing, so please file my expense claim for T-001: London, 2026-09-18 to 2026-09-21.",
+  "expect": "act"
+ },
+ {
+  "id": "E001~buried",
+  "base": "E001",
+  "domain": "d1",
+  "split": "dev",
+  "style": "buried",
+  "text": "I\u2019ve wrapped up the notes from the London meetings and sent the follow-ups. Could you please file my expense claim for T-001: London, 2026-09-18 to 2026-09-21? I\u2019m also\u6574\u7406ing the receipts from the return journey. Once that\u2019s done, I can close out the travel record.",
+  "expect": "act"
+ },
+ {
+  "id": "E002~casual",
+  "base": "E002",
+  "domain": "d1",
+  "split": "dev",
+  "style": "casual",
+  "text": "Hey, could you file my expense claim for T-002? Toronto, 2026-09-28 to 2026-10-02.",
+  "expect": "act"
+ },
+ {
+  "id": "E002~shorthand",
+  "base": "E002",
+  "domain": "d1",
+  "split": "dev",
+  "style": "shorthand",
+  "text": "Please file my expense claim for trip 002: Toronto, 2026-09-28 to 2026-10-02.",
+  "expect": "act"
+ },
+ {
+  "id": "E002~distractor",
+  "base": "E002",
+  "domain": "d1",
+  "split": "dev",
+  "style": "distractor",
+  "text": "Please file my expense claim for T-42 and T-002; only act on T-002, since T-42 is a different one and needs nothing. T-002 is Toronto, 2026-09-28 to 2026-10-02.",
+  "expect": "act"
+ },
+ {
+  "id": "E002~buried",
+  "base": "E002",
+  "domain": "d1",
+  "split": "dev",
+  "style": "buried",
+  "text": "I\u2019m closing out a few loose ends from last month\u2019s travel. Could you please file my expense claim for T-002: Toronto, 2026-09-28 to 2026-10-02. I\u2019d appreciate it when you get a chance. Thanks.",
+  "expect": "act"
+ },
+ {
+  "id": "E003~casual",
+  "base": "E003",
+  "domain": "d1",
+  "split": "dev",
+  "style": "casual",
+  "text": "Hey, please file my expense claim for T-003: London, 2026-09-28 to 2026-10-02.",
+  "expect": "act"
+ },
+ {
+  "id": "E003~shorthand",
+  "base": "E003",
+  "domain": "d1",
+  "split": "dev",
+  "style": "shorthand",
+  "text": "Could you file my expense claim for trip 003: London, 2026-09-28 to 2026-10-02?",
+  "expect": "act"
+ },
+ {
+  "id": "E003~distractor",
+  "base": "E003",
+  "domain": "d1",
+  "split": "dev",
+  "style": "distractor",
+  "text": "T-43 is already handled and needs nothing; please file my expense claim for T-003 for the London trip, 2026-09-28 to 2026-10-02.",
+  "expect": "act"
+ },
+ {
+  "id": "E003~buried",
+  "base": "E003",
+  "domain": "d1",
+  "split": "dev",
+  "style": "buried",
+  "text": "Hope your week is going well. When you have a moment, please file my expense claim for trip T-003: London, 2026-09-28 to 2026-10-02. I should have everything else wrapped up by end of day.",
+  "expect": "act"
+ },
+ {
+  "id": "E004~casual",
+  "base": "E004",
+  "domain": "d1",
+  "split": "dev",
+  "style": "casual",
+  "text": "Hey, could you please file my expense claim for T-004, the Osaka trip from 2026-09-12 to 2026-09-15?",
+  "expect": "act"
+ },
+ {
+  "id": "E004~shorthand",
+  "base": "E004",
+  "domain": "d1",
+  "split": "dev",
+  "style": "shorthand",
+  "text": "Please file my expense claim for trip 004: Osaka, 2026-09-12 to 2026-09-15.",
+  "expect": "act"
+ },
+ {
+  "id": "E004~distractor",
+  "base": "E004",
+  "domain": "d1",
+  "split": "dev",
+  "style": "distractor",
+  "text": "T-44 is all set and needs nothing, but please file my expense claim for T-004, the Osaka trip from 2026-09-12 to 2026-09-15.",
+  "expect": "act"
+ },
+ {
+  "id": "E004~buried",
+  "base": "E004",
+  "domain": "d1",
+  "split": "dev",
+  "style": "buried",
+  "text": "I\u2019m catching up on a few travel items after the week\u2019s meetings. When you have a moment, please file my expense claim for T-004, Osaka, 2026-09-12 to 2026-09-15. I\u2019ve already organized the receipts, so this should be straightforward. Thanks.",
+  "expect": "act"
+ },
+ {
+  "id": "E005~casual",
+  "base": "E005",
+  "domain": "d1",
+  "split": "dev",
+  "style": "casual",
+  "text": "Hey, could you file my expense claim for T-005?",
+  "expect": "act"
+ },
+ {
+  "id": "E005~shorthand",
+  "base": "E005",
+  "domain": "d1",
+  "split": "dev",
+  "style": "shorthand",
+  "text": "Please file my expense claim for trip 005: London, 2026-09-27 to 2026-10-01.",
+  "expect": "act"
+ },
+ {
+  "id": "E005~distractor",
+  "base": "E005",
+  "domain": "d1",
+  "split": "dev",
+  "style": "distractor",
+  "text": "Please file the expense claim for T-005, not T-45; T-45 is a different trip and needs nothing. T-005 is the London trip from 2026-09-27 to 2026-10-01.",
+  "expect": "act"
+ },
+ {
+  "id": "E005~buried",
+  "base": "E005",
+  "domain": "d1",
+  "split": "dev",
+  "style": "buried",
+  "text": "I\u2019ve wrapped up my notes from the London visit and sent over the related receipts. When you have a moment, please file my expense claim for T-005, London, 2026-09-27 to 2026-10-01. I appreciate your help getting it submitted. Let me know if anything else is needed.",
+  "expect": "act"
+ },
+ {
+  "id": "E006~casual",
+  "base": "E006",
+  "domain": "d1",
+  "split": "dev",
+  "style": "casual",
+  "text": "Hey, could you please file my expense claim for T-006?",
+  "expect": "act"
+ },
+ {
+  "id": "E006~shorthand",
+  "base": "E006",
+  "domain": "d1",
+  "split": "dev",
+  "style": "shorthand",
+  "text": "Please file my expense claim for trip 006: Mexico City, 2026-09-28 to 2026-10-02.",
+  "expect": "act"
+ },
+ {
+  "id": "E006~distractor",
+  "base": "E006",
+  "domain": "d1",
+  "split": "dev",
+  "style": "distractor",
+  "text": "T-46 is all set and needs nothing, but please file my expense claim for T-006: Mexico City, 2026-09-28 to 2026-10-02.",
+  "expect": "act"
+ },
+ {
+  "id": "E006~buried",
+  "base": "E006",
+  "domain": "d1",
+  "split": "dev",
+  "style": "buried",
+  "text": "Thanks for pulling everything together on the travel side this week. When you have a moment, please file my expense claim for T-006: Mexico City, 2026-09-28 to 2026-10-02. I\u2019ve already got the receipts organized. Appreciate it.",
+  "expect": "act"
+ },
+ {
+  "id": "E007~casual",
+  "base": "E007",
+  "domain": "d1",
+  "split": "dev",
+  "style": "casual",
+  "text": "Hey, could you please file my expense claim for T-007, Mexico City, 2026-09-29 to 2026-10-02?",
+  "expect": "act"
+ },
+ {
+  "id": "E007~shorthand",
+  "base": "E007",
+  "domain": "d1",
+  "split": "dev",
+  "style": "shorthand",
+  "text": "Please file my expense claim for trip 007: Mexico City, 2026-09-29 to 2026-10-02.",
+  "expect": "act"
+ },
+ {
+  "id": "E007~distractor",
+  "base": "E007",
+  "domain": "d1",
+  "split": "dev",
+  "style": "distractor",
+  "text": "T-47 is all set and needs nothing, but please file my expense claim for T-007: Mexico City, 2026-09-29 to 2026-10-02.",
+  "expect": "act"
+ },
+ {
+  "id": "E007~buried",
+  "base": "E007",
+  "domain": "d1",
+  "split": "dev",
+  "style": "buried",
+  "text": "I\u2019m wrapping up a few things from last week so I can close my travel records. Please file my expense claim for T-007: Mexico City, 2026-09-29 to 2026-10-02. I\u2019ve already reviewed the supporting receipts and the trip notes. Thanks for taking care of it.",
+  "expect": "act"
+ },
+ {
+  "id": "E008~casual",
+  "base": "E008",
+  "domain": "d1",
+  "split": "dev",
+  "style": "casual",
+  "text": "Hey, can you file my expense claim for T-008: Toronto, 2026-09-20 to 2026-09-24?",
+  "expect": "act"
+ },
+ {
+  "id": "E008~shorthand",
+  "base": "E008",
+  "domain": "d1",
+  "split": "dev",
+  "style": "shorthand",
+  "text": "Please file my expense claim for trip 008: Toronto, 2026-09-20 to 2026-09-24.",
+  "expect": "act"
+ },
+ {
+  "id": "E008~distractor",
+  "base": "E008",
+  "domain": "d1",
+  "split": "dev",
+  "style": "distractor",
+  "text": "T-48 is a different trip and needs nothing; please file my expense claim for T-008: Toronto, 2026-09-20 to 2026-09-24.",
+  "expect": "act"
+ },
+ {
+  "id": "E008~buried",
+  "base": "E008",
+  "domain": "d1",
+  "split": "dev",
+  "style": "buried",
+  "text": "I just got back and am catching up on inbox cleanup. Please file my expense claim for T-008: Toronto, 2026-09-20 to 2026-09-24. I should be free again after the end-of-day meeting.",
+  "expect": "act"
+ },
+ {
+  "id": "E009~casual",
+  "base": "E009",
+  "domain": "d1",
+  "split": "dev",
+  "style": "casual",
+  "text": "Hey\u2014could you file my expense claim for T-009, Toronto, 2026-09-29 to 2026-10-02?",
+  "expect": "act"
+ },
+ {
+  "id": "E009~shorthand",
+  "base": "E009",
+  "domain": "d1",
+  "split": "dev",
+  "style": "shorthand",
+  "text": "Please file my expense claim for trip 009: Toronto, 2026-09-29 to 2026-10-02.",
+  "expect": "act"
+ },
+ {
+  "id": "E009~distractor",
+  "base": "E009",
+  "domain": "d1",
+  "split": "dev",
+  "style": "distractor",
+  "text": "T-49 is the other trip, but please ignore it\u2014it\u2019s a different one and needs nothing. Please file my expense claim for T-009: Toronto, 2026-09-29 to 2026-10-02.",
+  "expect": "act"
+ },
+ {
+  "id": "E009~buried",
+  "base": "E009",
+  "domain": "d1",
+  "split": "dev",
+  "style": "buried",
+  "text": "I\u2019ve wrapped up the notes from the Toronto meetings and sent the follow-up emails. Could you please file my expense claim for T-009: Toronto, 2026-09-29 to 2026-10-02? I\u2019ve already reconciled the receipts, so it should be straightforward. Thanks for handling that when you have a moment.",
+  "expect": "act"
+ },
+ {
+  "id": "E010~casual",
+  "base": "E010",
+  "domain": "d1",
+  "split": "dev",
+  "style": "casual",
+  "text": "Hey, can you file my expense claim for T-010? London, 2026-09-29 to 2026-10-02.",
+  "expect": "act"
+ },
+ {
+  "id": "E010~shorthand",
+  "base": "E010",
+  "domain": "d1",
+  "split": "dev",
+  "style": "shorthand",
+  "text": "Please file my expense claim for trip 010: London, 2026-09-29 to 2026-10-02.",
+  "expect": "act"
+ },
+ {
+  "id": "E010~distractor",
+  "base": "E010",
+  "domain": "d1",
+  "split": "dev",
+  "style": "distractor",
+  "text": "T-50 is a different trip and needs nothing. Please file my expense claim for T-010: London, 2026-09-29 to 2026-10-02, and only act on T-010.",
+  "expect": "act"
+ },
+ {
+  "id": "E010~buried",
+  "base": "E010",
+  "domain": "d1",
+  "split": "dev",
+  "style": "buried",
+  "text": "I\u2019ve wrapped up the notes from the London meetings and will send the recap later today. Could you please file my expense claim for T-010: London, 2026-09-29 to 2026-10-02. I\u2019ve also cleared my inbox, so this should be the last admin item. Thanks.",
+  "expect": "act"
+ },
+ {
+  "id": "E011~casual",
+  "base": "E011",
+  "domain": "d1",
+  "split": "dev",
+  "style": "casual",
+  "text": "Hey, could you file my expense claim for T-011, the London trip from 2026-09-27 to 2026-10-01?",
+  "expect": "act"
+ },
+ {
+  "id": "E011~shorthand",
+  "base": "E011",
+  "domain": "d1",
+  "split": "dev",
+  "style": "shorthand",
+  "text": "Please file my expense claim for trip 011: London, 2026-09-27 to 2026-10-01.",
+  "expect": "act"
+ },
+ {
+  "id": "E011~distractor",
+  "base": "E011",
+  "domain": "d1",
+  "split": "dev",
+  "style": "distractor",
+  "text": "Please file my expense claim for T-011, not T-51; T-51 is a different trip and needs nothing. T-011 is the London trip from 2026-09-27 to 2026-10-01.",
+  "expect": "act"
+ },
+ {
+  "id": "E011~buried",
+  "base": "E011",
+  "domain": "d1",
+  "split": "dev",
+  "style": "buried",
+  "text": "I\u2019ve wrapped up my notes from the trip and am clearing out my inbox. Please file my expense claim for T-011: London, 2026-09-27 to 2026-10-01. I should be back on top of everything after that.",
+  "expect": "act"
+ },
+ {
+  "id": "E012~casual",
+  "base": "E012",
+  "domain": "d1",
+  "split": "dev",
+  "style": "casual",
+  "text": "Hey \u2014 please file my expense claim for T-012: Lisbon, 2026-09-19 to 2026-09-23.",
+  "expect": "act"
+ },
+ {
+  "id": "E012~shorthand",
+  "base": "E012",
+  "domain": "d1",
+  "split": "dev",
+  "style": "shorthand",
+  "text": "Please file my expense claim for trip 012: Lisbon, 2026-09-19 to 2026-09-23.",
+  "expect": "act"
+ },
+ {
+  "id": "E012~distractor",
+  "base": "E012",
+  "domain": "d1",
+  "split": "dev",
+  "style": "distractor",
+  "text": "T-52 is the other trip, and it needs nothing. Please file my expense claim for T-012: Lisbon, 2026-09-19 to 2026-09-23.",
+  "expect": "act"
+ },
+ {
+  "id": "E012~buried",
+  "base": "E012",
+  "domain": "d1",
+  "split": "dev",
+  "style": "buried",
+  "text": "I\u2019ve been reviewing the Q3 travel notes this morning and clearing out a few old emails. When you have a moment, please file my expense claim for T-012: Lisbon, 2026-09-19 to 2026-09-23. I\u2019ve already confirmed the dates and location. Thanks for handling it.",
+  "expect": "act"
+ },
+ {
+  "id": "E013~casual",
+  "base": "E013",
+  "domain": "d1",
+  "split": "dev",
+  "style": "casual",
+  "text": "Hey, could you please file my expense claim for T-013? Lisbon, 2026-09-30 to 2026-10-03.",
+  "expect": "act"
+ },
+ {
+  "id": "E013~shorthand",
+  "base": "E013",
+  "domain": "d1",
+  "split": "dev",
+  "style": "shorthand",
+  "text": "Please file my expense claim for trip 013: Lisbon, 2026-09-30 to 2026-10-03.",
+  "expect": "act"
+ },
+ {
+  "id": "E013~distractor",
+  "base": "E013",
+  "domain": "d1",
+  "split": "dev",
+  "style": "distractor",
+  "text": "Please file the expense claim for T-53 only needs nothing done, while T-013 is the one that should be filed for Lisbon, 2026-09-30 to 2026-10-03.",
+  "expect": "act"
+ },
+ {
+  "id": "E013~buried",
+  "base": "E013",
+  "domain": "d1",
+  "split": "dev",
+  "style": "buried",
+  "text": "I\u2019m wrapping up a few travel items this week and wanted to keep everything moving. Could you please file my expense claim for T-013: Lisbon, 2026-09-30 to 2026-10-03. I\u2019ve already reviewed the receipts, so this should be straightforward. Thanks for taking care of it.",
+  "expect": "act"
+ },
+ {
+  "id": "E014~casual",
+  "base": "E014",
+  "domain": "d1",
+  "split": "dev",
+  "style": "casual",
+  "text": "Hey, could you please file my expense claim for T-014?",
+  "expect": "act"
+ },
+ {
+  "id": "E014~shorthand",
+  "base": "E014",
+  "domain": "d1",
+  "split": "dev",
+  "style": "shorthand",
+  "text": "Please file my expense claim for trip 014 in London, 2026-09-15 to 2026-09-18.",
+  "expect": "act"
+ },
+ {
+  "id": "E014~distractor",
+  "base": "E014",
+  "domain": "d1",
+  "split": "dev",
+  "style": "distractor",
+  "text": "T-54 is the one that needs nothing; please file my expense claim for T-014, the London trip from 2026-09-15 to 2026-09-18, and only that one.",
+  "expect": "act"
+ },
+ {
+  "id": "E014~buried",
+  "base": "E014",
+  "domain": "d1",
+  "split": "dev",
+  "style": "buried",
+  "text": "I\u2019ve finished sorting through the travel notes from last week. When you have a moment, could you please file my expense claim for T-014, the London trip from 2026-09-15 to 2026-09-18? I\u2019ve already checked the receipts and everything looks in order. Thanks.",
+  "expect": "act"
+ },
+ {
+  "id": "E015~casual",
+  "base": "E015",
+  "domain": "d1",
+  "split": "dev",
+  "style": "casual",
+  "text": "Hey, could you please file my expense claim for T-015 \u2014 Lisbon, 2026-09-29 to 2026-10-01?",
+  "expect": "act"
+ },
+ {
+  "id": "E015~shorthand",
+  "base": "E015",
+  "domain": "d1",
+  "split": "dev",
+  "style": "shorthand",
+  "text": "Please file my expense claim for trip 015, Lisbon, 2026-09-29 to 2026-10-01.",
+  "expect": "act"
+ },
+ {
+  "id": "E015~distractor",
+  "base": "E015",
+  "domain": "d1",
+  "split": "dev",
+  "style": "distractor",
+  "text": "T-55 is a different trip and needs nothing; please file my expense claim for T-015, Lisbon, 2026-09-29 to 2026-10-01.",
+  "expect": "act"
+ },
+ {
+  "id": "E015~buried",
+  "base": "E015",
+  "domain": "d1",
+  "split": "dev",
+  "style": "buried",
+  "text": "I\u2019ve just wrapped up a few follow-ups from the Lisbon meetings and am clearing my inbox this afternoon. Could you please file my expense claim for T-015, Lisbon, 2026-09-29 to 2026-10-01. Once that\u2019s done, I\u2019ll be able to close out the trip record. Thanks.",
+  "expect": "act"
+ },
+ {
+  "id": "E016~casual",
+  "base": "E016",
+  "domain": "d1",
+  "split": "dev",
+  "style": "casual",
+  "text": "Hey, can you file my expense claim for T-016 \u2014 Osaka, 2026-09-11 to 2026-09-14?",
+  "expect": "act"
+ },
+ {
+  "id": "E016~shorthand",
+  "base": "E016",
+  "domain": "d1",
+  "split": "dev",
+  "style": "shorthand",
+  "text": "Please file my expense claim for trip 016: Osaka, 2026-09-11 to 2026-09-14.",
+  "expect": "act"
+ },
+ {
+  "id": "E016~distractor",
+  "base": "E016",
+  "domain": "d1",
+  "split": "dev",
+  "style": "distractor",
+  "text": "T-56 is the different one and needs nothing; please file my expense claim only for T-016: Osaka, 2026-09-11 to 2026-09-14.",
+  "expect": "act"
+ },
+ {
+  "id": "E016~buried",
+  "base": "E016",
+  "domain": "d1",
+  "split": "dev",
+  "style": "buried",
+  "text": "I\u2019ve finished reviewing the notes from last week and the invoices are in order. When you have a moment, please file my expense claim for T-016: Osaka, 2026-09-11 to 2026-09-14. I\u2019ve already sent over the receipts, so there\u2019s nothing else to chase down. Thanks for handling it.",
+  "expect": "act"
+ },
+ {
+  "id": "E001~out0",
+  "base": "E001",
+  "domain": "d1",
+  "split": "dev",
+  "style": "out_of_scope",
+  "text": "What's the status of my claim for trip T-001?",
+  "expect": "handoff"
+ },
+ {
+  "id": "E002~out1",
+  "base": "E002",
+  "domain": "d1",
+  "split": "dev",
+  "style": "out_of_scope",
+  "text": "Please cancel the expense claim I filed for trip T-002.",
+  "expect": "handoff"
+ },
+ {
+  "id": "E001~out2",
+  "base": "E001",
+  "domain": "d1",
+  "split": "dev",
+  "style": "out_of_scope",
+  "text": "How much is the daily meal allowance for trip T-001's city?",
+  "expect": "handoff"
+ },
+ {
+  "id": "E002~out3",
+  "base": "E002",
+  "domain": "d1",
+  "split": "dev",
+  "style": "out_of_scope",
+  "text": "Can you split trip T-002 into two claims?",
+  "expect": "handoff"
+ },
+ {
+  "id": "E201~casual",
+  "base": "E201",
+  "domain": "d1",
+  "split": "test",
+  "style": "casual",
+  "text": "Hey, can you file my expense claim for T-201?",
+  "expect": "act"
+ },
+ {
+  "id": "E201~shorthand",
+  "base": "E201",
+  "domain": "d1",
+  "split": "test",
+  "style": "shorthand",
+  "text": "Please file my expense claim for trip 201: London, 2026-09-30 to 2026-10-03.",
+  "expect": "act"
+ },
+ {
+  "id": "E201~distractor",
+  "base": "E201",
+  "domain": "d1",
+  "split": "test",
+  "style": "distractor",
+  "text": "Please file my expense claim for T-201: London, 2026-09-30 to 2026-10-03; T-241 is a different trip and needs nothing done.",
+  "expect": "act"
+ },
+ {
+  "id": "E201~buried",
+  "base": "E201",
+  "domain": "d1",
+  "split": "test",
+  "style": "buried",
+  "text": "I just wrapped up a few follow-ups from the London visit and wanted to close the loop on that travel week. Please file my expense claim for T-201: London, 2026-09-30 to 2026-10-03. Once that\u2019s submitted, I can move on to the next set of tasks. Thanks.",
+  "expect": "act"
+ },
+ {
+  "id": "E202~casual",
+  "base": "E202",
+  "domain": "d1",
+  "split": "test",
+  "style": "casual",
+  "text": "Hey, could you file my expense claim for T-202 (London, 2026-09-30 to 2026-10-03)?",
+  "expect": "act"
+ },
+ {
+  "id": "E202~shorthand",
+  "base": "E202",
+  "domain": "d1",
+  "split": "test",
+  "style": "shorthand",
+  "text": "Please file my expense claim for trip 202: London, 2026-09-30 to 2026-10-03.",
+  "expect": "act"
+ },
+ {
+  "id": "E202~distractor",
+  "base": "E202",
+  "domain": "d1",
+  "split": "test",
+  "style": "distractor",
+  "text": "T-242 is already closed and needs nothing; please file my expense claim for T-202, the London trip from 2026-09-30 to 2026-10-03.",
+  "expect": "act"
+ },
+ {
+  "id": "E202~buried",
+  "base": "E202",
+  "domain": "d1",
+  "split": "test",
+  "style": "buried",
+  "text": "I\u2019m catching up on a few admin items this morning. Please file my expense claim for trip T-202: London, 2026-09-30 to 2026-10-03. I\u2019ve already sorted the rest of my travel notes. Thanks.",
+  "expect": "act"
+ },
+ {
+  "id": "E203~casual",
+  "base": "E203",
+  "domain": "d1",
+  "split": "test",
+  "style": "casual",
+  "text": "Hey, can you file my expense claim for T-203?",
+  "expect": "act"
+ },
+ {
+  "id": "E203~shorthand",
+  "base": "E203",
+  "domain": "d1",
+  "split": "test",
+  "style": "shorthand",
+  "text": "Please file my expense claim for trip 203: Mexico City, 2026-09-29 to 2026-10-02.",
+  "expect": "act"
+ },
+ {
+  "id": "E203~distractor",
+  "base": "E203",
+  "domain": "d1",
+  "split": "test",
+  "style": "distractor",
+  "text": "Please file my expense claim for T-243? Actually, no action is needed on T-243; the one to process is T-203 for Mexico City, 2026-09-29 to 2026-10-02.",
+  "expect": "act"
+ },
+ {
+  "id": "E203~buried",
+  "base": "E203",
+  "domain": "d1",
+  "split": "test",
+  "style": "buried",
+  "text": "I\u2019ve wrapped up the Mexico City notes and shared the deck with the team. When you get a moment, please file my expense claim for T-203: Mexico City, 2026-09-29 to 2026-10-02. I\u2019ve already logged the receipts in the usual folder. Thanks.",
+  "expect": "act"
+ },
+ {
+  "id": "E204~casual",
+  "base": "E204",
+  "domain": "d1",
+  "split": "test",
+  "style": "casual",
+  "text": "Hey, can you file my expense claim for T-204, the London trip from 2026-09-27 to 2026-10-01?",
+  "expect": "act"
+ },
+ {
+  "id": "E204~shorthand",
+  "base": "E204",
+  "domain": "d1",
+  "split": "test",
+  "style": "shorthand",
+  "text": "Please file my expense claim for trip 204, London, 2026-09-27 to 2026-10-01.",
+  "expect": "act"
+ },
+ {
+  "id": "E204~distractor",
+  "base": "E204",
+  "domain": "d1",
+  "split": "test",
+  "style": "distractor",
+  "text": "T-244 is a different trip and doesn\u2019t need anything, but please file my expense claim for T-204, the London trip from 2026-09-27 to 2026-10-01.",
+  "expect": "act"
+ },
+ {
+  "id": "E204~buried",
+  "base": "E204",
+  "domain": "d1",
+  "split": "test",
+  "style": "buried",
+  "text": "I\u2019ve wrapped up the travel notes from last month and sent them over for the team archive. Could you file my expense claim for T-204, the London trip from 2026-09-27 to 2026-10-01? I\u2019ve already checked the receipts against my calendar. Let me know if anything is missing.",
+  "expect": "act"
+ },
+ {
+  "id": "E205~casual",
+  "base": "E205",
+  "domain": "d1",
+  "split": "test",
+  "style": "casual",
+  "text": "Hey, can you please file my expense claim for T-205: London, 2026-09-29 to 2026-10-03?",
+  "expect": "act"
+ },
+ {
+  "id": "E205~shorthand",
+  "base": "E205",
+  "domain": "d1",
+  "split": "test",
+  "style": "shorthand",
+  "text": "Please file my expense claim for trip 205: London, 2026-09-29 to 2026-10-03.",
+  "expect": "act"
+ },
+ {
+  "id": "E205~distractor",
+  "base": "E205",
+  "domain": "d1",
+  "split": "test",
+  "style": "distractor",
+  "text": "T-245 is the other trip and needs nothing; please file my expense claim for T-205: London, 2026-09-29 to 2026-10-03.",
+  "expect": "act"
+ },
+ {
+  "id": "E205~buried",
+  "base": "E205",
+  "domain": "d1",
+  "split": "test",
+  "style": "buried",
+  "text": "Hope you're doing well. Please file my expense claim for T-205: London, 2026-09-29 to 2026-10-03. I\u2019ll send the receipts over shortly.",
+  "expect": "act"
+ },
+ {
+  "id": "E206~casual",
+  "base": "E206",
+  "domain": "d1",
+  "split": "test",
+  "style": "casual",
+  "text": "Hey \u2014 please file my expense claim for T-206, Lisbon, 2026-09-09 to 2026-09-13.",
+  "expect": "act"
+ },
+ {
+  "id": "E206~shorthand",
+  "base": "E206",
+  "domain": "d1",
+  "split": "test",
+  "style": "shorthand",
+  "text": "Please file my expense claim for trip 206: Lisbon, 2026-09-09 to 2026-09-13.",
+  "expect": "act"
+ },
+ {
+  "id": "E206~distractor",
+  "base": "E206",
+  "domain": "d1",
+  "split": "test",
+  "style": "distractor",
+  "text": "Please file the expense claim for T-206, Lisbon, 2026-09-09 to 2026-09-13; T-246 is a different trip and needs nothing done.",
+  "expect": "act"
+ },
+ {
+  "id": "E206~buried",
+  "base": "E206",
+  "domain": "d1",
+  "split": "test",
+  "style": "buried",
+  "text": "I\u2019ve wrapped up my notes from the Lisbon visit and sent the follow-up emails. Please file my expense claim for T-206, Lisbon, 2026-09-09 to 2026-09-13, when you have a moment. I\u2019m back in the office today and can answer anything you need. Thanks.",
+  "expect": "act"
+ },
+ {
+  "id": "E207~casual",
+  "base": "E207",
+  "domain": "d1",
+  "split": "test",
+  "style": "casual",
+  "text": "Hey, please file my expense claim for T-207: Osaka, 2026-09-04 to 2026-09-08.",
+  "expect": "act"
+ },
+ {
+  "id": "E207~shorthand",
+  "base": "E207",
+  "domain": "d1",
+  "split": "test",
+  "style": "shorthand",
+  "text": "Please file my expense claim for trip 207: Osaka, 2026-09-04 to 2026-09-08.",
+  "expect": "act"
+ },
+ {
+  "id": "E207~distractor",
+  "base": "E207",
+  "domain": "d1",
+  "split": "test",
+  "style": "distractor",
+  "text": "T-247 is a different one and needs nothing. Please file my expense claim for T-207: Osaka, 2026-09-04 to 2026-09-08.",
+  "expect": "act"
+ },
+ {
+  "id": "E207~buried",
+  "base": "E207",
+  "domain": "d1",
+  "split": "test",
+  "style": "buried",
+  "text": "I\u2019ve wrapped up the Osaka itinerary notes for next week. Could you please file my expense claim for T-207: Osaka, 2026-09-04 to 2026-09-08. I\u2019m heading into a meeting after lunch, so thanks for taking care of it when you can.",
+  "expect": "act"
+ },
+ {
+  "id": "E208~casual",
+  "base": "E208",
+  "domain": "d1",
+  "split": "test",
+  "style": "casual",
+  "text": "Hey, can you file my expense claim for T-208: Mexico City, 2026-09-30 to 2026-10-02?",
+  "expect": "act"
+ },
+ {
+  "id": "E208~shorthand",
+  "base": "E208",
+  "domain": "d1",
+  "split": "test",
+  "style": "shorthand",
+  "text": "Can you file my expense claim for trip 208: Mexico City, 2026-09-30 to 2026-10-02?",
+  "expect": "act"
+ },
+ {
+  "id": "E208~distractor",
+  "base": "E208",
+  "domain": "d1",
+  "split": "test",
+  "style": "distractor",
+  "text": "Please file the expense claim for T-208, Mexico City, 2026-09-30 to 2026-10-02; T-248 is a different trip and needs nothing.",
+  "expect": "act"
+ },
+ {
+  "id": "E208~buried",
+  "base": "E208",
+  "domain": "d1",
+  "split": "test",
+  "style": "buried",
+  "text": "I\u2019ve attached the receipts from my recent travel and wanted to get everything wrapped up. When you have a moment, please file my expense claim for T-208: Mexico City, 2026-09-30 to 2026-10-02. Thanks for helping keep these organized, and let me know if anything is missing.",
+  "expect": "act"
+ },
+ {
+  "id": "E209~casual",
+  "base": "E209",
+  "domain": "d1",
+  "split": "test",
+  "style": "casual",
+  "text": "Hey, could you file my expense claim for T-209, Mexico City, 2026-09-30 to 2026-10-03?",
+  "expect": "act"
+ },
+ {
+  "id": "E209~shorthand",
+  "base": "E209",
+  "domain": "d1",
+  "split": "test",
+  "style": "shorthand",
+  "text": "Please file my expense claim for trip 209: Mexico City, 2026-09-30 to 2026-10-03.",
+  "expect": "act"
+ },
+ {
+  "id": "E209~distractor",
+  "base": "E209",
+  "domain": "d1",
+  "split": "test",
+  "style": "distractor",
+  "text": "T-249 is a different trip and needs nothing, but please file my expense claim for T-209: Mexico City, 2026-09-30 to 2026-10-03.",
+  "expect": "act"
+ },
+ {
+  "id": "E209~buried",
+  "base": "E209",
+  "domain": "d1",
+  "split": "test",
+  "style": "buried",
+  "text": "I\u2019ve finished sorting the notes from the Mexico City meetings and the receipts are all together. Could you please file my expense claim for T-209: Mexico City, 2026-09-30 to 2026-10-03. I\u2019ve already reconciled the hotel and transport charges. Thanks for taking care of it.",
+  "expect": "act"
+ },
+ {
+  "id": "E210~casual",
+  "base": "E210",
+  "domain": "d1",
+  "split": "test",
+  "style": "casual",
+  "text": "Hey, can you file my expense claim for T-210 (London, 2026-09-30 to 2026-10-03)?",
+  "expect": "act"
+ },
+ {
+  "id": "E210~shorthand",
+  "base": "E210",
+  "domain": "d1",
+  "split": "test",
+  "style": "shorthand",
+  "text": "Please file my expense claim for trip 210: London, 2026-09-30 to 2026-10-03.",
+  "expect": "act"
+ },
+ {
+  "id": "E210~distractor",
+  "base": "E210",
+  "domain": "d1",
+  "split": "test",
+  "style": "distractor",
+  "text": "T-250 is fine as-is and needs nothing, but please file my expense claim for T-210: London, 2026-09-30 to 2026-10-03.",
+  "expect": "act"
+ },
+ {
+  "id": "E210~buried",
+  "base": "E210",
+  "domain": "d1",
+  "split": "test",
+  "style": "buried",
+  "text": "I\u2019ve wrapped up the London notes and sent over the follow-up items from the trip. Could you please file my expense claim for T-210: London, 2026-09-30 to 2026-10-03. I\u2019m also clearing out a few admin tasks this afternoon, so that would help. Thanks.",
+  "expect": "act"
+ },
+ {
+  "id": "E211~casual",
+  "base": "E211",
+  "domain": "d1",
+  "split": "test",
+  "style": "casual",
+  "text": "Hey, can you file my expense claim for T-211? It\u2019s the Toronto trip from 2026-09-29 to 2026-10-02.",
+  "expect": "act"
+ },
+ {
+  "id": "E211~shorthand",
+  "base": "E211",
+  "domain": "d1",
+  "split": "test",
+  "style": "shorthand",
+  "text": "Please file my expense claim for trip 211: Toronto, 2026-09-29 to 2026-10-02.",
+  "expect": "act"
+ },
+ {
+  "id": "E211~distractor",
+  "base": "E211",
+  "domain": "d1",
+  "split": "test",
+  "style": "distractor",
+  "text": "Please file my expense claim for T-251 as needed, but only act on T-211, which is the Toronto trip from 2026-09-29 to 2026-10-02; T-251 is a different trip and needs nothing.",
+  "expect": "act"
+ },
+ {
+  "id": "E211~buried",
+  "base": "E211",
+  "domain": "d1",
+  "split": "test",
+  "style": "buried",
+  "text": "I\u2019ve just finished reviewing the notes from the week, and everything else is up to date. When you have a moment, please file my expense claim for T-211: Toronto, 2026-09-29 to 2026-10-02. I\u2019d appreciate it if you could send it through with the usual paperwork. Thanks.",
+  "expect": "act"
+ },
+ {
+  "id": "E212~casual",
+  "base": "E212",
+  "domain": "d1",
+  "split": "test",
+  "style": "casual",
+  "text": "Hey, could you please file my expense claim for T-212 \u2014 London, 2026-09-07 to 2026-09-10?",
+  "expect": "act"
+ },
+ {
+  "id": "E212~shorthand",
+  "base": "E212",
+  "domain": "d1",
+  "split": "test",
+  "style": "shorthand",
+  "text": "Please file my expense claim for trip 212: London, 2026-09-07 to 2026-09-10.",
+  "expect": "act"
+ },
+ {
+  "id": "E212~distractor",
+  "base": "E212",
+  "domain": "d1",
+  "split": "test",
+  "style": "distractor",
+  "text": "Please file the expense claim for T-252? No action needed on that one. The one that should be acted on is T-212: London, 2026-09-07 to 2026-09-10.",
+  "expect": "act"
+ },
+ {
+  "id": "E212~buried",
+  "base": "E212",
+  "domain": "d1",
+  "split": "test",
+  "style": "buried",
+  "text": "I\u2019ve just wrapped up a few follow-ups from last week and I\u2019m trying to keep my admin moving. When you have a moment, could you please file my expense claim for T-212. It was the London trip from 2026-09-07 to 2026-09-10. Thanks.",
+  "expect": "act"
+ },
+ {
+  "id": "E213~casual",
+  "base": "E213",
+  "domain": "d1",
+  "split": "test",
+  "style": "casual",
+  "text": "Hey, could you file my expense claim for T-213?",
+  "expect": "act"
+ },
+ {
+  "id": "E213~shorthand",
+  "base": "E213",
+  "domain": "d1",
+  "split": "test",
+  "style": "shorthand",
+  "text": "Please file my expense claim for trip 213: Toronto, 2026-09-09 to 2026-09-11.",
+  "expect": "act"
+ },
+ {
+  "id": "E213~distractor",
+  "base": "E213",
+  "domain": "d1",
+  "split": "test",
+  "style": "distractor",
+  "text": "Please file my expense claim for T-213: Toronto, 2026-09-09 to 2026-09-11. T-253 is a different trip and needs nothing done.",
+  "expect": "act"
+ },
+ {
+  "id": "E213~buried",
+  "base": "E213",
+  "domain": "d1",
+  "split": "test",
+  "style": "buried",
+  "text": "I\u2019m wrapping up a few things before the end of the week. When you have a moment, could you file my expense claim for T-213: Toronto, 2026-09-09 to 2026-09-11. I\u2019ve already organized the rest of my notes. Thanks.",
+  "expect": "act"
+ },
+ {
+  "id": "E214~casual",
+  "base": "E214",
+  "domain": "d1",
+  "split": "test",
+  "style": "casual",
+  "text": "Hey, can you file my expense claim for T-214?",
+  "expect": "act"
+ },
+ {
+  "id": "E214~shorthand",
+  "base": "E214",
+  "domain": "d1",
+  "split": "test",
+  "style": "shorthand",
+  "text": "Please file my expense claim for trip 214: Lisbon, 2026-09-28 to 2026-10-01.",
+  "expect": "act"
+ },
+ {
+  "id": "E214~distractor",
+  "base": "E214",
+  "domain": "d1",
+  "split": "test",
+  "style": "distractor",
+  "text": "Please file my expense claim for T-214, Lisbon, 2026-09-28 to 2026-10-01; T-254 is a different trip and doesn\u2019t need anything.",
+  "expect": "act"
+ },
+ {
+  "id": "E214~buried",
+  "base": "E214",
+  "domain": "d1",
+  "split": "test",
+  "style": "buried",
+  "text": "I\u2019ve finished going through the notes from the week and everything looks in order. When you have a moment, please file my expense claim for T-214: Lisbon, 2026-09-28 to 2026-10-01. I\u2019m wrapping up the remaining admin items this afternoon. Thanks.",
+  "expect": "act"
+ },
+ {
+  "id": "E215~casual",
+  "base": "E215",
+  "domain": "d1",
+  "split": "test",
+  "style": "casual",
+  "text": "Hey, could you file my expense claim for T-215? Mexico City, 2026-09-29 to 2026-10-03.",
+  "expect": "act"
+ },
+ {
+  "id": "E215~shorthand",
+  "base": "E215",
+  "domain": "d1",
+  "split": "test",
+  "style": "shorthand",
+  "text": "Please file my expense claim for trip 215: Mexico City, 2026-09-29 to 2026-10-03.",
+  "expect": "act"
+ },
+ {
+  "id": "E215~distractor",
+  "base": "E215",
+  "domain": "d1",
+  "split": "test",
+  "style": "distractor",
+  "text": "T-255 is a different trip and needs nothing, so please file my expense claim only for T-215: Mexico City, 2026-09-29 to 2026-10-03.",
+  "expect": "act"
+ },
+ {
+  "id": "E215~buried",
+  "base": "E215",
+  "domain": "d1",
+  "split": "test",
+  "style": "buried",
+  "text": "I\u2019m wrapping up a few follow-ups from last week and clearing out my inbox. Please file my expense claim for T-215: Mexico City, 2026-09-29 to 2026-10-03. I\u2019ll send the remaining receipts separately if needed. Thanks.",
+  "expect": "act"
+ },
+ {
+  "id": "E216~casual",
+  "base": "E216",
+  "domain": "d1",
+  "split": "test",
+  "style": "casual",
+  "text": "Hey, can you file my expense claim for T-216?",
+  "expect": "act"
+ },
+ {
+  "id": "E216~shorthand",
+  "base": "E216",
+  "domain": "d1",
+  "split": "test",
+  "style": "shorthand",
+  "text": "Please file my expense claim for trip 216.",
+  "expect": "act"
+ },
+ {
+  "id": "E216~distractor",
+  "base": "E216",
+  "domain": "d1",
+  "split": "test",
+  "style": "distractor",
+  "text": "Please file my expense claim for T-216, not T-256; T-256 is a different trip and needs nothing.",
+  "expect": "act"
+ },
+ {
+  "id": "E216~buried",
+  "base": "E216",
+  "domain": "d1",
+  "split": "test",
+  "style": "buried",
+  "text": "I\u2019m catching up on a few things from the Mexico City trip. When you have a moment, please file my expense claim for T-216. I\u2019ve already got the rest of my notes organized, so this is the only item left. Thanks.",
+  "expect": "act"
+ },
+ {
+  "id": "E201~out0",
+  "base": "E201",
+  "domain": "d1",
+  "split": "test",
+  "style": "out_of_scope",
+  "text": "Did finance already pay out trip T-201?",
+  "expect": "handoff"
+ },
+ {
+  "id": "E202~out1",
+  "base": "E202",
+  "domain": "d1",
+  "split": "test",
+  "style": "out_of_scope",
+  "text": "Withdraw my claim on T-202, I filed it by mistake.",
+  "expect": "handoff"
+ },
+ {
+  "id": "E201~out2",
+  "base": "E201",
+  "domain": "d1",
+  "split": "test",
+  "style": "out_of_scope",
+  "text": "What exchange rate does the company use for the receipts on T-201?",
+  "expect": "handoff"
+ },
+ {
+  "id": "E202~out3",
+  "base": "E202",
+  "domain": "d1",
+  "split": "test",
+  "style": "out_of_scope",
+  "text": "Please book me a flight for trip T-202.",
+  "expect": "handoff"
+ },
+ {
+  "id": "V001~casual",
+  "base": "V001",
+  "domain": "d3",
+  "split": "dev",
+  "style": "casual",
+  "text": "Can you set up the payment for invoice INV-001 under the client's terms?",
+  "expect": "act"
+ },
+ {
+  "id": "V001~shorthand",
+  "base": "V001",
+  "domain": "d3",
+  "split": "dev",
+  "style": "shorthand",
+  "text": "Please set up payment for invoice 001 under the client's terms.",
+  "expect": "act"
+ },
+ {
+  "id": "V001~distractor",
+  "base": "V001",
+  "domain": "d3",
+  "split": "dev",
+  "style": "distractor",
+  "text": "INV-41 is a different one and needs nothing; please set up the payment for INV-001 under the client's terms.",
+  "expect": "act"
+ },
+ {
+  "id": "V001~buried",
+  "base": "V001",
+  "domain": "d3",
+  "split": "dev",
+  "style": "buried",
+  "text": "I reviewed the latest batch this morning and everything else looks in order. Please set up the payment for invoice INV-001 under the client's terms. Once that's handled, we can close out the rest of the items and move on. Thanks.",
+  "expect": "act"
+ },
+ {
+  "id": "V002~casual",
+  "base": "V002",
+  "domain": "d3",
+  "split": "dev",
+  "style": "casual",
+  "text": "Hey, can you enter DOC-002 into the ledger? It\u2019s a vendor invoice.",
+  "expect": "act"
+ },
+ {
+  "id": "V002~shorthand",
+  "base": "V002",
+  "domain": "d3",
+  "split": "dev",
+  "style": "shorthand",
+  "text": "Please enter document 002 into the ledger; it is a vendor invoice.",
+  "expect": "act"
+ },
+ {
+  "id": "V002~distractor",
+  "base": "V002",
+  "domain": "d3",
+  "split": "dev",
+  "style": "distractor",
+  "text": "DOC-42 needs nothing done to it, but please enter DOC-002 into the ledger; it is a vendor invoice.",
+  "expect": "act"
+ },
+ {
+  "id": "V002~buried",
+  "base": "V002",
+  "domain": "d3",
+  "split": "dev",
+  "style": "buried",
+  "text": "I\u2019m tying up a few admin items this afternoon. When you have a moment, please enter DOC-002 into the ledger. It\u2019s a vendor invoice, and I\u2019d appreciate it being handled today. Thanks.",
+  "expect": "act"
+ },
+ {
+  "id": "V003~casual",
+  "base": "V003",
+  "domain": "d3",
+  "split": "dev",
+  "style": "casual",
+  "text": "Hey, can you schedule the payment for INV-003?",
+  "expect": "act"
+ },
+ {
+  "id": "V003~shorthand",
+  "base": "V003",
+  "domain": "d3",
+  "split": "dev",
+  "style": "shorthand",
+  "text": "Please schedule payment for invoice 003.",
+  "expect": "act"
+ },
+ {
+  "id": "V003~distractor",
+  "base": "V003",
+  "domain": "d3",
+  "split": "dev",
+  "style": "distractor",
+  "text": "Please schedule the payment for INV-003; INV-43 is a different invoice and needs nothing.",
+  "expect": "act"
+ },
+ {
+  "id": "V003~buried",
+  "base": "V003",
+  "domain": "d3",
+  "split": "dev",
+  "style": "buried",
+  "text": "I\u2019m reviewing a few outstanding items this afternoon and want to keep the queue moving. When you have a moment, please schedule the payment for INV-003. I\u2019ve already checked the other open records, so this is the one to handle next. Thanks.",
+  "expect": "act"
+ },
+ {
+  "id": "V004",
+  "base": "V004",
+  "domain": "d3",
+  "split": "dev",
+  "style": "question",
+  "text": "What is the remittance email address for Marlow Office Goods?",
+  "expect": "handoff"
+ },
+ {
+  "id": "V005~casual",
+  "base": "V005",
+  "domain": "d3",
+  "split": "dev",
+  "style": "casual",
+  "text": "Can you work out what we owe on INV-005 and when, then schedule the payment?",
+  "expect": "act"
+ },
+ {
+  "id": "V005~shorthand",
+  "base": "V005",
+  "domain": "d3",
+  "split": "dev",
+  "style": "shorthand",
+  "text": "Please work out what we owe on invoice 005 and when, then schedule the payment.",
+  "expect": "act"
+ },
+ {
+  "id": "V005~distractor",
+  "base": "V005",
+  "domain": "d3",
+  "split": "dev",
+  "style": "distractor",
+  "text": "Please work out what we owe on INV-45 and INV-005, but only act on INV-005 since INV-45 is a different one and needs nothing; then schedule the payment for INV-005.",
+  "expect": "act"
+ },
+ {
+  "id": "V005~buried",
+  "base": "V005",
+  "domain": "d3",
+  "split": "dev",
+  "style": "buried",
+  "text": "I\u2019ve been reviewing the recent vendor paperwork this morning. Could you work out what we owe on INV-005 and when, then schedule the payment? Once that\u2019s done, please keep me posted so I can update the team.",
+  "expect": "act"
+ },
+ {
+  "id": "V006~casual",
+  "base": "V006",
+  "domain": "d3",
+  "split": "dev",
+  "style": "casual",
+  "text": "Hey, can you record the vendor invoice in DOC-006?",
+  "expect": "act"
+ },
+ {
+  "id": "V006~shorthand",
+  "base": "V006",
+  "domain": "d3",
+  "split": "dev",
+  "style": "shorthand",
+  "text": "Please record the vendor invoice in document 006.",
+  "expect": "act"
+ },
+ {
+  "id": "V006~distractor",
+  "base": "V006",
+  "domain": "d3",
+  "split": "dev",
+  "style": "distractor",
+  "text": "DOC-46 is the other file, but it needs nothing. Please record the vendor invoice in DOC-006 only.",
+  "expect": "act"
+ },
+ {
+  "id": "V006~buried",
+  "base": "V006",
+  "domain": "d3",
+  "split": "dev",
+  "style": "buried",
+  "text": "Thanks for getting this together. When you have a moment, please record the vendor invoice in DOC-006. I appreciate it, and that should be the only item for now. Let me know if anything looks off.",
+  "expect": "act"
+ },
+ {
+  "id": "V007~casual",
+  "base": "V007",
+  "domain": "d3",
+  "split": "dev",
+  "style": "casual",
+  "text": "Hey, can you set up payment for INV-007 under the client\u2019s terms?",
+  "expect": "act"
+ },
+ {
+  "id": "V007~shorthand",
+  "base": "V007",
+  "domain": "d3",
+  "split": "dev",
+  "style": "shorthand",
+  "text": "Please set up payment for invoice 007 under the client\u2019s terms.",
+  "expect": "act"
+ },
+ {
+  "id": "V007~distractor",
+  "base": "V007",
+  "domain": "d3",
+  "split": "dev",
+  "style": "distractor",
+  "text": "Please set up payment for INV-47? Actually, no\u2014ignore INV-47; it needs nothing. The one to act on is INV-007, so please set up payment for that invoice under the client\u2019s terms.",
+  "expect": "act"
+ },
+ {
+  "id": "V007~buried",
+  "base": "V007",
+  "domain": "d3",
+  "split": "dev",
+  "style": "buried",
+  "text": "I\u2019m working through a few billing items this morning and wanted to keep the queue moving. Could you please set up the payment for INV-007 under the client\u2019s terms? Once that\u2019s handled, I\u2019ll review the rest of the outstanding paperwork.",
+  "expect": "act"
+ },
+ {
+  "id": "V008~casual",
+  "base": "V008",
+  "domain": "d3",
+  "split": "dev",
+  "style": "casual",
+  "text": "Hey, can you enter DOC-008 into the ledger?",
+  "expect": "act"
+ },
+ {
+  "id": "V008~shorthand",
+  "base": "V008",
+  "domain": "d3",
+  "split": "dev",
+  "style": "shorthand",
+  "text": "Please enter document 008 into the ledger; it is a vendor invoice.",
+  "expect": "act"
+ },
+ {
+  "id": "V008~distractor",
+  "base": "V008",
+  "domain": "d3",
+  "split": "dev",
+  "style": "distractor",
+  "text": "DOC-48 is already handled and needs nothing. Please enter DOC-008 into the ledger; it is a vendor invoice, and only DOC-008 should be acted on.",
+  "expect": "act"
+ },
+ {
+  "id": "V008~buried",
+  "base": "V008",
+  "domain": "d3",
+  "split": "dev",
+  "style": "buried",
+  "text": "We\u2019re closing out the week\u2019s paperwork and I want to keep the records current. Please enter DOC-008 into the ledger; it is a vendor invoice. I\u2019ll review the remaining items after that. Thanks.",
+  "expect": "act"
+ },
+ {
+  "id": "V009~casual",
+  "base": "V009",
+  "domain": "d3",
+  "split": "dev",
+  "style": "casual",
+  "text": "Hey, can you schedule the payment for INV-009?",
+  "expect": "act"
+ },
+ {
+  "id": "V009~shorthand",
+  "base": "V009",
+  "domain": "d3",
+  "split": "dev",
+  "style": "shorthand",
+  "text": "Please schedule payment for invoice 009.",
+  "expect": "act"
+ },
+ {
+  "id": "V009~distractor",
+  "base": "V009",
+  "domain": "d3",
+  "split": "dev",
+  "style": "distractor",
+  "text": "INV-49 is a different one and needs nothing, so please schedule the payment for INV-009 only.",
+  "expect": "act"
+ },
+ {
+  "id": "V009~buried",
+  "base": "V009",
+  "domain": "d3",
+  "split": "dev",
+  "style": "buried",
+  "text": "We\u2019re closing out a few open items this week. When you get a moment, please schedule the payment for INV-009. Let me know if anything is missing from the file. Thanks.",
+  "expect": "act"
+ },
+ {
+  "id": "V010~casual",
+  "base": "V010",
+  "domain": "d3",
+  "split": "dev",
+  "style": "casual",
+  "text": "Hey, can you please enter DOC-010 in the ledger?",
+  "expect": "act"
+ },
+ {
+  "id": "V010~shorthand",
+  "base": "V010",
+  "domain": "d3",
+  "split": "dev",
+  "style": "shorthand",
+  "text": "Please enter document 010 in the ledger.",
+  "expect": "act"
+ },
+ {
+  "id": "V010~distractor",
+  "base": "V010",
+  "domain": "d3",
+  "split": "dev",
+  "style": "distractor",
+  "text": "Please enter DOC-010 in the ledger; DOC-50 is a different document and needs nothing.",
+  "expect": "act"
+ },
+ {
+  "id": "V010~buried",
+  "base": "V010",
+  "domain": "d3",
+  "split": "dev",
+  "style": "buried",
+  "text": "We\u2019ve been moving a lot of paperwork through today, so thanks for keeping up. When you have a moment, please enter DOC-010 in the ledger. That should help us stay current before the end of the day.",
+  "expect": "act"
+ },
+ {
+  "id": "V011~casual",
+  "base": "V011",
+  "domain": "d3",
+  "split": "dev",
+  "style": "casual",
+  "text": "Can you check what we owe on INV-011 and when it\u2019s due, then schedule the payment?",
+  "expect": "act"
+ },
+ {
+  "id": "V011~shorthand",
+  "base": "V011",
+  "domain": "d3",
+  "split": "dev",
+  "style": "shorthand",
+  "text": "Can you work out what we owe on invoice 011 and when, then schedule the payment?",
+  "expect": "act"
+ },
+ {
+  "id": "V011~distractor",
+  "base": "V011",
+  "domain": "d3",
+  "split": "dev",
+  "style": "distractor",
+  "text": "Please work out what we owe on INV-51 and INV-011, but only act on INV-011 since INV-51 is a different invoice and needs nothing. Then schedule the payment for INV-011 based on what\u2019s due and when.",
+  "expect": "act"
+ },
+ {
+  "id": "V011~buried",
+  "base": "V011",
+  "domain": "d3",
+  "split": "dev",
+  "style": "buried",
+  "text": "I\u2019m catching up on a few vendor items this morning. Please review INV-011, work out what we owe and when it\u2019s due, and then schedule the payment. Let me know once it\u2019s set up. Thanks.",
+  "expect": "act"
+ },
+ {
+  "id": "V012",
+  "base": "V012",
+  "domain": "d3",
+  "split": "dev",
+  "style": "question",
+  "text": "Which email should remittance advice for Kestrel Industrial Supply go to?",
+  "expect": "handoff"
+ },
+ {
+  "id": "V013~casual",
+  "base": "V013",
+  "domain": "d3",
+  "split": "dev",
+  "style": "casual",
+  "text": "Can you set up payment for INV-013 under the client\u2019s terms?",
+  "expect": "act"
+ },
+ {
+  "id": "V013~shorthand",
+  "base": "V013",
+  "domain": "d3",
+  "split": "dev",
+  "style": "shorthand",
+  "text": "Please set up payment for invoice 013 under the client\u2019s terms.",
+  "expect": "act"
+ },
+ {
+  "id": "V013~distractor",
+  "base": "V013",
+  "domain": "d3",
+  "split": "dev",
+  "style": "distractor",
+  "text": "Please set up payment for INV-013 under the client\u2019s terms; INV-53 is a different invoice and needs nothing done.",
+  "expect": "act"
+ },
+ {
+  "id": "V013~buried",
+  "base": "V013",
+  "domain": "d3",
+  "split": "dev",
+  "style": "buried",
+  "text": "I\u2019m reviewing the open items from this week and clearing anything ready to move forward. When you have a moment, please set up the payment of INV-013 under the client\u2019s terms. The rest of the list can wait until the next pass. Thanks.",
+  "expect": "act"
+ },
+ {
+  "id": "V014~casual",
+  "base": "V014",
+  "domain": "d3",
+  "split": "dev",
+  "style": "casual",
+  "text": "Hey, please enter DOC-014 into the ledger \u2014 it\u2019s a vendor invoice.",
+  "expect": "act"
+ },
+ {
+  "id": "V014~shorthand",
+  "base": "V014",
+  "domain": "d3",
+  "split": "dev",
+  "style": "shorthand",
+  "text": "Please enter document 014 into the ledger; it is a vendor invoice.",
+  "expect": "act"
+ },
+ {
+  "id": "V014~distractor",
+  "base": "V014",
+  "domain": "d3",
+  "split": "dev",
+  "style": "distractor",
+  "text": "DOC-54 is all set and needs nothing. Please enter DOC-014 into the ledger; it is a vendor invoice.",
+  "expect": "act"
+ },
+ {
+  "id": "V014~buried",
+  "base": "V014",
+  "domain": "d3",
+  "split": "dev",
+  "style": "buried",
+  "text": "I\u2019m wrapping up a few admin items before the end of the day. Please enter DOC-014 into the ledger; it is a vendor invoice. After that, we should be good for the afternoon.",
+  "expect": "act"
+ },
+ {
+  "id": "V015~casual",
+  "base": "V015",
+  "domain": "d3",
+  "split": "dev",
+  "style": "casual",
+  "text": "Hey, can you schedule the payment for invoice INV-015?",
+  "expect": "act"
+ },
+ {
+  "id": "V015~shorthand",
+  "base": "V015",
+  "domain": "d3",
+  "split": "dev",
+  "style": "shorthand",
+  "text": "Please schedule the payment for invoice 015.",
+  "expect": "act"
+ },
+ {
+  "id": "V015~distractor",
+  "base": "V015",
+  "domain": "d3",
+  "split": "dev",
+  "style": "distractor",
+  "text": "INV-55 is a different one that needs nothing; please schedule the payment for INV-015 only.",
+  "expect": "act"
+ },
+ {
+  "id": "V015~buried",
+  "base": "V015",
+  "domain": "d3",
+  "split": "dev",
+  "style": "buried",
+  "text": "I reviewed the payment queue this morning and everything else looks on track. Please schedule the payment for INV-015. We should be set for the rest of the invoices today.",
+  "expect": "act"
+ },
+ {
+  "id": "V016~casual",
+  "base": "V016",
+  "domain": "d3",
+  "split": "dev",
+  "style": "casual",
+  "text": "Hey, can you enter DOC-016 in the ledger?",
+  "expect": "act"
+ },
+ {
+  "id": "V016~shorthand",
+  "base": "V016",
+  "domain": "d3",
+  "split": "dev",
+  "style": "shorthand",
+  "text": "Please enter document 016 in the ledger.",
+  "expect": "act"
+ },
+ {
+  "id": "V016~distractor",
+  "base": "V016",
+  "domain": "d3",
+  "split": "dev",
+  "style": "distractor",
+  "text": "Please enter DOC-016 in the ledger; DOC-56 is a different document and needs nothing done.",
+  "expect": "act"
+ },
+ {
+  "id": "V016~buried",
+  "base": "V016",
+  "domain": "d3",
+  "split": "dev",
+  "style": "buried",
+  "text": "I\u2019m reviewing the incoming paperwork from the vendor now. Could you please enter the invoice from DOC-016 in the ledger when you have a moment? I\u2019ll keep moving through the rest of the queue after that. Thanks.",
+  "expect": "act"
+ },
+ {
+  "id": "V001~out0",
+  "base": "V001",
+  "domain": "d3",
+  "split": "dev",
+  "style": "out_of_scope",
+  "text": "What's the status of invoice INV-001?",
+  "expect": "handoff"
+ },
+ {
+  "id": "V001~out1",
+  "base": "V001",
+  "domain": "d3",
+  "split": "dev",
+  "style": "out_of_scope",
+  "text": "Cancel the payment scheduled for invoice INV-001.",
+  "expect": "handoff"
+ },
+ {
+  "id": "V001~out2",
+  "base": "V001",
+  "domain": "d3",
+  "split": "dev",
+  "style": "out_of_scope",
+  "text": "Please dispute invoice INV-001 with the vendor.",
+  "expect": "handoff"
+ },
+ {
+  "id": "V002~out3",
+  "base": "V002",
+  "domain": "d3",
+  "split": "dev",
+  "style": "out_of_scope",
+  "text": "Delete document DOC-002 from the ledger.",
+  "expect": "handoff"
+ },
+ {
+  "id": "V201~casual",
+  "base": "V201",
+  "domain": "d3",
+  "split": "test",
+  "style": "casual",
+  "text": "Can you schedule the payment for INV-201?",
+  "expect": "act"
+ },
+ {
+  "id": "V201~shorthand",
+  "base": "V201",
+  "domain": "d3",
+  "split": "test",
+  "style": "shorthand",
+  "text": "Please schedule the payment for invoice 201.",
+  "expect": "act"
+ },
+ {
+  "id": "V201~distractor",
+  "base": "V201",
+  "domain": "d3",
+  "split": "test",
+  "style": "distractor",
+  "text": "INV-241 is the other invoice and needs nothing, so please schedule the payment for INV-201 only.",
+  "expect": "act"
+ },
+ {
+  "id": "V201~buried",
+  "base": "V201",
+  "domain": "d3",
+  "split": "test",
+  "style": "buried",
+  "text": "We\u2019re wrapping up a few vendor items this afternoon. Please schedule the payment for INV-201. I\u2019ll review the rest of the queue after that. Thanks.",
+  "expect": "act"
+ },
+ {
+  "id": "V202~casual",
+  "base": "V202",
+  "domain": "d3",
+  "split": "test",
+  "style": "casual",
+  "text": "Hey, can you please enter DOC-202 in the ledger?",
+  "expect": "act"
+ },
+ {
+  "id": "V202~shorthand",
+  "base": "V202",
+  "domain": "d3",
+  "split": "test",
+  "style": "shorthand",
+  "text": "Please enter document 202 in the ledger.",
+  "expect": "act"
+ },
+ {
+  "id": "V202~distractor",
+  "base": "V202",
+  "domain": "d3",
+  "split": "test",
+  "style": "distractor",
+  "text": "Please enter DOC-202 in the ledger; DOC-242 is a different document and needs nothing done.",
+  "expect": "act"
+ },
+ {
+  "id": "V202~buried",
+  "base": "V202",
+  "domain": "d3",
+  "split": "test",
+  "style": "buried",
+  "text": "I\u2019m following up on a vendor invoice that just came in. When you have a moment, please enter DOC-202 in the ledger. Thanks for handling it. Let me know if you need anything else.",
+  "expect": "act"
+ },
+ {
+  "id": "V203~casual",
+  "base": "V203",
+  "domain": "d3",
+  "split": "test",
+  "style": "casual",
+  "text": "Hey, can you work out what we owe on INV-203 and when, then schedule the payment?",
+  "expect": "act"
+ },
+ {
+  "id": "V203~shorthand",
+  "base": "V203",
+  "domain": "d3",
+  "split": "test",
+  "style": "shorthand",
+  "text": "Can you work out what we owe on invoice 203 and when, then schedule the payment?",
+  "expect": "act"
+ },
+ {
+  "id": "V203~distractor",
+  "base": "V203",
+  "domain": "d3",
+  "split": "test",
+  "style": "distractor",
+  "text": "INV-243 is all sorted and needs nothing, but please work out what we owe on INV-203 and when, then schedule the payment for that one only.",
+  "expect": "act"
+ },
+ {
+  "id": "V203~buried",
+  "base": "V203",
+  "domain": "d3",
+  "split": "test",
+  "style": "buried",
+  "text": "I\u2019m wrapping up a few admin tasks this afternoon. Please work out what we owe on INV-203 and when, then schedule the payment. Let me know once it\u2019s done.",
+  "expect": "act"
+ },
+ {
+  "id": "V204",
+  "base": "V204",
+  "domain": "d3",
+  "split": "test",
+  "style": "question",
+  "text": "Which email should remittance advice for Kestrel Industrial Supply go to?",
+  "expect": "handoff"
+ },
+ {
+  "id": "V205~casual",
+  "base": "V205",
+  "domain": "d3",
+  "split": "test",
+  "style": "casual",
+  "text": "Can you set up the payment for INV-205 under the client's terms?",
+  "expect": "act"
+ },
+ {
+  "id": "V205~shorthand",
+  "base": "V205",
+  "domain": "d3",
+  "split": "test",
+  "style": "shorthand",
+  "text": "Can you set up payment for invoice 205 under the client's terms?",
+  "expect": "act"
+ },
+ {
+  "id": "V205~distractor",
+  "base": "V205",
+  "domain": "d3",
+  "split": "test",
+  "style": "distractor",
+  "text": "Please set up payment for INV-205 under the client's terms; INV-245 is a different invoice and needs nothing done to it.",
+  "expect": "act"
+ },
+ {
+  "id": "V205~buried",
+  "base": "V205",
+  "domain": "d3",
+  "split": "test",
+  "style": "buried",
+  "text": "I was reviewing the latest vendor notes this morning and wanted to make sure everything stays on track. Could you set up the payment for INV-205 under the client's terms? Once that is handled, we should be in good shape for the rest of the week. Thanks.",
+  "expect": "act"
+ },
+ {
+  "id": "V206~casual",
+  "base": "V206",
+  "domain": "d3",
+  "split": "test",
+  "style": "casual",
+  "text": "Hey, can you enter DOC-206 into the ledger? It\u2019s a vendor invoice.",
+  "expect": "act"
+ },
+ {
+  "id": "V206~shorthand",
+  "base": "V206",
+  "domain": "d3",
+  "split": "test",
+  "style": "shorthand",
+  "text": "Please enter document 206 into the ledger; it is a vendor invoice.",
+  "expect": "act"
+ },
+ {
+  "id": "V206~distractor",
+  "base": "V206",
+  "domain": "d3",
+  "split": "test",
+  "style": "distractor",
+  "text": "DOC-246 is nothing to do with this one; please ignore it. Enter DOC-206 into the ledger, since it is the vendor invoice that needs to be recorded.",
+  "expect": "act"
+ },
+ {
+  "id": "V206~buried",
+  "base": "V206",
+  "domain": "d3",
+  "split": "test",
+  "style": "buried",
+  "text": "I\u2019m cleaning up a few paperwork items this afternoon. When you get a chance, please enter DOC-206 into the ledger. It is a vendor invoice. Thanks.",
+  "expect": "act"
+ },
+ {
+  "id": "V207~casual",
+  "base": "V207",
+  "domain": "d3",
+  "split": "test",
+  "style": "casual",
+  "text": "Hey, can you schedule the payment for INV-207?",
+  "expect": "act"
+ },
+ {
+  "id": "V207~shorthand",
+  "base": "V207",
+  "domain": "d3",
+  "split": "test",
+  "style": "shorthand",
+  "text": "Please schedule the payment for invoice 207.",
+  "expect": "act"
+ },
+ {
+  "id": "V207~distractor",
+  "base": "V207",
+  "domain": "d3",
+  "split": "test",
+  "style": "distractor",
+  "text": "Please schedule the payment for INV-207; INV-247 is a different invoice and needs nothing.",
+  "expect": "act"
+ },
+ {
+  "id": "V207~buried",
+  "base": "V207",
+  "domain": "d3",
+  "split": "test",
+  "style": "buried",
+  "text": "I\u2019m wrapping up a few admin items this afternoon. When you have a moment, could you handle the payment scheduling? The invoice is INV-207. Thanks for taking care of it.",
+  "expect": "act"
+ },
+ {
+  "id": "V208~casual",
+  "base": "V208",
+  "domain": "d3",
+  "split": "test",
+  "style": "casual",
+  "text": "Hey, please enter DOC-208 in the ledger.",
+  "expect": "act"
+ },
+ {
+  "id": "V208~shorthand",
+  "base": "V208",
+  "domain": "d3",
+  "split": "test",
+  "style": "shorthand",
+  "text": "Please enter document 208 in the ledger.",
+  "expect": "act"
+ },
+ {
+  "id": "V208~distractor",
+  "base": "V208",
+  "domain": "d3",
+  "split": "test",
+  "style": "distractor",
+  "text": "Please enter DOC-208 in the ledger; DOC-248 is a different invoice and needs nothing.",
+  "expect": "act"
+ },
+ {
+  "id": "V208~buried",
+  "base": "V208",
+  "domain": "d3",
+  "split": "test",
+  "style": "buried",
+  "text": "We\u2019ve had a steady flow of vendor paperwork coming in this week, so I\u2019m trying to keep everything moving along. When you have a moment, please enter DOC-208 in the ledger. I\u2019ll keep sorting the rest of the incoming items and follow up if anything else comes through.",
+  "expect": "act"
+ },
+ {
+  "id": "V209~casual",
+  "base": "V209",
+  "domain": "d3",
+  "split": "test",
+  "style": "casual",
+  "text": "Hey, can you work out what we owe on INV-209 and when, then schedule the payment?",
+  "expect": "act"
+ },
+ {
+  "id": "V209~shorthand",
+  "base": "V209",
+  "domain": "d3",
+  "split": "test",
+  "style": "shorthand",
+  "text": "Please work out what we owe on invoice 209 and when, then schedule the payment.",
+  "expect": "act"
+ },
+ {
+  "id": "V209~distractor",
+  "base": "V209",
+  "domain": "d3",
+  "split": "test",
+  "style": "distractor",
+  "text": "Please handle INV-249 and INV-209 only as follows: INV-249 is a different one that needs nothing, and the one to act on is INV-209\u2014please work out what we owe on it and when, then schedule the payment.",
+  "expect": "act"
+ },
+ {
+  "id": "V209~buried",
+  "base": "V209",
+  "domain": "d3",
+  "split": "test",
+  "style": "buried",
+  "text": "We\u2019re wrapping up a few vendor items this week and I\u2019m\u6574\u7406ing the remaining AP tasks. Could you work out what we owe on INV-209 and when, then schedule the payment. Once that\u2019s done, send me a quick update so I can close the loop. Thanks.",
+  "expect": "act"
+ },
+ {
+  "id": "V210~casual",
+  "base": "V210",
+  "domain": "d3",
+  "split": "test",
+  "style": "casual",
+  "text": "Hey, please record the vendor invoice in DOC-210.",
+  "expect": "act"
+ },
+ {
+  "id": "V210~shorthand",
+  "base": "V210",
+  "domain": "d3",
+  "split": "test",
+  "style": "shorthand",
+  "text": "Please record the vendor invoice in document 210.",
+  "expect": "act"
+ },
+ {
+  "id": "V210~distractor",
+  "base": "V210",
+  "domain": "d3",
+  "split": "test",
+  "style": "distractor",
+  "text": "Please record the vendor invoice in DOC-210; DOC-250 is the other document and needs nothing done to it.",
+  "expect": "act"
+ },
+ {
+  "id": "V210~buried",
+  "base": "V210",
+  "domain": "d3",
+  "split": "test",
+  "style": "buried",
+  "text": "I was reviewing the latest batch of paperwork this morning. When you have a moment, please record the vendor invoice in DOC-210. After that, just let me know if anything looks off. Thanks.",
+  "expect": "act"
+ },
+ {
+  "id": "V211~casual",
+  "base": "V211",
+  "domain": "d3",
+  "split": "test",
+  "style": "casual",
+  "text": "Hey, can you set up payment for INV-211 under the client's terms?",
+  "expect": "act"
+ },
+ {
+  "id": "V211~shorthand",
+  "base": "V211",
+  "domain": "d3",
+  "split": "test",
+  "style": "shorthand",
+  "text": "Please set up payment for invoice 211 under the client's terms.",
+  "expect": "act"
+ },
+ {
+  "id": "V211~distractor",
+  "base": "V211",
+  "domain": "d3",
+  "split": "test",
+  "style": "distractor",
+  "text": "Please set up payment for INV-211 under the client's terms; INV-251 is a different invoice and needs nothing.",
+  "expect": "act"
+ },
+ {
+  "id": "V211~buried",
+  "base": "V211",
+  "domain": "d3",
+  "split": "test",
+  "style": "buried",
+  "text": "I\u2019m wrapping up a few items from the client side today. Please take care of the payment setup for INV-211 under the client's terms. Once that\u2019s handled, we should be all set on this batch. Thanks.",
+  "expect": "act"
+ },
+ {
+  "id": "V212",
+  "base": "V212",
+  "domain": "d3",
+  "split": "test",
+  "style": "question",
+  "text": "Kestrel Industrial Supply asked where we send remittance advice. Which email do they use for it?",
+  "expect": "handoff"
+ },
+ {
+  "id": "V213~casual",
+  "base": "V213",
+  "domain": "d3",
+  "split": "test",
+  "style": "casual",
+  "text": "Hey, can you schedule the payment for INV-213?",
+  "expect": "act"
+ },
+ {
+  "id": "V213~shorthand",
+  "base": "V213",
+  "domain": "d3",
+  "split": "test",
+  "style": "shorthand",
+  "text": "Please schedule payment for invoice 213.",
+  "expect": "act"
+ },
+ {
+  "id": "V213~distractor",
+  "base": "V213",
+  "domain": "d3",
+  "split": "test",
+  "style": "distractor",
+  "text": "Please schedule the payment for INV-213; INV-253 is a different invoice and needs nothing done.",
+  "expect": "act"
+ },
+ {
+  "id": "V213~buried",
+  "base": "V213",
+  "domain": "d3",
+  "split": "test",
+  "style": "buried",
+  "text": "I\u2019m wrapping up a few vendor items this afternoon. When you have a moment, please schedule the payment for INV-213. I\u2019ve already checked the rest of the list, so that should be the only action needed for now.",
+  "expect": "act"
+ },
+ {
+  "id": "V214~casual",
+  "base": "V214",
+  "domain": "d3",
+  "split": "test",
+  "style": "casual",
+  "text": "Hey \u2014 please enter DOC-214 into the ledger.",
+  "expect": "act"
+ },
+ {
+  "id": "V214~shorthand",
+  "base": "V214",
+  "domain": "d3",
+  "split": "test",
+  "style": "shorthand",
+  "text": "Please enter document 214 into the ledger.",
+  "expect": "act"
+ },
+ {
+  "id": "V214~distractor",
+  "base": "V214",
+  "domain": "d3",
+  "split": "test",
+  "style": "distractor",
+  "text": "Please enter DOC-214 into the ledger; DOC-254 is a different invoice and needs nothing.",
+  "expect": "act"
+ },
+ {
+  "id": "V214~buried",
+  "base": "V214",
+  "domain": "d3",
+  "split": "test",
+  "style": "buried",
+  "text": "Thanks for taking care of this when you have a moment. We\u2019ve got a vendor invoice that came in and should be recorded with the rest of our accounting items. Please enter DOC-214 in the ledger. Let me know if anything looks off after you process it.",
+  "expect": "act"
+ },
+ {
+  "id": "V215~casual",
+  "base": "V215",
+  "domain": "d3",
+  "split": "test",
+  "style": "casual",
+  "text": "Hey, can you work out what we owe on INV-215 and when, then schedule the payment?",
+  "expect": "act"
+ },
+ {
+  "id": "V215~shorthand",
+  "base": "V215",
+  "domain": "d3",
+  "split": "test",
+  "style": "shorthand",
+  "text": "Please work out what we owe on invoice 215 and when, then schedule the payment.",
+  "expect": "act"
+ },
+ {
+  "id": "V215~distractor",
+  "base": "V215",
+  "domain": "d3",
+  "split": "test",
+  "style": "distractor",
+  "text": "Please work out what we owe on INV-215 and when, then schedule the payment; INV-255 is a different invoice and needs no action.",
+  "expect": "act"
+ },
+ {
+  "id": "V215~buried",
+  "base": "V215",
+  "domain": "d3",
+  "split": "test",
+  "style": "buried",
+  "text": "We\u2019re cleaning up the payment queue this afternoon. Could you please work out what we owe on INV-215 and when, then schedule the payment? Once that\u2019s set, we should be all caught up for the week.",
+  "expect": "act"
+ },
+ {
+  "id": "V216~casual",
+  "base": "V216",
+  "domain": "d3",
+  "split": "test",
+  "style": "casual",
+  "text": "Hey, can you record the vendor invoice in DOC-216?",
+  "expect": "act"
+ },
+ {
+  "id": "V216~shorthand",
+  "base": "V216",
+  "domain": "d3",
+  "split": "test",
+  "style": "shorthand",
+  "text": "Please record the vendor invoice in document 216.",
+  "expect": "act"
+ },
+ {
+  "id": "V216~distractor",
+  "base": "V216",
+  "domain": "d3",
+  "split": "test",
+  "style": "distractor",
+  "text": "Please record the vendor invoice in DOC-216; DOC-256 is a different document and needs nothing done to it.",
+  "expect": "act"
+ },
+ {
+  "id": "V216~buried",
+  "base": "V216",
+  "domain": "d3",
+  "split": "test",
+  "style": "buried",
+  "text": "I\u2019m wrapping up a few document items this afternoon. Please record the vendor invoice in DOC-216. The other file, DOC-256, is a separate item and needs nothing further from you.",
+  "expect": "act"
+ },
+ {
+  "id": "V201~out0",
+  "base": "V201",
+  "domain": "d3",
+  "split": "test",
+  "style": "out_of_scope",
+  "text": "Has invoice INV-201 been paid yet?",
+  "expect": "handoff"
+ },
+ {
+  "id": "V201~out1",
+  "base": "V201",
+  "domain": "d3",
+  "split": "test",
+  "style": "out_of_scope",
+  "text": "Put invoice INV-201 on hold until further notice.",
+  "expect": "handoff"
+ },
+ {
+  "id": "V201~out2",
+  "base": "V201",
+  "domain": "d3",
+  "split": "test",
+  "style": "out_of_scope",
+  "text": "Send the vendor a reminder about invoice INV-201.",
+  "expect": "handoff"
+ },
+ {
+  "id": "V202~out3",
+  "base": "V202",
+  "domain": "d3",
+  "split": "test",
+  "style": "out_of_scope",
+  "text": "Reject document DOC-202, it is a duplicate.",
+  "expect": "handoff"
+ }
+]

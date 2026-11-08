@@ -15,6 +15,8 @@ archives persist across process restarts. SPEC section 5.4.
 from __future__ import annotations
 
 import json
+import math
+from collections import Counter
 import random
 import sqlite3
 from dataclasses import asdict, dataclass
@@ -679,6 +681,7 @@ class SQLiteArchive:
         strategy: SamplingStrategy,
         kind: ArtifactKind | str | None = None,
         artifact_id: str | None = None,
+        rng: random.Random | None = None,
     ) -> Variant:
         """Draw one variant from the archive, optionally within a pool.
 
@@ -705,20 +708,28 @@ class SQLiteArchive:
                 return random.choice([v for v, _ in scored])
             return random.choices([v for v, _ in scored], weights=[s for _, s in scored])[0]
         if strategy == SamplingStrategy.QUALITY_DIVERSITY:
-            # Toy QD: pick a high-score variant, then prefer one whose content
-            # hash differs from the most recent N. Production QD uses behavior
-            # characterization functions per artifact kind (SPEC section 5.3).
-            top = sorted(
-                [v for v in variants if v.measurement and v.measurement.score is not None],
-                key=lambda v: v.measurement.score,
-                reverse=True,
+            # A variant is drawn in proportion to how good it is, discounted by how many children it has had and
+            # by how many others behave as it does (measurement.metadata["behavior"], such as the cases it failed).
+            scored = sorted(
+                (v for v in variants if v.measurement and v.measurement.score is not None),
+                key=lambda v: (v.artifact.id, v.artifact.version),
             )
-            seen_hashes: set[str] = set()
-            for v in top:
-                if v.artifact.content_hash not in seen_hashes:
-                    return v
-                seen_hashes.add(v.artifact.content_hash)
-            return top[0] if top else random.choice(variants)
+            if not scored:
+                return (rng or random).choice(variants)
+            children = Counter(v.artifact.parent_id for v in scored if v.artifact.parent_id is not None)
+
+            def behavior(v: Variant) -> str | None:
+                seen = v.measurement.metadata.get("behavior")
+                return None if seen is None else json.dumps(seen, sort_keys=True)
+
+            families = Counter(behavior(v) for v in scored)
+
+            def weight(v: Variant) -> float:
+                quality = 1.0 / (1.0 + math.exp(-10.0 * (v.measurement.score - 0.5)))
+                family = behavior(v)
+                return quality / (1 + children[v.artifact.ref]) / (families[family] if family is not None else 1)
+
+            return (rng or random).choices(scored, weights=[weight(v) for v in scored])[0]
         raise NotImplementedError(f"Sampling strategy '{strategy}' not implemented")
 
     async def lineage(self, artifact: Artifact) -> list[Artifact]:

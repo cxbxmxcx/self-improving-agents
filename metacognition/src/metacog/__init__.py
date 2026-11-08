@@ -9,8 +9,8 @@ and gate) is added as hooks around that loop, never as a change to it.
 See HARNESS_PLAN.md for the design and milestones.
 """
 
-from metacog.agent import Agent
-from metacog.exceptions import (
+from helix.metacognition.agent import Agent
+from helix.metacognition.exceptions import (
     AgentsException,
     InputGuardrailTripwireTriggered,
     MaxTurnsExceeded,
@@ -18,7 +18,7 @@ from metacog.exceptions import (
     OutputGuardrailTripwireTriggered,
     UserError,
 )
-from metacog.guardrail import (
+from helix.metacognition.guardrail import (
     GuardrailFunctionOutput,
     InputGuardrail,
     InputGuardrailResult,
@@ -27,17 +27,17 @@ from metacog.guardrail import (
     input_guardrail,
     output_guardrail,
 )
-from metacog.items import ItemHelpers, MessageOutputItem, ModelResponse, ToolCallItem, ToolCallOutputItem
-from metacog.lifecycle import AgentHooks, RunHooks
-from metacog.model_settings import ModelSettings, Reasoning
-from metacog.recording import Recording
-from metacog.result import RunResult
-from metacog.run import DEFAULT_MAX_TURNS, DEFAULT_MODEL, RunConfig, Runner
-from metacog.run_context import RunContextWrapper, Usage
-from metacog.session import Session, SQLiteSession
-from metacog.stream import AgentUpdatedStreamEvent, RunItemStreamEvent, RunResultStreaming
-from metacog.tool import FunctionTool, function_tool
-from metacog.tracing import enable_console_export, get_current_trace, trace
+from helix.metacognition.items import ItemHelpers, MessageOutputItem, ModelResponse, ToolCallItem, ToolCallOutputItem
+from helix.metacognition.lifecycle import AgentHooks, RunHooks
+from helix.metacognition.model_settings import ModelSettings, Reasoning
+from helix.metacognition.recording import Recording
+from helix.metacognition.result import RunResult
+from helix.metacognition.run import DEFAULT_MAX_TURNS, DEFAULT_MODEL, RunConfig, Runner
+from helix.metacognition.run_context import RunContextWrapper, Usage
+from helix.metacognition.session import Session, SQLiteSession
+from helix.metacognition.stream import AgentUpdatedStreamEvent, RunItemStreamEvent, RunResultStreaming
+from helix.metacognition.tool import FunctionTool, function_tool
+from helix.metacognition.tracing import enable_console_export, get_current_trace, trace
 
 __version__ = "0.0.1"
 

@@ -11,16 +11,16 @@ import httpx
 import pytest
 from basket import CASES, PRICES, V2, agent, make_meta
 from helix.memory.learning_mechanisms import Episode
+from helix.metacognition import Controller, Metacognition, MetaStore, Router, Verdict
+from helix.metacognition.discover import discover, draft_stub, skeleton
+from helix.metacognition.events import publish, webhook
+from helix.metacognition.offline import Case, calibrate_deployment, load_cases, save_cases
 from helix.observability.bus import get_bus
 
 from examples.expenses.agent import REFERENCE, reimbursable_total
 from examples.expenses.agent import assistant as expense_assistant
 from examples.expenses.world import ExpenseWorld, task_by_id, task_set
 from metacog import Agent, Recording, cli
-from metacog.discover import discover, draft_stub, skeleton
-from metacog.meta import Controller, Metacognition, MetaStore, Router, Verdict
-from metacog.meta.events import publish, webhook
-from metacog.offline import Case, calibrate_deployment, load_cases, save_cases
 from metacog.service import create_app
 from metacog.testing import RespondingModel, ScriptedModel, call, text
 
@@ -266,7 +266,7 @@ def write_app(tmp_path, name: str, *, verifier: bool) -> str:
     options = "" if verifier else "verifier=None, "
     (tmp_path / f"{name}.py").write_text(
         "from basket import agent, make_meta\n"
-        "from metacog.meta import Controller\n\n"
+        "from helix.metacognition import Controller\n\n"
         f"shop = agent(make_meta({options}controller=Controller(), store={str(tmp_path / 'cli.meta')!r}))\n\n\n"
         "def world(data):\n    return data\n", encoding="utf-8")
     return f"{name}:shop"

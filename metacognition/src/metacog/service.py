@@ -43,13 +43,12 @@ from typing import Any
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import HTMLResponse, StreamingResponse
+from helix.metacognition.exceptions import AgentsException, UserError
+from helix.metacognition.model_settings import DEFAULT_MODEL
+from helix.metacognition.recording import MissingReply
+from helix.metacognition.report import summarize
+from helix.metacognition.run import RunConfig, Runner
 from pydantic import BaseModel
-
-from metacog.exceptions import AgentsException, UserError
-from metacog.meta.report import summarize
-from metacog.model_settings import DEFAULT_MODEL
-from metacog.recording import MissingReply
-from metacog.run import RunConfig, Runner
 
 
 class RunRequest(BaseModel):

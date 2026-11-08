@@ -11,10 +11,10 @@ from pathlib import Path
 from typing import Any
 
 from helix.memory.code_skills import skill_tool
+from helix.metacognition import procedure
 
 from examples.invoices.world import InvoiceWorld, task_by_id
 from metacog import Agent, RunContextWrapper, function_tool
-from metacog.meta import procedure
 
 MODEL = "gpt-5.4-mini"
 PROMPT = """You work accounts payable for several client companies. Each request is one of three kinds of work:
@@ -116,12 +116,26 @@ def amount_payable(invoice_id: str) -> dict:
     ...
 
 
+@procedure(api=[read_invoice, read_purchase_order, read_client_terms], name="amount_payable")
+def amount_payable_to_act_on(invoice_id: str) -> dict:
+    """Work out what to pay on an entered invoice, and when, under its client's accounts-payable terms. It reads
+    the invoice, its purchase order and the client's terms itself, including conventions the client never wrote
+    down: call it first and pass its answer to schedule_payment, without working the amount out again.
+
+    Returns: schedule_payment's arguments: {"invoice_id": str, "amount_usd": float, "pay_on": "YYYY-MM-DD"}.
+    """
+    ...
+
+
 PROCEDURES = [parse_invoice, amount_payable]
+# D4: the payable's contract in the tools' terms, and the same contract telling the agent to act on its answer
+# (D2's fix for an agent that overrules a right procedure). Same name, signature and return.
+CONTRACTS = {"tool": PROCEDURES, "act": [parse_invoice, amount_payable_to_act_on]}
 KIND_OF = {"parse_invoice": "intake", "amount_payable": "payment"}  # the work each procedure does
 
 
-def ap_desk(**kwargs: Any) -> Agent:
-    return Agent(name="Accounts payable desk", instructions=PROMPT, model=MODEL,
+def ap_desk(model: str = MODEL, **kwargs: Any) -> Agent:
+    return Agent(name="Accounts payable desk", instructions=PROMPT, model=model,
                  tools=[*READS, record_invoice, schedule_payment], **kwargs)
 
 

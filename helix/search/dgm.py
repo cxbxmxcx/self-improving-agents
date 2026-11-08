@@ -29,8 +29,9 @@ the mutator change; the archive-evolutionary loop does not.
 
 from __future__ import annotations
 
+import random
 from collections.abc import AsyncIterator, Awaitable, Callable
-from typing import TYPE_CHECKING, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 from helix.artifact import Artifact
 from helix.llm_call import acompletion as helix_acompletion
@@ -46,6 +47,7 @@ from helix.search.base import (
     SearchKind,
     Variant,
 )
+from helix.search.gepa import _strip_outer_fence
 from helix.signal import Cost, Signal
 
 if TYPE_CHECKING:
@@ -69,7 +71,7 @@ class Mutator(Protocol):
         seed: Artifact,
         last_feedback: str | None,
         signal: Signal,
-    ) -> tuple[str | dict, Cost]: ...
+    ) -> tuple[str | dict | None, Cost]: ...
 
 
 DEFAULT_DGM_MUTATION_PROMPT = """You are improving an artifact under archive-evolutionary search.
@@ -125,6 +127,66 @@ class BlindLLMMutator:
         return new_content, cost
 
 
+class ReflectiveMutator:
+    """Rewrite a sampled artifact from the feedback on it, and check the result before it is measured.
+
+    Each proposal is numbered in its prompt: the archive can hand back a parent it has handed back before, and
+    the same prompt twice would draw one reply from a recording. A proposal `validate` rejects goes back to the
+    proposer with the reason, up to `max_invalid` times, and is then dropped.
+    """
+
+    def __init__(
+        self,
+        model: str,
+        prompt: str = DEFAULT_DGM_MUTATION_PROMPT,
+        *,
+        params: dict[str, Any] | None = None,
+        validate: Callable[[str], str | None] | None = None,
+        max_invalid: int = 2,
+    ) -> None:
+        self.model = model
+        self.prompt = prompt
+        self.params = dict(params or {})
+        self.validate = validate
+        self.max_invalid = max_invalid
+        self.proposals = 0
+        self.discarded: list[dict[str, str]] = []
+
+    async def mutate(
+        self,
+        seed: Artifact,
+        last_feedback: str | None,
+        signal: Signal,
+    ) -> tuple[str | None, Cost]:
+        self.proposals += 1
+        seed_text = seed.content if isinstance(seed.content, str) else str(seed.content)
+        system = (f"{self.prompt}\n\nThis is proposal {self.proposals} of the search. Other proposals may start "
+                  "from the same parent, so take your own line on the feedback.")
+        user_prompt = (f"Parent candidate:\n---\n{seed_text}\n---\n\n"
+                       f"Reflective feedback from its most recent measurement: {last_feedback or 'none'}\n\n"
+                       "Produce a single improved variant.")
+        tokens, reason = 0, None
+        for _ in range(1 + (self.max_invalid if self.validate else 0)):
+            message = user_prompt if reason is None else (
+                f"{user_prompt}\n\nYour previous proposal was rejected: {reason}\nCorrect it and answer again.")
+            response = await helix_acompletion(
+                model=self.model,
+                messages=[{"role": "system", "content": system}, {"role": "user", "content": message}],
+                **self.params,
+            )
+            usage = getattr(response, "usage", None)
+            tokens += getattr(usage, "total_tokens", 0) if usage else 0
+            content = (response.choices[0].message.content or "").strip()
+            if self.validate is None:
+                return content, Cost(tokens=tokens)
+            content = _strip_outer_fence(content)
+            reason = self.validate(content)
+            if reason is None:
+                return content, Cost(tokens=tokens)
+            self.discarded.append({"reason": reason, "excerpt": content[:200]})
+        return None, Cost(tokens=tokens)
+
+
 class DGMSearch:
     """Archive-evolutionary search with a pluggable mutator. SPEC section 4.2.
 
@@ -152,11 +214,21 @@ class DGMSearch:
         rounds: int = 1,
         sampling_strategy: "SamplingStrategy | None" = None,
         bus: EventBus | None = None,
+        evaluator: Callable[[Artifact, Any], Awaitable[Any]] | None = None,
+        rng: random.Random | None = None,
     ) -> None:
         self.mutator = mutator or BlindLLMMutator()
         self.rounds = rounds
         self._sampling_strategy = sampling_strategy
+        # With an evaluator the search measures the seed and every candidate and records them, as GEPA does.
+        self.evaluator = evaluator
+        self.rng = rng
         self.bus = bus or get_bus()
+
+    @property
+    def discarded(self) -> list[dict[str, str]]:
+        """Proposals validation rejected, when the mutator keeps them."""
+        return getattr(self.mutator, "discarded", [])
 
     @property
     def kind(self) -> SearchKind:
@@ -182,7 +254,8 @@ class DGMSearch:
 
         strategy = self._sampling_strategy or SamplingStrategy.QUALITY_DIVERSITY
         try:
-            variant = await archive.sample(strategy)
+            pool = {"artifact_id": fallback.id, "rng": self.rng} if self.evaluator is not None else {}
+            variant = await archive.sample(strategy, **pool)
             return variant.artifact
         except (ValueError, NotImplementedError):
             # Empty archive, or strategy unsupported: fall back to the seed.
@@ -224,6 +297,11 @@ class DGMSearch:
         winner_version = seed.version
 
         try:
+            if self.evaluator is not None and not await archive.best(k=1, artifact_id=seed.id):
+                # A search resumed on a kept archive already has its seed.
+                measurement = await self.evaluator(seed, [])
+                await archive.record(Variant(artifact=seed, parent=seed, search_method=self.kind.value,
+                                             measurement=measurement), measurement)
             for round_idx in range(self.rounds):
                 if budget.exhausted():
                     break
@@ -238,6 +316,8 @@ class DGMSearch:
                 )
                 budget.charge(gen_cost)
                 total_cost_tokens += gen_cost.tokens
+                if new_content is None:
+                    continue  # every proposal failed validation
 
                 # 3. Version + lineage. The candidate's parent is the *sampled*
                 #    seed, not necessarily the propose() seed — that's the
@@ -274,6 +354,11 @@ class DGMSearch:
                     search_method=self.kind.value,
                     metadata={"round": round_idx, "sampled_from_version": sampled.version},
                 )
+                if self.evaluator is not None:
+                    measurement = await self.evaluator(candidate_artifact, [])
+                    variant.measurement = measurement
+                    budget.charge(measurement.cost)
+                    await archive.record(variant, measurement)
                 budget.saw_candidate()
                 candidates_yielded += 1
                 yield variant

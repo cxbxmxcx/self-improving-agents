@@ -7,9 +7,8 @@ import json
 from types import SimpleNamespace
 
 import pytest
-
-from metacog import recording
-from metacog.recording import MissingReply, Recording, call_key, restore_seconds, served_seconds
+from helix.metacognition import recording
+from helix.metacognition.recording import MissingReply, Recording, call_key, restore_seconds, served_seconds
 
 CALL = {
     "model": "gpt-5.4-mini",

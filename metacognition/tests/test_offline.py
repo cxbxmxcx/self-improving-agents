@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from basket import CASES, V1, V2, agent, make_meta, practice, serve, uses, verifier
 from helix.eval.effort import EffortCell, EffortSweep, RunRecord
+from helix.metacognition import SOLID, Controller
+from helix.metacognition.offline import Case, Floors, calibrate, practice_evaluator
 
 from metacog import cli
-from metacog.meta import SOLID, Controller
-from metacog.offline import Case, Floors, calibrate, practice_evaluator
 from metacog.testing import ScriptedModel, text
 
 

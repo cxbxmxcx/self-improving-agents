@@ -7,10 +7,10 @@ from pathlib import Path
 from typing import Any
 
 from helix.memory.code_skills import skill_tool
+from helix.metacognition import procedure
 
 from examples.expenses.world import COMPANY, EMPLOYEE, ExpenseWorld, task_by_id
 from metacog import Agent, RunContextWrapper, function_tool
-from metacog.meta import procedure
 
 MODEL = "gpt-5.4-mini"
 PROMPT = f"""You are {EMPLOYEE}'s travel expense assistant at {COMPANY}. File the user's expense
@@ -47,8 +47,8 @@ def reimbursable_total(trip_id: str) -> dict:
     ...
 
 
-def assistant(**kwargs: Any) -> Agent:
-    return Agent(name="Jordan's expense assistant", instructions=PROMPT, model=MODEL,
+def assistant(model: str = MODEL, **kwargs: Any) -> Agent:
+    return Agent(name="Jordan's expense assistant", instructions=PROMPT, model=model,
                  tools=[read_trip, read_policy, file_claim], **kwargs)
 
 

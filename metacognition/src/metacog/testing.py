@@ -15,7 +15,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import Any
 
-from metacog import recording
+from helix.metacognition import recording
 
 
 @dataclass

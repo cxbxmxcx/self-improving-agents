@@ -26,17 +26,7 @@ from basket import (
 from helix.memory.code_skills import skill_tool
 from helix.memory.learning_mechanisms import Episode, Writer
 from helix.memory.mechanism_runtime import MechanismBudget, UnsafeMechanism, check_mechanism
-
-from examples.expenses import study as expense_study
-from metacog import Recording
-from metacog.design import (
-    approve_mechanism,
-    design_learners,
-    install_mechanism,
-    ranked_mechanisms,
-    register_mechanism,
-)
-from metacog.meta import (
+from helix.metacognition import (
     CALENDAR,
     GENERIC,
     SEEDS,
@@ -46,8 +36,18 @@ from metacog.meta import (
     SourceLearner,
     seed_source,
 )
-from metacog.meta.mechanisms import resolve_mechanism
-from metacog.meta.sources import CONTROL, PROMPT_FIELDS, SEEDS_DIR, prompt_constants
+from helix.metacognition.design import (
+    approve_mechanism,
+    design_learners,
+    install_mechanism,
+    ranked_mechanisms,
+    register_mechanism,
+)
+from helix.metacognition.mechanisms import resolve_mechanism
+from helix.metacognition.sources import CONTROL, PROMPT_FIELDS, SEEDS_DIR, prompt_constants
+
+from examples.expenses import study as expense_study
+from metacog import Recording
 from metacog.testing import RespondingModel, ScriptedModel, call, text
 
 CHAPTER_7 = Path(__file__).parents[2] / "chapters" / "ch07" / "mechanisms"

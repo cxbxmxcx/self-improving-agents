@@ -32,14 +32,10 @@ from chapters.ch06.assistant.harness import (
     run_task,
 )
 from chapters.ch06.assistant.learning import CONTRACT, act
-from chapters.ch06.assistant.online import (
-    Controller,
-    Detector,
-    Gate,
-    Recorder,
-)
+from chapters.ch06.assistant.online import recorder as make_recorder
 from chapters.ch06.assistant.recording import Recording
 from helix.eval.effort import RunRecord
+from helix.metacognition import Controller, Detector, Gate
 from helix.memory.learning_mechanisms import MECHANISMS, Episode, Writer
 from helix.signals.cost import call_dollars
 
@@ -70,7 +66,7 @@ def log_run(log, n, task, trusted, effort, solved, reason, trajectory):
 
 
 def log_learning(log, kept, episodes, learned, writer, gate_result):
-    accepted, total, passed = gate_result
+    accepted, total, passed = gate_result.accepted, gate_result.total, gate_result.passed
     log[-1].update(event=f"{kept} relearned from {len(episodes)} runs; gate {accepted}/{total}",
                    writer_calls=learned.writer_calls,
                    learning_dollars=round(sum(call_dollars(WRITER["model"], u, PRICES) or 0.0
@@ -104,10 +100,10 @@ async def main(args: argparse.Namespace) -> None:
     memory = await install(source, kept)
     trusted = True
 
-    controller = Controller.from_floors(FLOORS)
+    controller = Controller.from_sweeps(FLOORS, memory="bootstrapped_memory", no_memory="no_memory")
     detector = Detector()
-    gate = Gate(generator_drift.task_set("gate"))
-    recorder = Recorder()
+    gate = Gate(cases=[task["id"] for task in generator_drift.task_set("gate")])
+    recorder = make_recorder()
     print(
         f"Controller: {controller.table['memory']} with trusted memory,"
         f" {controller.table['no_memory']} without"
@@ -124,7 +120,7 @@ async def main(args: argparse.Namespace) -> None:
             if recording.spent(PRICES) > args.budget:
                 print("Budget spent; the stream stops here.")
                 break
-            effort = controller.effort(trusted)
+            effort = controller.effort(trusted=trusted)
             solved, reason, trajectory = await run_task(
                 task, effort, memory=memory if trusted else None
             )
@@ -157,9 +153,9 @@ async def main(args: argparse.Namespace) -> None:
                 learned = await learner.learn(
                     episodes, act, writer, CONTRACT
                 )
-                result = await gate.check(learned.source)
+                result = await gate.check(learned.source, act, gate.cases)
                 log_learning(log, kept, episodes, learned, writer, result)
-                if result[2]:
+                if result.passed:
                     memory = await install(learned.source, kept)
                     source, trusted = learned.source, True
                     detector.reset()

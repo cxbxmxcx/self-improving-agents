@@ -8,6 +8,7 @@ import re
 from pathlib import Path
 
 import pytest
+from helix.metacognition.offline import Floors
 
 from examples.refunds import study
 from examples.refunds.agent import (
@@ -31,7 +32,6 @@ from examples.refunds.world import (
     task_set,
 )
 from metacog import Recording
-from metacog.offline import Floors
 from metacog.testing import RespondingModel, call, text
 
 

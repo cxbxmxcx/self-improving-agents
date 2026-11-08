@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from metacog.retrieval import embed
+from helix.metacognition.lexical import embed
 
 TEXTS = [
     "Book a 45-minute hiring debrief with Ana Silva and Omar Haddad this week, Wednesday or Thursday.",

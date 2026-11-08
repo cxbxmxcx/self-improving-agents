@@ -7,10 +7,10 @@ from pathlib import Path
 from typing import Any, Literal
 
 from helix.memory.code_skills import skill_tool
+from helix.metacognition import procedure
 
 from examples.refunds.world import STORE, ReturnsWorld, task_by_id
 from metacog import Agent, RunContextWrapper, function_tool
-from metacog.meta import procedure
 
 MODEL = "gpt-5.4-mini"
 PROMPT = f"""You work the returns desk at {STORE}. Process the return the user names with the tools: read

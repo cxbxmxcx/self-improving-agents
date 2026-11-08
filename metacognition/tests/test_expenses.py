@@ -7,11 +7,11 @@ import re
 from pathlib import Path
 
 import pytest
+from helix.metacognition.offline import Floors
 
 from examples.expenses import study
 from examples.expenses.agent import REFERENCE, practice, reimbursable_total
 from examples.expenses.world import DIAGNOSES, ExpenseWorld, _rules_that_matter, reimbursable, task_set
-from metacog.offline import Floors
 
 SMOKE = Path(__file__).parents[1] / "examples" / "expenses" / "recorded" / "smoke.jsonl"
 # Trip-start conversion always: the procedure as it stood before the policy change.

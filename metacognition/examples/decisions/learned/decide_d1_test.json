@@ -1,0 +1,730 @@
+{
+  "domain": "d1",
+  "split": "test",
+  "requests": 68,
+  "handled": 64,
+  "right": 64,
+  "handoffs": 4,
+  "dollars_per_request": 2.2507676470588238e-05,
+  "seconds_per_request": 0.07325441176470589,
+  "jev_calls": 68,
+  "rows": [
+    {
+      "case_id": "E201~casual",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 497,
+      "dollars": 2.0874000000000004e-05,
+      "seconds": 0.0731
+    },
+    {
+      "case_id": "E201~shorthand",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 520,
+      "dollars": 2.184e-05,
+      "seconds": 0.0733
+    },
+    {
+      "case_id": "E201~distractor",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 564,
+      "dollars": 2.3688e-05,
+      "seconds": 0.0638
+    },
+    {
+      "case_id": "E201~buried",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 561,
+      "dollars": 2.3562000000000002e-05,
+      "seconds": 0.069
+    },
+    {
+      "case_id": "E202~casual",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 523,
+      "dollars": 2.1966e-05,
+      "seconds": 0.0663
+    },
+    {
+      "case_id": "E202~shorthand",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 520,
+      "dollars": 2.184e-05,
+      "seconds": 0.0792
+    },
+    {
+      "case_id": "E202~distractor",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 564,
+      "dollars": 2.3688e-05,
+      "seconds": 0.0647
+    },
+    {
+      "case_id": "E202~buried",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 548,
+      "dollars": 2.3016e-05,
+      "seconds": 0.0711
+    },
+    {
+      "case_id": "E203~casual",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 497,
+      "dollars": 2.0874000000000004e-05,
+      "seconds": 0.0597
+    },
+    {
+      "case_id": "E203~shorthand",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 521,
+      "dollars": 2.1882e-05,
+      "seconds": 0.079
+    },
+    {
+      "case_id": "E203~distractor",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 575,
+      "dollars": 2.415e-05,
+      "seconds": 0.0847
+    },
+    {
+      "case_id": "E203~buried",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 556,
+      "dollars": 2.3352e-05,
+      "seconds": 0.0659
+    },
+    {
+      "case_id": "E204~casual",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 525,
+      "dollars": 2.205e-05,
+      "seconds": 0.0666
+    },
+    {
+      "case_id": "E204~shorthand",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 520,
+      "dollars": 2.184e-05,
+      "seconds": 0.0622
+    },
+    {
+      "case_id": "E204~distractor",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 568,
+      "dollars": 2.3856000000000003e-05,
+      "seconds": 0.0641
+    },
+    {
+      "case_id": "E204~buried",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 560,
+      "dollars": 2.3520000000000002e-05,
+      "seconds": 0.0885
+    },
+    {
+      "case_id": "E205~casual",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 524,
+      "dollars": 2.2008000000000003e-05,
+      "seconds": 0.0653
+    },
+    {
+      "case_id": "E205~shorthand",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 520,
+      "dollars": 2.184e-05,
+      "seconds": 0.0639
+    },
+    {
+      "case_id": "E205~distractor",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 563,
+      "dollars": 2.3646e-05,
+      "seconds": 0.0675
+    },
+    {
+      "case_id": "E205~buried",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 534,
+      "dollars": 2.2428e-05,
+      "seconds": 0.0658
+    },
+    {
+      "case_id": "E206~casual",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 522,
+      "dollars": 2.1924000000000002e-05,
+      "seconds": 0.1039
+    },
+    {
+      "case_id": "E206~shorthand",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 520,
+      "dollars": 2.184e-05,
+      "seconds": 0.0663
+    },
+    {
+      "case_id": "E206~distractor",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 564,
+      "dollars": 2.3688e-05,
+      "seconds": 0.0715
+    },
+    {
+      "case_id": "E206~buried",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 559,
+      "dollars": 2.3478e-05,
+      "seconds": 0.1213
+    },
+    {
+      "case_id": "E207~casual",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 522,
+      "dollars": 2.1924000000000002e-05,
+      "seconds": 0.0674
+    },
+    {
+      "case_id": "E207~shorthand",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 520,
+      "dollars": 2.184e-05,
+      "seconds": 0.072
+    },
+    {
+      "case_id": "E207~distractor",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 563,
+      "dollars": 2.3646e-05,
+      "seconds": 0.0682
+    },
+    {
+      "case_id": "E207~buried",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 554,
+      "dollars": 2.3268e-05,
+      "seconds": 0.062
+    },
+    {
+      "case_id": "E208~casual",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 524,
+      "dollars": 2.2008000000000003e-05,
+      "seconds": 0.0748
+    },
+    {
+      "case_id": "E208~shorthand",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 522,
+      "dollars": 2.1924000000000002e-05,
+      "seconds": 0.0638
+    },
+    {
+      "case_id": "E208~distractor",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 564,
+      "dollars": 2.3688e-05,
+      "seconds": 0.0672
+    },
+    {
+      "case_id": "E208~buried",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 560,
+      "dollars": 2.3520000000000002e-05,
+      "seconds": 0.068
+    },
+    {
+      "case_id": "E209~casual",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 524,
+      "dollars": 2.2008000000000003e-05,
+      "seconds": 0.1037
+    },
+    {
+      "case_id": "E209~shorthand",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 521,
+      "dollars": 2.1882e-05,
+      "seconds": 0.0634
+    },
+    {
+      "case_id": "E209~distractor",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 565,
+      "dollars": 2.373e-05,
+      "seconds": 0.0693
+    },
+    {
+      "case_id": "E209~buried",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 560,
+      "dollars": 2.3520000000000002e-05,
+      "seconds": 0.0668
+    },
+    {
+      "case_id": "E210~casual",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 523,
+      "dollars": 2.1966e-05,
+      "seconds": 0.0759
+    },
+    {
+      "case_id": "E210~shorthand",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 520,
+      "dollars": 2.184e-05,
+      "seconds": 0.0929
+    },
+    {
+      "case_id": "E210~distractor",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 564,
+      "dollars": 2.3688e-05,
+      "seconds": 0.0656
+    },
+    {
+      "case_id": "E210~buried",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 559,
+      "dollars": 2.3478e-05,
+      "seconds": 0.0678
+    },
+    {
+      "case_id": "E211~casual",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 527,
+      "dollars": 2.2134000000000002e-05,
+      "seconds": 0.0939
+    },
+    {
+      "case_id": "E211~shorthand",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 520,
+      "dollars": 2.184e-05,
+      "seconds": 0.063
+    },
+    {
+      "case_id": "E211~distractor",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 579,
+      "dollars": 2.4318e-05,
+      "seconds": 0.0653
+    },
+    {
+      "case_id": "E211~buried",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 562,
+      "dollars": 2.3604000000000003e-05,
+      "seconds": 0.0639
+    },
+    {
+      "case_id": "E212~casual",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 524,
+      "dollars": 2.2008000000000003e-05,
+      "seconds": 0.0671
+    },
+    {
+      "case_id": "E212~shorthand",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 520,
+      "dollars": 2.184e-05,
+      "seconds": 0.0658
+    },
+    {
+      "case_id": "E212~distractor",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 571,
+      "dollars": 2.3982000000000002e-05,
+      "seconds": 0.0687
+    },
+    {
+      "case_id": "E212~buried",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 556,
+      "dollars": 2.3352e-05,
+      "seconds": 0.0662
+    },
+    {
+      "case_id": "E213~casual",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 497,
+      "dollars": 2.0874000000000004e-05,
+      "seconds": 0.079
+    },
+    {
+      "case_id": "E213~shorthand",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 520,
+      "dollars": 2.184e-05,
+      "seconds": 0.0741
+    },
+    {
+      "case_id": "E213~distractor",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 564,
+      "dollars": 2.3688e-05,
+      "seconds": 0.0661
+    },
+    {
+      "case_id": "E213~buried",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 553,
+      "dollars": 2.3226000000000004e-05,
+      "seconds": 0.0654
+    },
+    {
+      "case_id": "E214~casual",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 497,
+      "dollars": 2.0874000000000004e-05,
+      "seconds": 0.0666
+    },
+    {
+      "case_id": "E214~shorthand",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 520,
+      "dollars": 2.184e-05,
+      "seconds": 0.1028
+    },
+    {
+      "case_id": "E214~distractor",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 565,
+      "dollars": 2.373e-05,
+      "seconds": 0.0705
+    },
+    {
+      "case_id": "E214~buried",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 555,
+      "dollars": 2.3310000000000002e-05,
+      "seconds": 0.0647
+    },
+    {
+      "case_id": "E215~casual",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 524,
+      "dollars": 2.2008000000000003e-05,
+      "seconds": 0.0653
+    },
+    {
+      "case_id": "E215~shorthand",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 521,
+      "dollars": 2.1882e-05,
+      "seconds": 0.1056
+    },
+    {
+      "case_id": "E215~distractor",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 566,
+      "dollars": 2.3772000000000002e-05,
+      "seconds": 0.0741
+    },
+    {
+      "case_id": "E215~buried",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 550,
+      "dollars": 2.3100000000000002e-05,
+      "seconds": 0.0702
+    },
+    {
+      "case_id": "E216~casual",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 497,
+      "dollars": 2.0874000000000004e-05,
+      "seconds": 0.071
+    },
+    {
+      "case_id": "E216~shorthand",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 494,
+      "dollars": 2.0748000000000002e-05,
+      "seconds": 0.0684
+    },
+    {
+      "case_id": "E216~distractor",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 544,
+      "dollars": 2.2848000000000002e-05,
+      "seconds": 0.0634
+    },
+    {
+      "case_id": "E216~buried",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 535,
+      "dollars": 2.2470000000000003e-05,
+      "seconds": 0.0632
+    },
+    {
+      "case_id": "E201~out0",
+      "handled": false,
+      "right": true,
+      "reason": "request is not asking to file a claim now",
+      "jev_calls": 1,
+      "jev_input_tokens": 496,
+      "dollars": 2.0832e-05,
+      "seconds": 0.0832
+    },
+    {
+      "case_id": "E202~out1",
+      "handled": false,
+      "right": true,
+      "reason": "request is not asking to file a claim now",
+      "jev_calls": 1,
+      "jev_input_tokens": 498,
+      "dollars": 2.0916e-05,
+      "seconds": 0.076
+    },
+    {
+      "case_id": "E201~out2",
+      "handled": false,
+      "right": true,
+      "reason": "request is not asking to file a claim now",
+      "jev_calls": 1,
+      "jev_input_tokens": 499,
+      "dollars": 2.0958e-05,
+      "seconds": 0.1232
+    },
+    {
+      "case_id": "E202~out3",
+      "handled": false,
+      "right": true,
+      "reason": "request is not asking to file a claim now",
+      "jev_calls": 1,
+      "jev_input_tokens": 497,
+      "dollars": 2.0874000000000004e-05,
+      "seconds": 0.0691
+    }
+  ],
+  "by_style": {
+    "casual": {
+      "requests": 16,
+      "kept": 16,
+      "right": 16,
+      "wrong": 0,
+      "handoffs": 0
+    },
+    "shorthand": {
+      "requests": 16,
+      "kept": 16,
+      "right": 16,
+      "wrong": 0,
+      "handoffs": 0
+    },
+    "distractor": {
+      "requests": 16,
+      "kept": 16,
+      "right": 16,
+      "wrong": 0,
+      "handoffs": 0
+    },
+    "buried": {
+      "requests": 16,
+      "kept": 16,
+      "right": 16,
+      "wrong": 0,
+      "handoffs": 0
+    },
+    "out_of_scope": {
+      "requests": 4,
+      "kept": 0,
+      "right": 0,
+      "wrong": 0,
+      "handoffs": 4
+    }
+  }
+}

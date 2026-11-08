@@ -13,9 +13,9 @@ from chapters.ch06.assistant.environment import SchedulingEnvironment
 from chapters.ch06.assistant.harness import BOOTSTRAPPED_MEMORY, MODEL, PROMPT
 from chapters.ch06.assistant.learning import CONTRACT
 from chapters.ch06.assistant.tools import make_tools
+from helix.metacognition import Procedure
 
 from metacog import Agent, RunContextWrapper, function_tool
-from metacog.meta import Procedure
 
 DESCRIPTIONS = {t.name: t.description for t in make_tools(None)}
 

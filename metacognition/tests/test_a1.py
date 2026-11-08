@@ -15,14 +15,14 @@ import sqlite3
 
 import pytest
 from basket import CASES, V1, WRITTEN, agent, basket_total, make_meta, practice, price, serve, tax, uses
+from helix.metacognition import Controller, Gate, Metacognition, MetaStore, Router, Verdict, procedure
+from helix.metacognition.ladders import family, ladder_for, most_demanding
+from helix.metacognition.offline import Floors, calibrate_routing
+from helix.metacognition.recording import Recording, _response
+from helix.metacognition.store import SCHEMA_VERSION
 from litellm.llms.anthropic.chat.transformation import AnthropicConfig
 
 from metacog import Agent, RunConfig, RunContextWrapper, Runner, function_tool
-from metacog.ladders import family, ladder_for, most_demanding
-from metacog.meta import Controller, Gate, Metacognition, MetaStore, Router, Verdict, procedure
-from metacog.meta.store import SCHEMA_VERSION
-from metacog.offline import Floors, calibrate_routing
-from metacog.recording import Recording, _response
 from metacog.testing import ScriptedModel, text
 
 
@@ -305,7 +305,7 @@ async def test_recordings_are_written_with_lf(tmp_path, monkeypatch):
     async def model(**_kwargs):
         return _response({"content": "hi", "tool_calls": [], "usage": {"prompt_tokens": 1, "completion_tokens": 1}})
 
-    monkeypatch.setattr("metacog.recording._call_model", model)
+    monkeypatch.setattr("helix.metacognition.recording._call_model", model)
     recording = Recording(tmp_path / "calls.jsonl", mode="record")
     await recording(model="gpt-5.4-mini", messages=[{"role": "user", "content": "hello"}])
     await recording(model="gpt-5.4-mini", messages=[{"role": "user", "content": "again"}])

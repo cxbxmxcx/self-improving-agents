@@ -8,6 +8,8 @@ import re
 from pathlib import Path
 
 import pytest
+from helix.metacognition import MetaStore
+from helix.metacognition.offline import Floors
 
 from examples.invoices import study
 from examples.invoices.agent import (
@@ -31,8 +33,6 @@ from examples.invoices.world import (
     task_set,
 )
 from metacog import Recording
-from metacog.meta import MetaStore
-from metacog.offline import Floors
 from metacog.testing import RespondingModel, call, text
 
 WORK = ("intake", "payment")

@@ -365,14 +365,70 @@ tests in `tests/test_invoices.py`. It has not run live yet.
 
 ## D4. Model switch: do floors and learned procedures carry over between models?
 
-- **Runs:** D1's floors and memory phases, and D3's, on `claude-haiku-5-5` beside `gpt-5.4-mini`. The keys
-  for both providers are in `.env`.
+- **Runs:** D1 and D3 on `claude-haiku-5-5` and `claude-sonnet-5-5` beside `gpt-5.4-mini` (`--model`,
+  `--writer-model`, `--procedure-file`, `--payable-file`, and D3's `--contract act`).
 - **Questions:**
   - What is each model's floor with and without a procedure?
   - Does a procedure written by one model's writer serve the other model's agent?
   - What does each model cost per accepted run?
-- **Machinery:** floors are kept per model, so both sets sit in one store, and the effort ladders send each
-  provider its own reasoning settings.
+- **Machinery:**
+  - Claude models go through Anthropic's SDK (`helix.metacognition.claude`), behind the OpenAI-style call helix makes.
+  - LiteLLM sends nothing for `none` on the Claude 5.5 family, which leaves thinking on. So `none` is
+    `disabled` thinking on Haiku 5.5 and `between_tools` on Sonnet 5.5. Opus 5.5 has no `none` rung, because
+    it can't turn thinking off.
+  - Floors are kept per model, and the effort ladders send each model its own settings.
+
+**Live** (2026-11-07, $6.66: Haiku $0.44, Sonnet $6.19, gpt-5.4-mini $0.15 for the act control;
+`tests/test_d4.py` replays every run):
+
+| D1 expenses, solved of 16 | `none` | `low` | `medium` | `high` | $ per request at `none` |
+|---|---|---|---|---|---|
+| gpt-5.4-mini, no procedure | 0 | 6 | 9 | 12 | $0.0021 |
+| gpt-5.4-mini, learned procedure | 16 | 16 | 16 | 16 | $0.0022 |
+| Haiku 5.5, no procedure | 12 | 15 | 16 | 15 | $0.0011 |
+| Haiku 5.5, learned procedure | 16 | 16 | 16 | 16 | $0.0013 |
+| Sonnet 5.5, no procedure | 15 | 16 | 16 | 16 | $0.0209 |
+| Sonnet 5.5, learned procedure | 16 | 16 | 16 | 16 | $0.0237 |
+
+| D3 invoices, solved of 16 | `none` | `low` | `medium` | `high` |
+|---|---|---|---|---|
+| Haiku 5.5, no procedure | 10 | 10 | 10 | 10 |
+| Haiku 5.5, procedures in the tools' terms | 16 | 15 | 13 | 12 |
+| Haiku 5.5, gpt-5.4-mini's designed payable | 16 | 11 | 11 | 10 |
+| Haiku 5.5, told to act on the payable's answer | 16 | 16 | 16 | 16 |
+| Sonnet 5.5, no procedure | 10 | 10 | 10 | 10 |
+| Sonnet 5.5, procedures in the tools' terms | 10 | 11 | 10 | 9 |
+| Sonnet 5.5, told to act on the payable's answer | 16 | 16 | not run | not run |
+| gpt-5.4-mini, either contract | 16 | 16 | 16 | 16 |
+
+- **Procedures carry over between models.**
+  - Each model's writer learned D1's procedure from its own experience, and each version matched the
+    hand-written reference on all 16 validation trips. gpt-5.4-mini's writer spent $0.43 (14 calls),
+    Sonnet's $0.19 (16), and Haiku's $0.03 (16).
+  - Any model's agent served any writer's procedure with the same results. The procedures gave the same
+    answers, so the runs were the same calls, and they replayed from each other's recordings.
+- **The more a model reasons, the more it overrules a procedure.**
+  - With D3's hand-written procedures, Haiku went from 16 of 16 at `none` to 12 at `high`.
+  - Sonnet, which keeps thinking between tool calls even at `none`, got at most 11 of 16.
+  - It calls the payable, then works the amount out again and pays its own figure. In its words, the
+    "tool looks like it rounds down". The rounding is one of the clients' unwritten conventions, the very
+    thing the procedure learned.
+  - D2's fix carries over. Once the payable's description says to call it first and pass its answer to
+    `schedule_payment`, every model got every D3 request right at every setting run. Sonnet then stopped
+    thinking (0 reasoning tokens) and cost 24% less than without a procedure, at 25% less latency.
+- **A procedure pays least where the model needs it least.**
+  - Each comparison is at the model's lowest setting with the most requests right, without and with the
+    procedure.
+  - gpt-5.4-mini: D1 cost 73% less and took 75% less time; D3 (told to act) 33% less on both.
+  - Haiku: D1 cost 9% less and took 20% less time; D3 cost 27% less, with 6 more right.
+  - Sonnet: D1 cost 19% more and took 54% longer with the procedure, at `none` as at any setting. It
+    already solved D1, and its lowest setting still thinks.
+- **What `none` means differs.**
+  - Haiku with thinking off writes its working into the reply.
+  - Sonnet's `between_tools` still thinks after tool results (453 reasoning tokens per D1 request at `none`).
+  - Claude counts about twice gpt-5.4-mini's tokens for the same prompts, so dollars, not tokens, compare
+    models.
+- **Not run:** Sonnet's online loop and its D3 run with gpt-5.4-mini's designed payable; Opus 5.5.
 
 ## Learning about learning (A5): which learner, and can a search design a better one?
 
@@ -509,3 +565,47 @@ design choose.
   - Finish D3's online arms.
   - Search under the default writer, where D3 shows the design matters most.
   - Repeat each search more times, to put a rate on transfer.
+
+## Replacing the LLM: decision programs (new chapter 7 direction)
+
+Chapter 6 removed the reasoning; the agent still read the request, called the procedure and acted. A decision
+program removes the agent too: code does the routing, the procedure and the action, and Jev (TypeSafe's System
+One model, $0.042 per million input tokens, output free) answers typed judgments. When unsure it hands off. A
+learning mechanism writes the program from the LLM's judged runs. (`helix/metacognition/decide.py`, `examples/decisions/`,
+`tests/test_decide.py`; live 2026-11-08, $1.51.)
+
+- **The split.** D1's and D3's requests are templated, so `examples/decisions/wordings.py` asks for the same
+  work in other words: casual, shorthand ("invoice 201"), a distractor id, and buried in a longer note. There are
+  also out-of-scope requests, and two sets of near misses that use the job's own words to ask for something else.
+- **The mechanisms** (`meta/programs/`): `program_synthesis` writes a program from the runs and repairs it from
+  practice. `program_judgment` does the same but tells the writer that what a request asks for is Jev's call,
+  and it practices on near misses too.
+
+Held-out varied wordings, with the LLM (gpt-5.4-mini, procedures at `none`) taking every hand-off:
+
+| | D1 right of 68 | D3 right of 62 | $ per request | Seconds |
+|---|---|---|---|---|
+| LLM alone | 49 | 48 | $0.0023 to $0.0026 | 2.4 |
+| Hand-written regex + Jev | 50 | 48 | $0.0012 to $0.0015 | 1.3 to 1.4 |
+| Learned, keywords for intent | 65 | 62 | $0.00015 to $0.00019 | 0.17 |
+| Learned, Jev judges intent | 66 | 62 | $0.00019 to $0.00022 | 0.21 to 0.23 |
+
+Near misses in the held-out set, of 20 per domain, acted on when they should have been handed off:
+
+| | D1 | D3 |
+|---|---|---|
+| LLM alone | 9 | 6 |
+| Hand-written regex + Jev | 0 | 0 |
+| Learned, keywords for intent | 20 | 16 |
+| Learned, Jev judges intent | 0 | 2 |
+
+- **What was learned.** The programs worked out how ids are really written (`T-201`, `INV-201`). The LLM got
+  every shorthand request wrong, because nothing tells it that format. The learned programs got them all right.
+- **Without being told, the writer reached for word lists.** Those programs scored well on the first test and
+  failed the near misses. Telling the mechanism that intent is a judgment for Jev fixed it, and the writer then
+  wrote the Jev questions itself. The first near-miss set informed that change, so the second was written before
+  any such program existed.
+- **Limits.** Only two domains, and both have a code checker and clean ids. A program's hand-off goes to the LLM
+  here, which still acts on many near misses, so a hand-off of "this isn't the job" should go to a person or a
+  read-only agent. The judgment programs are single attempts.
+- **Next:** a search over these mechanisms, and the triage domain, where the work itself is a judgment.

@@ -77,7 +77,7 @@ The procedure can come from a person, from the agent's own runs, or from a searc
   It must pass the code-skill guard and take `api` first. Code a person wrote runs in-process.
 - **Learned online (paid):** serve the agent with no procedure. Once runs have been judged, the worker writes
   one from them (step 6 shows the worker).
-- **Searched offline (paid):** `metacog.offline.search_procedure` runs GEPA over a seed version's code, as the
+- **Searched offline (paid):** `helix.metacognition.offline.search_procedure` runs GEPA over a seed version's code, as the
   study's E2 did.
 
 ## 4. Release: what to trust
@@ -130,4 +130,4 @@ stops it at a dollar limit), use
 Floors belong to a model. Point the agent at another model, for example `claude-haiku-5-5`, and until it is
 calibrated, its runs use the agent's own setting, not floors measured on `gpt-5.4-mini`. Run step 2's
 command (**paid**) to record floors for the new model beside the old ones. Anthropic models get their reasoning
-settings through LiteLLM, as [`metacog.ladders`](src/metacog/ladders.py) describes.
+settings through LiteLLM, as [`helix.metacognition.ladders`](../helix/metacognition/ladders.py) describes.
