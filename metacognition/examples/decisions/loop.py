@@ -10,8 +10,9 @@ which says nothing about Jev. The stream has three parts:
     drift        (D3) a vendor changes its invoice layout, the parser goes stale, intake is switched off and
                  payments stay on the program; a corrected parser arrives and the loop relearns and switches it back
 
-The gate's labeled cases, which the search also scores against, are half the test wordings and the first
-near-miss set. The held-out stream is the other half and the second near-miss set.
+A search sees half the gate's wordings and the first near-miss set on half its invoices; the gate holds the rest, so
+it asks the same kinds of near miss about other invoices. The held-out stream is the other half of the test wordings
+and the second near-miss set, worded apart from both.
 """
 
 from __future__ import annotations
@@ -49,24 +50,41 @@ def split_test(domain: str) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]
     return [t for t in tasks if t["id"].split("~")[0] in first], [t for t in tasks if t["id"].split("~")[0] not in first]
 
 
+def split_near(tasks: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Near misses by base request, alternating within each kind of work, so both sides hold every kind of near miss."""
+    of_kind: dict[str, list[str]] = {}
+    for t in tasks:
+        bases = of_kind.setdefault(t.get("kind", ""), [])
+        if t["id"].split("~")[0] not in bases:
+            bases.append(t["id"].split("~")[0])
+    first = {base for bases in of_kind.values() for base in bases[::2]}
+    return [t for t in tasks if t["id"].split("~")[0] in first], [t for t in tasks if t["id"].split("~")[0] not in first]
+
+
 def tier_for(domain: str, jev: Decider, args: argparse.Namespace) -> ProgramTier:
     desk, _, _ = study.domain(domain)
+    if domain == "d3":  # the gate calls the procedures the agent has, or it passes what the agent fails
+        from examples.invoices.agent import PARSER_BEFORE
+        from examples.invoices.decide import desk as ap_desk
+
+        desk = ap_desk(PARSER_BEFORE)
     gate, _ = split_test(domain)
-    # A search and the gate must not share cases, or a search grades its own exam: half the bases and half the
-    # near misses are the search's to see, and the rest stay hidden behind the gate.
+    # A search and the gate must not share cases, or a search grades its own exam: half the bases are the search's to
+    # see and the rest stay hidden behind the gate. Near misses split by base too: the search sees every kind, and the
+    # gate asks the same kinds about other invoices. The held-out stream's near misses are worded apart from both.
     bases = list(dict.fromkeys(t["id"].split("~")[0] for t in gate))
     for_search = set(bases[: len(bases) // 2])
-    stress = load(domain, "stress")
-    seen = [*[t for t in gate if t["id"].split("~")[0] in for_search], *stress[::2]]
-    hidden = [*[t for t in gate if t["id"].split("~")[0] not in for_search], *stress[1::2]]
+    near_seen, near_hidden = split_near(load(domain, "stress"))
+    seen = [*[t for t in gate if t["id"].split("~")[0] in for_search], *near_seen]
+    hidden = [*[t for t in gate if t["id"].split("~")[0] not in for_search], *near_hidden]
     labeled = {t["id"]: t for t in hidden}
     source = (SEEDS / f"{args.mechanism}.py").read_text(encoding="utf-8")
-    search = ProgramSearch(method=args.search_method, archive=args.archive, population=args.population,
+    search = ProgramSearch(method=args.search_method, target=args.search_target, archive=args.archive, population=args.population,
                            generations=args.generations, seed=args.seed, label=args.label) if args.search else None
     return ProgramTier(desk=desk, decider=jev, contract=contract(domain, routes=args.routes), labeled=labeled, mechanisms=[(args.mechanism, source)],
                        search=search, search_cases={t["id"]: t for t in seen}, min_runs=args.min_runs,
                        max_wrong=args.max_wrong, bar=args.bar, routed_bar=args.routed_bar,
-                       writer_model=llm.MODEL, retry_after=12, max_attempts=6, gating_sources=("verifier",))
+                       writer_model=llm.MODEL, retry_after=12, max_attempts=args.max_attempts, gating_sources=("verifier",))
 
 
 async def phase(name: str, tasks: list[dict[str, Any]], agent: Any, meta: Any, world_of: Any, rows: list[dict[str, Any]],
@@ -183,6 +201,9 @@ def parse(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--no-routes", dest="routes", action="store_false", help="programs only act or hand off")
     parser.add_argument("--routed-bar", type=float, default=0.7, help="the LLM's right share on what a program routes to it")
     parser.add_argument("--search-method", default="dgm", choices=METHODS)
+    parser.add_argument("--search-target", default="mechanism", choices=["mechanism", "program"],
+                        help="rewrite the mechanism, or edit the program it wrote with what works frozen")
+    parser.add_argument("--max-attempts", type=int, default=6, help="times the loop tries to close a gap")
     parser.add_argument("--archive", default=":memory:", help="a path keeps the search's history between runs")
     parser.add_argument("--population", type=int, default=4)
     parser.add_argument("--generations", type=int, default=2)
@@ -191,8 +212,8 @@ def parse(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--min-runs", type=int, default=48)
     parser.add_argument("--max-wrong", type=int, default=1)
     parser.add_argument("--bar", type=float, default=0.9)
-    parser.add_argument("--drift", type=int, default=32, help="drift requests (D3)")
-    parser.add_argument("--fixed-at", type=int, default=16, help="the drift request a corrected parser arrives at")
+    parser.add_argument("--drift", type=int, default=60, help="drift requests (D3); the first drifted one is the 21st")
+    parser.add_argument("--fixed-at", type=int, default=40, help="the drift request a corrected parser arrives at")
     parser.add_argument("--mode", default="replay", choices=["replay", "record", "live"])
     parser.add_argument("--recording", type=Path, default=HERE / "recorded" / "llm.jsonl")
     parser.add_argument("--jev-recording", type=Path, default=HERE / "recorded" / "jev.jsonl")

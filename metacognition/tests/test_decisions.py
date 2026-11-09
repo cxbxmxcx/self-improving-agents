@@ -8,7 +8,7 @@ import pytest
 from helix.deciders import Answer, DecisionUsage
 from helix.memory.learning_mechanisms import Contract
 from helix.metacognition import Metacognition, procedure
-from helix.metacognition.decide import KIT_GUIDE, RETURNS, Desk
+from helix.metacognition.decide import KIT_GUIDE, RETURNS, Desk, frozen_change
 from helix.metacognition.decisions import DECISION, RUNG, ProgramSearch, ProgramTier
 from helix.search.methods import METHODS
 
@@ -269,3 +269,121 @@ async def test_a_search_is_shown_its_own_cases_and_never_the_gates():
         await meta.programs.improve([])
     shown = designer.requests[0]["messages"][1]["content"]
     assert "c201" in shown and "c104" not in shown
+
+
+SLOPPY = GOOD.replace("< 0.7", "< 0.05")
+HELPED = """TOP = 3
+
+
+def first(items):
+    return items[0]
+
+
+async def decide(request, kit):
+    ids = kit.find("O-[0-9]+", request)
+    answers = await kit.ask({"request": request}, {"go": {"type": "noul", "instructions": "Ship it?"}})
+    if answers["go"]["noul"] < 0.5:
+        return {"handoff": "no"}
+    return {"action": "ship", "arguments": {"order_id": first(ids)}, "reply": "Shipped."}
+"""
+
+
+@pytest.mark.parametrize("edited", [
+    HELPED.replace("< 0.5", "< 0.9"),  # a threshold
+    HELPED.replace("Ship it?", "Is shipping this order what the request asks for now?"),  # a question
+    HELPED.replace('    return {"action"',
+                   '    if len(ids) > 1:\n        return {"handoff": "which?", "route": "low"}\n    return {"action"'),  # a route
+    HELPED.replace("async def decide", "NEW = 1\n\n\nasync def decide"),  # a constant
+])
+def test_an_edit_may_change_how_a_program_judges(edited):
+    assert frozen_change(HELPED, edited) is None
+
+
+@pytest.mark.parametrize("edited", [
+    HELPED.replace('"reply": "Shipped."', '"reply": "Sent."'),  # an action
+    HELPED.replace('    return {"action"',
+                   '    if not ids:\n        return {"action": "refund", "arguments": {}}\n    return {"action"'),  # a new action
+    HELPED.replace("return items[0]", "return items[-1]"),  # a helper
+    HELPED.replace("TOP = 3", "TOP = 4"),  # a constant
+    HELPED.replace('kit.find("O-[0-9]+", request)', 'kit.find("O-[0-9]", request)'),  # how ids are found
+    HELPED.replace("first(ids)", "ids[0]"),  # a call to a helper
+])
+def test_an_edit_may_not_change_what_already_works(edited):
+    assert "frozen" in frozen_change(HELPED, edited) or "added an action" in frozen_change(HELPED, edited)
+
+
+def edit_search(method: str = "dgm") -> ProgramSearch:
+    return ProgramSearch(method=method, target="program", population=1, generations=1, seed=3)
+
+
+@pytest.mark.parametrize("method", METHODS)
+async def test_either_method_can_edit_a_written_program_into_one_the_gate_admits(method):
+    designer = RespondingModel(lambda request: text(GOOD))
+    agent, meta = build(SLOPPY, search=edit_search(method))
+    meta.agent = agent
+    events: list[str] = []
+    with designer.active():
+        await meta.programs.improve(events)
+    assert any("wrote a program the gate admits" in e for e in events), events
+    assert meta.programs.current()["source"].strip() == GOOD.strip()
+
+
+async def test_a_proposal_that_changes_a_frozen_part_is_sent_back_and_dropped():
+    changed = GOOD.replace('"reply": "Shipped."', '"reply": "Sent."')
+    designer = RespondingModel(lambda request: text(changed))
+    agent, meta = build(SLOPPY, search=edit_search())
+    meta.agent = agent
+    events: list[str] = []
+    with designer.active():
+        await meta.programs.improve(events)
+    assert "keep this exactly" in designer.requests[1]["messages"][1]["content"]
+    assert not any("gate admits" in e and "no design" not in e for e in events), events
+    assert any(row["outcome"] == "proposal failed validation" for row in meta.programs.search_log)
+    assert meta.programs.current() is None
+
+
+async def test_an_edit_sees_its_own_failed_requests_and_what_jev_said_and_never_the_gates():
+    designer = RespondingModel(lambda request: text(SLOPPY.replace("< 0.05", "< 0.06")))
+    seen = {"c201": task(201, "Don't ship O-201.", "handoff")}
+    agent, meta = build(SLOPPY, search=edit_search(), search_cases=seen)
+    meta.agent = agent
+    with designer.active():
+        await meta.programs.improve([])
+    shown = designer.requests[0]["messages"][1]["content"]
+    assert "Don't ship O-201." in shown and '"noul": 0.1' in shown
+    assert "O-104" not in shown
+
+
+async def test_a_switched_off_class_comes_back_when_the_program_it_has_passes_again(model):
+    agent, meta = build(RECKLESS, trusted=GOOD)
+    meta.agent = agent
+    meta.store.put_state("program:ship", {"off": True, "reason": "a tool it calls had broken"})
+    events: list[str] = []
+    with model.active():
+        await meta.programs.improve(events)
+    assert any("switched back on: ship" in e for e in events), events
+    assert not meta.programs.off("ship")
+    assert meta.programs.current()["source"] == GOOD
+    assert not any("wrote" in e for e in events), events
+
+
+async def test_a_program_that_still_fails_stays_off_and_a_new_one_is_written(model):
+    agent, meta = build(GOOD, trusted=RECKLESS)
+    meta.agent = agent
+    meta.store.put_state("program:ship", {"off": True})
+    events: list[str] = []
+    with model.active():
+        await meta.programs.improve(events)
+    assert any("still refused" in e for e in events), events
+    assert any("m0 wrote" in e for e in events), events
+    assert meta.programs.current()["source"] == GOOD
+    assert not meta.programs.off("ship")
+
+
+async def test_nothing_is_retested_when_no_class_is_off(model):
+    agent, meta = build(GOOD, trusted=RECKLESS)
+    meta.agent = agent
+    events: list[str] = []
+    with model.active():
+        await meta.programs.improve(events)
+    assert not any("re-tested" in e for e in events), events

@@ -31,6 +31,7 @@ import asyncio
 import json
 import re
 import time
+from collections import Counter
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import Any
@@ -119,6 +120,54 @@ def check_program(source: str) -> None:
         raise UnsafeProgram(f"the program does not define async def {ENTRY}(request, kit)")
 
 
+def _first_missing(kept: list[ast.AST], now: list[ast.AST]) -> ast.AST | None:
+    left = Counter(ast.dump(node) for node in now)
+    for node in kept:
+        key = ast.dump(node)
+        if not left[key]:
+            return node
+        left[key] -= 1
+    return None
+
+
+def _actions(tree: ast.AST) -> list[ast.AST]:
+    return [n for n in ast.walk(tree) if isinstance(n, ast.Dict)
+            and any(isinstance(k, ast.Constant) and k.value == "action" for k in n.keys)]
+
+
+def frozen_change(seed: str, candidate: str) -> str | None:
+    """What `candidate` changed that an edit of `seed` must keep, or None if it kept everything.
+
+    A search editing a working program may rewrite how the program judges a request, which is the body of `decide`:
+    its questions for Jev, the thresholds on the answers, and its hand-offs. It may add constants and helpers. The rest
+    stays as `seed` has it: every constant and helper, every call to `kit.find`, `kit.read`, `kit.procedure` or a
+    helper, and every action, with no new one added. Both sources must already have passed `check_program`.
+    """
+    before, after = ast.parse(seed), ast.parse(candidate)
+
+    def top(tree: ast.Module) -> list[ast.AST]:
+        return [n for n in tree.body if not isinstance(n, ast.Expr) and getattr(n, "name", None) != ENTRY]
+
+    helpers = {getattr(n, "name", None) for n in top(before)} - {None}
+
+    def calls(tree: ast.AST) -> list[ast.AST]:
+        def frozen(function: ast.AST) -> bool:
+            if isinstance(function, ast.Name):
+                return function.id in helpers
+            return (isinstance(function, ast.Attribute) and isinstance(function.value, ast.Name)
+                    and function.value.id == "kit" and function.attr in ("find", "read", "procedure"))
+
+        return [n for n in ast.walk(tree) if isinstance(n, ast.Call) and frozen(n.func)]
+
+    def kept(node: ast.AST | None) -> str | None:
+        return None if node is None else f"it changed a frozen part; keep this exactly: {ast.unparse(node)[:200]}"
+
+    added = _first_missing(_actions(after), _actions(before))
+    return (kept(_first_missing(top(before), top(after))) or kept(_first_missing(_actions(before), _actions(after)))
+            or kept(_first_missing(calls(before), calls(after)))
+            or (None if added is None else f"it added an action; an edit may not: {ast.unparse(added)[:200]}"))
+
+
 def to_question(question: dict[str, Any]) -> Question:
     """A question as a program writes it, in the Decider interface's terms."""
     kind = question.get("type")
@@ -154,6 +203,7 @@ class Kit:
     usage: DecisionUsage = field(default_factory=DecisionUsage)
     waited: float = 0.0  # wall-clock seconds spent inside the decision model on this request
     log: list[str] = field(default_factory=list)
+    answers: dict[str, dict[str, Any]] = field(default_factory=dict)  # what Jev said on this request, by question
 
     def find(self, pattern: str, text: str) -> list[str]:
         found: list[str] = []
@@ -180,7 +230,11 @@ class Kit:
         answers, call = await ask_measured(self.decider, state, asked)
         self.waited += time.perf_counter() - started
         self.usage.add(call)
-        return {name: from_answer(answer) for name, answer in answers.items()}
+        replies = {name: from_answer(answer) for name, answer in answers.items()}
+        kept = ("choice", "confidence", "noul", "score")
+        self.answers.update({name: {key: value for key, value in reply.items() if key in kept}
+                             for name, reply in replies.items()})
+        return replies
 
 
 async def run_program(source: str, request: str, kit: Kit, *, timeout: float = 60.0) -> dict[str, Any]:
@@ -221,6 +275,7 @@ class Served:
     seconds: float
     route: str | None = None  # the reasoning the agent should use, when a hand-off says
     memory: str | None = None  # what the agent should read first, when a hand-off says
+    answers: dict[str, dict[str, Any]] = field(default_factory=dict)  # what Jev said, for a search to read
 
     def to_dict(self) -> dict[str, Any]:
         return dict(vars(self))
@@ -244,7 +299,7 @@ async def serve(source: str, task: dict[str, Any], desk: Desk, decider: Decider 
     local = time.perf_counter() - started - kit.waited
     seconds = round(kit.usage.seconds + max(local, 0.0), 4)
     base = {"case_id": task["id"], "decider_calls": kit.usage.calls, "decider_input_tokens": kit.usage.input_tokens,
-            "dollars": kit.usage.dollars, "seconds": seconds}
+            "dollars": kit.usage.dollars, "seconds": seconds, "answers": kit.answers}
     expected_handoff = task.get("expect") == "handoff"
     if "handoff" in decision:
         return Served(handled=False, right=True if expected_handoff and not decision.get("route") else None,

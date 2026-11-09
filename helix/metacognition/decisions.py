@@ -6,9 +6,11 @@ same loop:
     signal   the store's runs: what the LLM costs on this work, and how much a program hands back
     gap      the LLM still serves work a program could, or a program has been switched off, or hands off too much
     improve  a mechanism writes a decision program from the judged runs (helix.metacognition.decide)
-    search   if the gate refuses what the mechanisms write, a search rewrites a mechanism's own source and tries again
+    search   if the gate refuses what the mechanisms write, a search rewrites a mechanism's own source and tries again,
+             or edits the best program they wrote, with what already works frozen
     gate     a program is admitted only if it clears the bar on labeled cases, with at most `max_wrong` wrong actions
-    switch   a trusted program runs before the agent; an action it takes ends the run with no model. A hand-off
+    switch   a trusted program runs before the agent; an action it takes ends the run with no model. A class that
+             was switched off comes back when the program it has passes the gate again, or a new one does. A hand-off
              continues into the agent in the same run, at the reasoning and with the memory the program named, if it
              named them. Each action is a task class with its own detector window, so a class that starts failing is
              switched off alone and goes back to the LLM until a new program passes.
@@ -20,6 +22,7 @@ recorded with the reasoning setting "program". Jev's calls are charged as the ru
 from __future__ import annotations
 
 import inspect
+import json
 import random
 import time
 from collections.abc import Sequence
@@ -38,8 +41,9 @@ from helix.signal import GapMeasurement
 from helix.trajectory import StepKind, Trajectory
 
 from helix.deciders.base import Decider, MissingAnswer
-from helix.metacognition.decide import Desk, Kit, UnsafeProgram, run_program, serve
+from helix.metacognition.decide import Desk, Kit, UnsafeProgram, check_program, frozen_change, run_program, serve
 from helix.metacognition.api import SkillAPI
+from helix.metacognition.mechanisms import contract_text
 from helix.metacognition.parts import Detector, GateResult
 from helix.metacognition.prompts import GENERIC
 from helix.metacognition.selection import LearningProblem, run_tournament
@@ -101,16 +105,46 @@ Take what each parent does well and drop what either does poorly.
 
 Output only the mechanism's source."""
 
+PROGRAM_RULES = """A decision program serves requests with no language model, and asks Jev, a small model that returns typed
+judgments, for what code can't decide. Its contract:
+
+{contract}
+
+What you may change is how the program judges a request, in the body of `decide`: the questions it asks Jev, the state
+it gives Jev, the thresholds it applies to the answers, and its hand-offs, including any hand-off the contract lets it
+route. You may add constants and helpers.
+
+Everything else is frozen, and a proposal that changes it is rejected: every existing constant and helper, every call to
+`kit.find`, `kit.read`, `kit.procedure` or a helper, and every action the program returns. You may add no new action.
+
+Decide what a request asks for with Jev, never with a list of words. A wrong action costs far more than a hand-off."""
+
+EDIT_PROMPT = """You are improving a decision program by one small edit, in a search that keeps every version it tries.
+
+""" + PROGRAM_RULES + """
+
+You will see the program, how it scored, and the requests it got wrong with what Jev answered on each. Make the smallest
+change that fixes those requests and keeps what works. Output only the program's source."""
+
+COMBINE_PROMPT = """You are combining two versions of a decision program into one.
+
+""" + PROGRAM_RULES + """
+
+Take the judgments that work in each. Output only the program's source."""
+
 
 @dataclass
 class ProgramSearch:
-    """A search over mechanism source, when no mechanism writes a program the gate admits.
+    """A search for when no mechanism writes a program the gate admits.
 
     `method` is any of helix.search.METHODS. `archive` is a path to keep the search's history across searches: a
-    later gap forks from anything earlier ones found instead of starting over.
+    later gap forks from anything earlier ones found instead of starting over. `target` is what it changes:
+    "mechanism" rewrites the mechanism, whose every variant then writes a program from scratch. "program" edits the
+    best program the mechanisms wrote, so a good change is inherited, and `frozen_change` keeps what already works.
     """
 
     method: str = "dgm"
+    target: str = "mechanism"
     archive: str = ":memory:"
     population: int = 4
     generations: int = 2
@@ -164,6 +198,7 @@ class Judgment:
     failures: list[str]
     routed: int = 0  # requests sent to the LLM with a route and a memory
     routed_right: int = 0
+    answers: dict[str, Any] = field(default_factory=dict)  # what Jev said on each failure, by case id
 
     def score(self, penalty: float) -> float:
         if not self.total:
@@ -365,25 +400,30 @@ class DecisionLoop:
     # ------------------------------------------------------------ improvement
 
     async def practice(self, source: str, case_id: str) -> tuple[float, str, str]:
+        reward, reason, _ = await self._practice(source, case_id)
+        return reward, reason, ""
+
+    async def _practice(self, source: str, case_id: str) -> tuple[float, str, dict[str, Any]]:
         task = self.tier.labeled.get(case_id) or self.tier.search_cases.get(case_id)
         if task is None:
             run = self.meta.store.case(case_id)
             if run is None or run["case_data"] is None:
-                return 0.0, f"no recorded request for {case_id}", ""
+                return 0.0, f"no recorded request for {case_id}", {}
             task = run["case_data"]
         try:
             row = await serve(source, task, self.tier.desk, self.tier.decider)
         except UnsafeProgram as exc:
-            return 0.0, f"the guard refused the program: {exc}", ""
+            return 0.0, f"the guard refused the program: {exc}", {}
         if row.route and (self.tier.route_practice is not None or self.tier.world is not None):
             attempt = self.tier.route_practice or self._try_route
             accepted, reason = await attempt(task, row.route, row.memory)
-            return ROUTED_REWARD if accepted else ROUTED_WRONG, f"routed to the LLM at {row.route}: {reason}", ""
+            reward = ROUTED_REWARD if accepted else ROUTED_WRONG
+            return reward, f"routed to the LLM at {row.route}: {reason}", row.answers
         if row.right:
-            return 1.0, row.reason, ""
+            return 1.0, row.reason, row.answers
         if not row.handled:
-            return HANDOFF_REWARD, f"it was handed off, though it could be served: {row.reason}", ""
-        return 0.0, row.reason, ""
+            return HANDOFF_REWARD, f"it was handed off, though it could be served: {row.reason}", row.answers
+        return 0.0, row.reason, row.answers
 
     async def _try_route(self, task: dict[str, Any], effort: str, memory: str | None) -> tuple[bool, str]:
         """Run the agent as a program's route would, frozen so the try teaches nothing, and judge the outcome."""
@@ -410,10 +450,10 @@ class DecisionLoop:
         return [*self.tier.labeled, *[c for c in dict.fromkeys(recent) if c not in self.tier.labeled]]
 
     async def judge(self, source: str, cases: Sequence[str] | None = None) -> Judgment:
-        accepted, wrong, handoffs, routed, routed_right, failures = 0, 0, 0, 0, 0, []
+        accepted, wrong, handoffs, routed, routed_right, failures, answers = 0, 0, 0, 0, 0, [], {}
         cases = list(self._cases() if cases is None else cases)
         for case_id in cases:
-            reward, reason, _ = await self.practice(source, case_id)
+            reward, reason, said = await self._practice(source, case_id)
             accepted += int(reward >= 1.0 or reward == ROUTED_REWARD)
             wrong += int(reward == 0.0)
             handoffs += int(reward == HANDOFF_REWARD)
@@ -421,7 +461,8 @@ class DecisionLoop:
             routed_right += int(reward == ROUTED_REWARD)
             if reward < 1.0:
                 failures.append(f"{case_id}: {reason}")
-        return Judgment(accepted, len(cases), wrong, handoffs, failures, routed, routed_right)
+                answers[case_id] = said
+        return Judgment(accepted, len(cases), wrong, handoffs, failures, routed, routed_right, answers)
 
     def _gate(self, judged: Judgment) -> GateResult:
         # Each route answers for itself: what the program serves must clear the bar with next to no wrong actions,
@@ -467,9 +508,37 @@ class DecisionLoop:
         events.append(f"program: {mechanism} wrote {DECISION}@{version}; gate {gate.accepted}/{gate.total} "
                       "passed, installed")
 
+    async def _retest(self, events: list[str]) -> bool:
+        """Switch classes back on if the current program now passes: what broke may not have been the program."""
+        store, current = self.meta.store, self.current()
+        off = [key for key in self._classes() if store.state(key).get("off")]
+        if current is None or not off:
+            return False
+        judged = await self.judge(current["source"])
+        gate = self._gate(judged)
+        label = f"{DECISION}@{current['version']}"
+        if not gate.passed:
+            events.append(f"program: re-tested {label}; still refused, {judged.accepted}/{judged.total}, "
+                          f"{judged.wrong} wrong actions")
+            return False
+        for key in off:
+            store.put_state(key, {})
+        state = store.state(_LOOP)
+        state["since"] = store.count()
+        store.put_state(_LOOP, state)
+        store.put_state(_OUTCOMES, {})
+        store.log_learning(name=DECISION, mechanism="retest", version=current["version"], episodes=0, writer_calls=0,
+                           dollars=0.0, gate=gate.to_dict(), outcome="passed, switched back on")
+        events.append(f"program: re-tested {label}; gate {gate.accepted}/{gate.total} passed, switched back on: "
+                      f"{', '.join(key.split(':', 1)[1] for key in off)}")
+        return True
+
     async def improve(self, events: list[str]) -> None:
         store, tier = self.meta.store, self.tier
+        if await self._retest(events):
+            return
         problem = self._problem()
+        written: list[tuple[str, Any]] = []
         for name, source in self._mechanisms():
             trial, judged = await self._learn(problem, name, source)
             if judged is None:
@@ -482,6 +551,7 @@ class DecisionLoop:
             if gate.passed:
                 self._install(trial.source, name, problem, trial, gate, events)
                 return
+            written.append((name, trial))
             store.log_learning(name=DECISION, mechanism=name, version=None, episodes=len(problem.episodes),
                                writer_calls=trial.writer_calls, dollars=trial.dollars, gate=gate.to_dict(),
                                outcome="refused")
@@ -492,11 +562,42 @@ class DecisionLoop:
             return
         state["searches"] = state.get("searches", 0) + 1
         store.put_state(_LOOP, state)
-        await self._search(problem, events)
+        await self._search(problem, events, written)
 
-    async def _search(self, problem: LearningProblem, events: list[str]) -> None:
+    async def _best_written(self, written: Sequence[tuple[str, Any]]) -> tuple[str, str] | None:
+        """The written program that does best on the search's own cases, so the gate's stay hidden."""
+        cases = list(self.tier.search_cases) or None
+        scored = [((await self.judge(trial.source, cases)).score(self.tier.search.penalty), i, name, trial.source)
+                  for i, (name, trial) in enumerate(written)]
+        if not scored:
+            return None
+        _, _, name, source = max(scored, key=lambda row: (row[0], -row[1]))
+        return name, source
+
+    def _edit_feedback(self, seen: Judgment) -> str:
+        """The score, and each failure as the request itself and what Jev answered: what an edit needs to see."""
+        shown = []
+        for failure in seen.failures[:14]:
+            case_id, reason = failure.split(": ", 1)
+            request = (self.tier.search_cases.get(case_id) or self.tier.labeled.get(case_id) or {}).get("text", case_id)
+            shown.append(f"- Request: {request}\n  Outcome: {reason}\n  Jev answered: "
+                         f"{json.dumps(seen.answers.get(case_id, {}))}")
+        return (f"{seen.accepted}/{seen.total} requests served right or rightly handed off, {seen.wrong} wrong "
+                f"actions, {seen.handoffs} hand-offs of work it could have done, {seen.routed} routed to the language model "
+                f"({seen.routed_right} right).\n" + "\n".join(shown))
+
+    async def _search(self, problem: LearningProblem, events: list[str],
+                      written: Sequence[tuple[str, Any]] = ()) -> None:
         store, tier, spec = self.meta.store, self.tier, self.tier.search
-        name, seed_source = self._mechanisms()[0]
+        editing = spec.target == "program"
+        if editing:
+            chosen = await self._best_written(written)
+            if chosen is None:
+                events.append("search: no mechanism wrote a program to edit")
+                return
+            name, seed_source = chosen
+        else:
+            name, seed_source = self._mechanisms()[0]
         best: dict[str, Any] = {}
 
         def logged(source: str, outcome: str, **fields: Any) -> None:
@@ -506,12 +607,16 @@ class DecisionLoop:
 
         async def evaluate(candidate: Any, questions: Any = None) -> GapMeasurement:
             source = candidate.content if hasattr(candidate, "content") else candidate
-            try:
-                trial, judged = await self._learn(problem, f"design_{source_id(source)}", source)
-            except UnsafeMechanism as exc:
-                logged(source, "refused by guard", reason=str(exc))
-                return GapMeasurement(score=0.0, signal_id="program_gate", signal_version=1, triggered=True,
-                                      raw_value=0.0, feedback=f"refused by the mechanism guard: {exc}", metadata={})
+            if editing:
+                trial = SimpleNamespace(source=source, writer_calls=0, dollars=0.0, note="")
+                judged = await self.judge(source)
+            else:
+                try:
+                    trial, judged = await self._learn(problem, f"design_{source_id(source)}", source)
+                except UnsafeMechanism as exc:
+                    logged(source, "refused by guard", reason=str(exc))
+                    return GapMeasurement(score=0.0, signal_id="program_gate", signal_version=1, triggered=True,
+                                          raw_value=0.0, feedback=f"refused by the mechanism guard: {exc}", metadata={})
             if judged is None:
                 logged(source, "wrote nothing", note=trial.note, writer_calls=trial.writer_calls)
                 return GapMeasurement(score=0.0, signal_id="program_gate", signal_version=1, triggered=True,
@@ -521,31 +626,37 @@ class DecisionLoop:
             score = seen.score(spec.penalty)
             passed = self._gate(judged).passed
             logged(source, "admitted" if passed else "refused by gate", right=f"{judged.accepted}/{judged.total}",
-                   wrong=judged.wrong, handoffs=judged.handoffs, search_score=round(score, 2),
+                   wrong=judged.wrong, handoffs=judged.handoffs, routed=f"{judged.routed_right}/{judged.routed}",
+                   seen=f"{seen.accepted}/{seen.total}", seen_wrong=seen.wrong, search_score=round(score, 2),
                    writer_calls=trial.writer_calls, program=trial.source)
             if passed and (not best or score > best["score"]):
                 best.update(score=score, source=source, trial=trial, judged=judged)
             behavior = sorted(failure.split(":", 1)[0] for failure in seen.failures)
             return GapMeasurement(score=score, signal_id="program_gate", signal_version=1, triggered=not passed,
-                                  raw_value=score, feedback=seen.feedback(),
+                                  raw_value=score,
+                                  feedback=self._edit_feedback(seen) if editing else seen.feedback(),
                                   metadata={"judged": asdict(seen), "behavior": behavior})
 
         def validate(source: str) -> str | None:
             try:
-                check_mechanism(source)
-            except UnsafeMechanism as exc:
+                check_program(source) if editing else check_mechanism(source)
+            except (UnsafeMechanism, UnsafeProgram) as exc:
                 return str(exc)
-            return None
+            return frozen_change(seed_source, source) if editing else None
 
         calls = tier.budget.writer_calls if tier.budget.writer_calls is not None else "unlimited"
         run = f"\n\nThis is design search {spec.label}." if spec.label else ""
+        rules = contract_text(tier.contract, GENERIC)
+        mutation = (EDIT_PROMPT.replace("{contract}", rules) if editing
+                    else MUTATION_PROMPT.replace("{writer_calls}", str(calls)))
+        crossover = (COMBINE_PROMPT.replace("{contract}", rules) if editing
+                     else CROSSOVER_PROMPT.replace("{writer_calls}", str(calls)))
         search = build_search(spec.method, proposer_model=spec.designer_model or tier.writer_model or DEFAULT_MODEL,
-                              evaluator=evaluate, mutation_prompt=MUTATION_PROMPT.replace("{writer_calls}", str(calls)) + run,
-                              crossover_prompt=CROSSOVER_PROMPT.replace("{writer_calls}", str(calls)) + run,
+                              evaluator=evaluate, mutation_prompt=mutation + run, crossover_prompt=crossover + run,
                               validate=validate, proposer_params=dict(spec.designer_params),
                               population=spec.population, generations=spec.generations, rng=random.Random(spec.seed))
         archive = SQLiteArchive(spec.archive)
-        seed = genesis("program_mechanism", ArtifactKind.CODE, seed_source, created_by=name)
+        seed = genesis(DECISION if editing else "program_mechanism", ArtifactKind.CODE, seed_source, created_by=name)
         limit = SearchBudget(max_candidates=spec.population * spec.generations)
         async for _ in search.propose(seed, None, archive, limit):
             pass
@@ -555,6 +666,11 @@ class DecisionLoop:
             events.append(f"search: a proposal failed validation: {rejected['reason']}")
         if not best:
             events.append("search: no design wrote a program the gate admits")
+            return
+        if editing:
+            design = f"edited_{source_id(best['source'])}"
+            events.append(f"search: {design} wrote a program the gate admits")
+            self._install(best["source"], design, problem, best["trial"], self._gate(best["judged"]), events)
             return
         design = f"designed_{source_id(best['source'])}"
         found = [m for m in (store.setting("program_mechanisms") or []) if m["name"] != design]
