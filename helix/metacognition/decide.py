@@ -10,6 +10,7 @@ takes the agent out too. It is source with one entry point:
         return {"handoff": "why"}                                            # the agent (an LLM) serves it
         return {"handoff": "why", "route": "low", "memory": "what applies"}  # the LLM, at that reasoning, reading that
         return {"handoff": "why", "read_only": True}                         # the LLM, able to read and answer, not act
+        return {"serve": "name"}                                             # the stored memory of that name
 
 and it may use only what `kit` offers:
 
@@ -23,6 +24,13 @@ and it may use only what `kit` offers:
 The guard is the learning lab's: no imports, no names starting with `_`, literal top-level constants, and only
 the code-skill builtins, so a decision program a model writes runs under the same rules as a mechanism.
 Every judgment goes through helix's `Decider` interface; a recorded decision model replays without a key.
+
+A program can keep what it learned as memories, one entry each in helix's procedural tier. A memory has a name, a
+description, a body and a route, and the route is how a request that retrieves it is served: "program" runs its body as
+a decision program with no language model, and a reasoning level hands the request to the LLM at that level, reading
+the body first and unable to act if the memory is read-only. `await kit.recall(text, k)` retrieves the closest, and a
+program serves one by returning `{"serve": name}`. While a program is being tried its memories ride in a literal
+`MEMORIES` constant at the top of its source; a tier admits it by storing them one by one.
 """
 
 from __future__ import annotations
@@ -32,7 +40,7 @@ import asyncio
 import json
 import re
 import time
-from collections import Counter
+from collections import Counter, OrderedDict
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import Any
@@ -49,9 +57,15 @@ from helix.deciders.base import (
     ask_measured,
 )
 from helix.eval.effort import EFFORTS
-from helix.memory.mechanism_runtime import MECHANISM_BUILTINS
+from helix.memory.base import MemoryContext, Scope, ScopeKey
+from helix.memory.hooks import recall_skills
+from helix.memory.mechanism_runtime import MECHANISM_BUILTINS, unpack_memories
+from helix.memory.procedural import ProceduralMemory
+from helix.metacognition.lexical import embed
 
 ENTRY = "decide"
+RUNG = "program"  # below every reasoning level: served with no language model
+GLOBAL = ScopeKey(Scope.GLOBAL, "*")
 JEV_MODEL = "jev-1.14.0"
 _TOP_LEVEL = (ast.FunctionDef, ast.AsyncFunctionDef, ast.Assign, ast.AnnAssign, ast.Expr)
 # What a program may use, as a learner reads it in the program's contract.
@@ -123,6 +137,9 @@ def check_program(source: str) -> None:
     entry = next((n for n in tree.body if isinstance(n, ast.AsyncFunctionDef) and n.name == ENTRY), None)
     if entry is None or len(entry.args.args) != 2:
         raise UnsafeProgram(f"the program does not define async def {ENTRY}(request, kit)")
+    for memory in unpack_memories(source)[1]:
+        if memory.get("route") == RUNG:
+            check_program(str(memory.get("body", "")))
 
 
 def _first_missing(kept: list[ast.AST], now: list[ast.AST]) -> ast.AST | None:
@@ -148,6 +165,8 @@ def frozen_change(seed: str, candidate: str) -> str | None:
     stays as `seed` has it: every constant and helper, every call to `kit.find`, `kit.read`, `kit.procedure` or a
     helper, and every action, with no new one added. Both sources must already have passed `check_program`.
     """
+    seed, kept_memories = unpack_memories(seed)
+    candidate, new_memories = unpack_memories(candidate)
     before, after = ast.parse(seed), ast.parse(candidate)
 
     def top(tree: ast.Module) -> list[ast.AST]:
@@ -168,9 +187,22 @@ def frozen_change(seed: str, candidate: str) -> str | None:
         return None if node is None else f"it changed a frozen part; keep this exactly: {ast.unparse(node)[:200]}"
 
     added = _first_missing(_actions(after), _actions(before))
-    return (kept(_first_missing(top(before), top(after))) or kept(_first_missing(_actions(before), _actions(after)))
-            or kept(_first_missing(calls(before), calls(after)))
-            or (None if added is None else f"it added an action; an edit may not: {ast.unparse(added)[:200]}"))
+    change = (kept(_first_missing(top(before), top(after))) or kept(_first_missing(_actions(before), _actions(after)))
+              or kept(_first_missing(calls(before), calls(after)))
+              or (None if added is None else f"it added an action; an edit may not: {ast.unparse(added)[:200]}"))
+    if change:
+        return change
+    # A memory's description, route and read-only flag are how it is judged; a decision memory's body is a program.
+    now = {memory.get("name"): memory for memory in new_memories}
+    for memory in kept_memories:
+        name = memory.get("name")
+        if name not in now:
+            return f"it removed the memory {name}; keep it"
+        if memory.get("route") == RUNG == now[name].get("route"):
+            change = frozen_change(str(memory.get("body", "")), str(now[name].get("body", "")))
+            if change:
+                return f"in the memory {name}, {change}"
+    return None
 
 
 def to_question(question: dict[str, Any]) -> Question:
@@ -210,6 +242,9 @@ class Kit:
     log: list[str] = field(default_factory=list)
     answers: dict[str, dict[str, Any]] = field(default_factory=dict)  # what Jev said on this request, by question
 
+    tier: Any = None  # helix's procedural memory, holding what this program stored
+    served_by: str | None = None  # the stored memory that served this request, if one did
+
     def find(self, pattern: str, text: str) -> list[str]:
         found: list[str] = []
         for match in re.finditer(pattern, text or ""):
@@ -221,6 +256,12 @@ class Kit:
         if name not in self.reads:
             raise KeyError(f"no read tool {name!r}; the kit offers {sorted(self.reads)}")
         return self.reads[name](**arguments)
+
+    async def recall(self, query: str, k: int = 3) -> list[dict[str, Any]]:
+        """The stored memories closest to `query`, closest first: each one's name, description, route and read_only."""
+        entries = await recall_skills(self.tier, query, MemoryContext(), k)
+        return [{"name": e.content["skill_name"], "description": e.content["description"],
+                 "route": e.metadata.get("route"), "read_only": bool(e.metadata.get("read_only"))} for e in entries]
 
     async def procedure(self, name: str, **arguments: Any) -> Any:
         if name not in self.procedures:
@@ -242,12 +283,57 @@ class Kit:
         return replies
 
 
-async def run_program(source: str, request: str, kit: Kit, *, timeout: float = 60.0) -> dict[str, Any]:
-    """A program's decision on one request: an action with arguments, or a hand-off with its reason."""
+_TIERS: OrderedDict[str, ProceduralMemory] = OrderedDict()
+_TIERS_KEPT = 64
+
+
+async def memory_tier(memories: list[dict[str, Any]]) -> ProceduralMemory | None:
+    """Helix's procedural tier holding `memories`, one entry each with its route. Malformed memories are left out."""
+    usable = [m for m in memories if m.get("name") and isinstance(m.get("description"), str)
+              and isinstance(m.get("body"), str) and m.get("route") in (RUNG, *EFFORTS)]
+    if not usable:
+        return None
+    key = json.dumps(usable, sort_keys=True)
+    tier = _TIERS.get(key)
+    if tier is None:
+        tier = ProceduralMemory(check_same_thread=False, embedding_fn=embed)
+        for memory in usable:
+            await tier.save_skill(memory["name"], memory["description"], memory["body"],
+                                  body_kind="decision" if memory["route"] == RUNG else "instructions", scope_key=GLOBAL,
+                                  metadata={"route": memory["route"], "read_only": bool(memory.get("read_only"))})
+        _TIERS[key] = tier
+        while len(_TIERS) > _TIERS_KEPT:
+            _TIERS.popitem(last=False)[1].close()
+    _TIERS.move_to_end(key)
+    return tier
+
+
+async def _decided(source: str, request: str, kit: Kit, timeout: float) -> Any:
     check_program(source)
     namespace: dict[str, Any] = {"__builtins__": MECHANISM_BUILTINS}
     exec(compile(source, "<decision program>", "exec"), namespace)  # top level is definitions and literals only
-    decision = await asyncio.wait_for(namespace[ENTRY](request, kit), timeout)
+    return await asyncio.wait_for(namespace[ENTRY](request, kit), timeout)
+
+
+async def _served_from_memory(name: str, request: str, kit: Kit, timeout: float) -> Any:
+    found = await kit.tier.get_skill(name, GLOBAL) if kit.tier is not None else None
+    if found is None:
+        return {"handoff": f"there is no memory named {name!r}"}
+    kit.served_by = name
+    route = found["metadata"].get("route")
+    if route == RUNG:
+        return await _decided(found["body"], request, kit, timeout)
+    return {"handoff": f"the memory {name} is served by the language model", "route": route,
+            "memory": found["body"] or None, "read_only": bool(found["metadata"].get("read_only"))}
+
+
+async def run_program(source: str, request: str, kit: Kit, *, timeout: float = 60.0) -> dict[str, Any]:
+    """A program's decision on one request: an action with arguments, or a hand-off with its reason."""
+    check_program(source)
+    kit.tier = await memory_tier(unpack_memories(source)[1])
+    decision = await _decided(source, request, kit, timeout)
+    if isinstance(decision, dict) and "serve" in decision and not ("handoff" in decision or "action" in decision):
+        decision = await _served_from_memory(str(decision["serve"]), request, kit, timeout)
     if not isinstance(decision, dict) or not ("handoff" in decision or "action" in decision):
         return {"handoff": f"the program returned {decision!r}, neither an action nor a hand-off"}
     if "route" in decision and decision["route"] not in EFFORTS:
@@ -287,6 +373,7 @@ class Served:
     memory: str | None = None  # what the agent should read first, when a hand-off says
     answers: dict[str, dict[str, Any]] = field(default_factory=dict)  # what Jev said, for a search to read
     read_only: bool = False  # handed to an agent that can read and answer but can take no action
+    served_by: str | None = None  # the stored memory that served it, if one did
 
     def to_dict(self) -> dict[str, Any]:
         return dict(vars(self))
@@ -310,7 +397,7 @@ async def serve(source: str, task: dict[str, Any], desk: Desk, decider: Decider 
     local = time.perf_counter() - started - kit.waited
     seconds = round(kit.usage.seconds + max(local, 0.0), 4)
     base = {"case_id": task["id"], "decider_calls": kit.usage.calls, "decider_input_tokens": kit.usage.input_tokens,
-            "dollars": kit.usage.dollars, "seconds": seconds, "answers": kit.answers}
+            "dollars": kit.usage.dollars, "seconds": seconds, "answers": kit.answers, "served_by": kit.served_by}
     expected_handoff = task.get("expect") == "handoff"
     if "handoff" in decision:
         read_only = bool(decision.get("read_only"))

@@ -18,14 +18,21 @@ parsed first and refused for imports, private names, bare `except`, and
 `lab.fill`). Like that guard, it contains honest mistakes in a teaching
 harness and is not a security sandbox; source from an untrusted designer
 belongs in a separate process or container.
+
+A mechanism may also store memories beside the function it returns, with
+`lab.remember`. They travel with that function as a literal `MEMORIES`
+constant at the top of its source, so one text can be practiced, scored and
+handed to a search; whatever admits it unpacks them into a memory tier.
 """
 
 from __future__ import annotations
 
 import ast
+import json
 import string
 import sys
 import time
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
 
@@ -40,6 +47,40 @@ MECHANISM_BUILTINS = dict(SAFE_BUILTINS)
 _TOP_LEVEL = (ast.FunctionDef, ast.AsyncFunctionDef, ast.Assign, ast.AnnAssign, ast.Expr)
 # str.format and format_map resolve "{x.attr}" and "{x[key]}" fields, a known way out of a namespace.
 _REFUSED_ATTRIBUTES = {"format", "format_map"}
+MEMORIES = "MEMORIES"
+
+
+def _literal(value: Any) -> str:
+    multiline = isinstance(value, str) and "\n" in value and '"""' not in value and "\\" not in value
+    return f'"""{value}"""' if multiline and not value.endswith('"') else repr(value)
+
+
+def pack_memories(source: str, memories: Sequence[dict[str, Any]]) -> str:
+    """`source` with `memories` as a literal constant ahead of it."""
+    if not memories:
+        return source
+    rows = ["    {" + ", ".join(f"{key!r}: {_literal(value)}" for key, value in memory.items()) + "},"
+            for memory in memories]
+    return f"{MEMORIES} = [\n" + "\n".join(rows) + f"\n]\n\n{source}"
+
+
+def unpack_memories(source: str) -> tuple[str, list[dict[str, Any]]]:
+    """`source` without its `MEMORIES` constant, and the memories it held (none if it holds no usable constant)."""
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return source, []
+    for node in tree.body:
+        if (isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name)
+                and node.targets[0].id == MEMORIES):
+            try:
+                memories = ast.literal_eval(node.value)
+            except ValueError:
+                return source, []
+            lines = source.splitlines(keepends=True)
+            rest = "".join([*lines[:node.lineno - 1], *lines[node.end_lineno:]]).lstrip("\r\n")
+            return rest, [m for m in memories if isinstance(m, dict)] if isinstance(memories, list) else []
+    return source, []
 
 
 class UnsafeMechanism(ValueError):
@@ -137,8 +178,12 @@ class Lab:
     Refused = UnsafeSkill
 
     def __init__(self, episodes: list[Episode], act: Act, contract: Contract, writer: Writer,
-                 budget: MechanismBudget | None = None) -> None:
+                 budget: MechanismBudget | None = None, memories: Sequence[dict[str, Any]] = (),
+                 tests: Sequence[dict[str, Any]] = ()) -> None:
         self.episodes = list(episodes)
+        self.memories = [dict(memory) for memory in memories]  # what an earlier version of this mechanism stored
+        self.tests = [dict(test) for test in tests]  # labeled requests a search shares: id, request, should_act
+        self._remembered: dict[str, dict[str, Any]] = {}
         self.contract = contract_text(contract)
         self.entry = contract.name
         self._contract = contract
@@ -172,10 +217,10 @@ class Lab:
     # ------------------------------------------------------------ practice
 
     async def practice(self, source: str, task_id: str) -> tuple[float, str, str]:
-        """Try a function on one observed request: (reward, the user's reason, the calendars it read)."""
+        """Try a function on one observed request or shared test: (reward, the user's reason, the calendars it read)."""
         self._spend("practice")
         try:
-            return await self._act(source, task_id)
+            return await self._act(self._packed(source), task_id)
         except Exception as exc:
             raise _HarnessFault(exc) from exc
 
@@ -186,8 +231,9 @@ class Lab:
         return list(dict.fromkeys(e.task_id for e in self.episodes))
 
     def request(self, task_id: str) -> str:
-        """The request text of the first episode for a task."""
-        return next(e.request for e in self.episodes if e.task_id == task_id)
+        """The text of a shared test, or of the first episode for a task."""
+        shared = next((test["request"] for test in self.tests if test["id"] == task_id), None)
+        return next(e.request for e in self.episodes if e.task_id == task_id) if shared is None else shared
 
     def render(self, episode: Episode) -> str:
         """An episode as chapter 6's writers read it; a design may build its own view instead."""
@@ -200,9 +246,26 @@ class Lab:
                 raise ValueError(f"lab.fill takes plain names only, not {{{name}}}")
         return template.format(**values)
 
+    def parse(self, reply: str) -> Any:
+        """The JSON value in a writer's reply, with or without a code fence. Raises ValueError if there is none."""
+        text = reply.strip()
+        if "```" in text:
+            parts = text.split("```")
+            text = parts[1] if len(parts) >= 3 else text
+            text = text[4:] if text.startswith("json") else text
+        return json.loads(text)
+
+    def remember(self, name: str, description: str, body: str, route: str = "none", read_only: bool = False) -> None:
+        """Store a memory, or replace the one of that name: what it covers, what it holds, and how it is served."""
+        self._remembered[str(name)] = {"name": str(name), "description": str(description), "route": str(route),
+                                       "read_only": bool(read_only), "body": str(body)}
+
     def note(self, text: Any) -> None:
         """Something the design wants a person, or the designer, to read later."""
         self._notes.append(str(text))
+
+    def _packed(self, source: str) -> str:
+        return pack_memories(source, list(self._remembered.values()))
 
     # ------------------------------------------------------------ metering
 
@@ -266,4 +329,4 @@ async def run_mechanism(source: str, lab: Lab, *, name: str = "mechanism") -> Le
         result = result.get("source")
     if not isinstance(result, str) or not result.strip():
         raise MechanismStopped("the mechanism returned no function source", lab.writer_calls, lab.writer_usage)
-    return LearnedMemory(name, result, lab.writer_calls, list(lab._notes), values, lab.writer_usage)
+    return LearnedMemory(name, lab._packed(result), lab.writer_calls, list(lab._notes), values, lab.writer_usage)

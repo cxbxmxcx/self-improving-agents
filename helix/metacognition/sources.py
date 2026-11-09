@@ -19,6 +19,7 @@ import ast
 import asyncio
 import hashlib
 import weakref
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
@@ -113,12 +114,15 @@ class SourceLearner(Mechanism):
     """
 
     def __init__(self, source: str, name: str = "mechanism", prompts: PromptPack | str = GENERIC,
-                 budget: MechanismBudget | None = None) -> None:
+                 budget: MechanismBudget | None = None, memories: Sequence[dict[str, Any]] = (),
+                 tests: Sequence[dict[str, Any]] = ()) -> None:
         super().__init__(PACKS[prompts] if isinstance(prompts, str) else prompts)
         check_mechanism(source)  # refuse unsafe source when it is declared, not when it first learns
         self.source = source
         self.name = name
         self.budget = budget
+        self.memories = list(memories)  # what an earlier version stored, for `lab.memories`
+        self.tests = list(tests)  # labeled requests a search shares, for `lab.tests`
 
     @classmethod
     def seed(cls, name: str, prompts: PromptPack | str = GENERIC, budget: MechanismBudget | None = None
@@ -131,7 +135,7 @@ class SourceLearner(Mechanism):
         return f"{self.name}:{source_id(self.source)}"
 
     async def learn(self, episodes: list[Episode], act: Any, writer: Writer, contract: Contract) -> LearnedMemory:
-        lab = Lab(episodes, act, contract, writer, budget=self.budget)
+        lab = Lab(episodes, act, contract, writer, budget=self.budget, memories=self.memories, tests=self.tests)
         lab.contract = contract_text(contract, self.prompts)
         async with _one_at_a_time():
             return await run_mechanism(self.source, lab, name=self.name)

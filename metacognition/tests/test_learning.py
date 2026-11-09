@@ -111,3 +111,35 @@ async def test_a_search_with_validation_is_judged_on_a_class_it_never_touched(tm
         (0.0, 0.0), (0.5, 0.0), (0.0, 0.0), (0.906, 0.417)]
     assert (design["standing"], design["accepted"], design["train"], round(design["validation"], 3),
             design["test"]) == ("refused", False, 0.90625, 0.417, 0.0)
+
+
+async def test_a_capped_recording_stops_before_a_call_could_pass_the_budget(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+
+    import helix.llm_call
+    from helix.metacognition import recording
+
+    async def model(**kwargs):
+        prompt = 100_000 if kwargs["reasoning_effort"] == "medium" else 100  # 7.5 cents a call at medium
+        return SimpleNamespace(
+            choices=[SimpleNamespace(message=SimpleNamespace(content="ok", tool_calls=None))],
+            usage=SimpleNamespace(prompt_tokens=prompt, completion_tokens=0,
+                                  completion_tokens_details=SimpleNamespace(reasoning_tokens=0),
+                                  prompt_tokens_details=SimpleNamespace(cached_tokens=0)))
+
+    recording.install()
+    monkeypatch.setattr(recording, "_original", model)
+    spend = study.Spend(0.2)
+    capped = study.CappedRecording(tmp_path / "r.jsonl", mode="record", spend=spend)
+
+    def call(n: int, effort: str) -> dict:
+        return {"model": "gpt-5.4-mini", "messages": [{"role": "user", "content": str(n)}], "tools": None,
+                "reasoning_effort": effort}
+
+    with capped.active():
+        await helix.llm_call.acompletion(**call(1, "medium"))
+        await helix.llm_call.acompletion(**call(2, "medium"))
+        with pytest.raises(study.BudgetSpent):  # a third would make 22.5 cents
+            await helix.llm_call.acompletion(**call(3, "medium"))
+        await helix.llm_call.acompletion(**call(4, "none"))  # a call this small still fits
+    assert capped.live_calls == 3 and spend.total <= spend.limit

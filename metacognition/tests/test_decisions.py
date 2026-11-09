@@ -2,14 +2,20 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Any
 
+import helix
 import pytest
 from helix.deciders import Answer, DecisionUsage
 from helix.memory.learning_mechanisms import Contract
+from helix.memory.mechanism_runtime import pack_memories, unpack_memories
 from helix.metacognition import Metacognition, procedure
 from helix.metacognition.decide import KIT_GUIDE, RETURNS, Desk, Kit, frozen_change, run_program
-from helix.metacognition.decisions import DECISION, RUNG, ProgramSearch, ProgramTier
+from helix.metacognition.gap import Attempt, Good, gap_of, report
+from helix.metacognition.decisions import DECISION, RUNG, ProgramSearch, ProgramTier, ServiceGap
+from helix.signal import Signal
 from helix.search.methods import METHODS
 
 from metacog import Agent, RunConfig, RunContextWrapper, Runner, function_tool
@@ -91,8 +97,8 @@ def tier(*programs: str, **overrides: Any) -> ProgramTier:
     contract = Contract(name="decide", signature="async def decide(request, kit) -> dict", description="Ship orders.",
                         api=KIT_GUIDE, returns=RETURNS)
     settings = {"min_runs": 3, "retry_after": 2, **overrides}
-    return ProgramTier(desk=desk, decider=FakeJev(), contract=contract, labeled=LABELED,
-                       mechanisms=[(f"m{i}", mechanism(p)) for i, p in enumerate(programs)],
+    mechanisms = settings.pop("mechanisms", [(f"m{i}", mechanism(p)) for i, p in enumerate(programs)])
+    return ProgramTier(desk=desk, decider=FakeJev(), contract=contract, labeled=LABELED, mechanisms=mechanisms,
                        writer_model="gpt-5.4-mini", **settings)
 
 
@@ -268,7 +274,7 @@ async def test_a_search_is_shown_its_own_cases_and_never_the_gates():
     with designer.active():
         await meta.programs.improve([])
     shown = designer.requests[0]["messages"][1]["content"]
-    assert "c201" in shown and "c104" not in shown
+    assert "Don't ship O-201." in shown and "O-104" not in shown
 
 
 SLOPPY = GOOD.replace("< 0.7", "< 0.05")
@@ -291,8 +297,8 @@ async def decide(request, kit):
 @pytest.mark.parametrize("edited", [
     HELPED.replace("< 0.5", "< 0.9"),  # a threshold
     HELPED.replace("Ship it?", "Is shipping this order what the request asks for now?"),  # a question
-    HELPED.replace('    return {"action"',
-                   '    if len(ids) > 1:\n        return {"handoff": "which?", "route": "low"}\n    return {"action"'),  # a route
+    HELPED.replace('    return {"action"',  # a route
+                   '    if len(ids) > 1:\n        return {"handoff": "which?", "route": "low"}\n    return {"action"'),
     HELPED.replace("async def decide", "NEW = 1\n\n\nasync def decide"),  # a constant
     HELPED.replace('{"handoff": "no"}', '{"handoff": "no", "read_only": True}'),  # a hand-off that can't act
 ])
@@ -302,8 +308,8 @@ def test_an_edit_may_change_how_a_program_judges(edited):
 
 @pytest.mark.parametrize("edited", [
     HELPED.replace('"reply": "Shipped."', '"reply": "Sent."'),  # an action
-    HELPED.replace('    return {"action"',
-                   '    if not ids:\n        return {"action": "refund", "arguments": {}}\n    return {"action"'),  # a new action
+    HELPED.replace('    return {"action"',  # a new action
+                   '    if not ids:\n        return {"action": "refund", "arguments": {}}\n    return {"action"'),
     HELPED.replace("return items[0]", "return items[-1]"),  # a helper
     HELPED.replace("TOP = 3", "TOP = 4"),  # a constant
     HELPED.replace('kit.find("O-[0-9]+", request)', 'kit.find("O-[0-9]", request)'),  # how ids are found
@@ -449,3 +455,343 @@ async def test_the_gate_calls_the_procedures_the_agent_has_now():
     meta.install("order_status", 'def order_status(api, order_id: str) -> dict:\n    return {"status": "held"}\n')
     after = await meta.programs.judge(CAREFUL, ["c101"])
     assert (after.accepted, after.handoffs) == (0, 1)
+
+
+SHIP_IT = """async def decide(request, kit):
+    ids = kit.find("O-[0-9]+", request)
+    return {"action": "ship", "arguments": {"order_id": ids[0]}, "reply": "Shipped."}
+"""
+PICK = """async def decide(request, kit):
+    return {"serve": "hold" if "Don't" in request else "ship_it"}
+"""
+
+
+def component(*memories: tuple[Any, ...], router: str = PICK) -> str:
+    """A learning component that stores `memories` (name, description, body, route, read_only) and returns `router`."""
+    return (f"ROUTER = {router!r}\nSTORED = {list(memories)!r}\n\n\nasync def learn(lab):\n"
+            "    for name, description, body, route, read_only in STORED:\n"
+            "        lab.remember(name, description, body, route=route, read_only=read_only)\n"
+            "    return ROUTER\n")
+
+
+SHIPS = ("ship_it", "Requests to ship an order.", SHIP_IT, "program", False)
+HOLDS = ("hold", "Requests not to ship something.", "Say a person will look at it.", "none", True)
+ALL_LLM = ("ship_it", "Requests to ship an order.", "Ids look like O-1.", "none", False)
+
+
+async def routed_right(task_, effort, memory):
+    return True, "fine"
+
+
+async def installed(*memories: tuple[Any, ...], router: str = PICK,
+                    **overrides: Any) -> tuple[Agent, Metacognition, list[str]]:
+    seed = [("seed", component(*memories, router=router))]
+    agent, meta = build(mechanisms=seed, route_practice=routed_right, **overrides)
+    meta.agent = agent
+    events: list[str] = []
+    model = RespondingModel(lambda request: text("unused"))
+    with model.active():
+        await meta.programs.improve(events)
+    return agent, meta, events
+
+
+async def test_an_admitted_component_stores_each_memory_with_its_route():
+    _, meta, events = await installed(SHIPS, HOLDS)
+    assert any("memories ship_it (program), hold (none, read-only)" in e for e in events), events
+    router = meta.programs.current()["source"]
+    assert "MEMORIES" not in router and '"serve"' in router
+    assert meta.store.trusted("memory:ship_it")["source"] == SHIP_IT
+    assert meta.store.trusted("memory:hold")["info"] == {"description": HOLDS[1], "route": "none", "read_only": True}
+
+
+async def test_a_decision_memory_serves_with_no_model_and_a_read_only_one_goes_to_the_llm(model):
+    agent, _, _ = await installed(SHIPS, HOLDS)
+    with model.active():
+        result, world = await run(agent, task(1))
+    assert model.requests == [] and world.shipped == ["O-1"]
+    assert "program: used memory ship_it" in result.metacognition.events
+    with model.active():
+        result, world = await run(agent, NEAR_MISS)
+    assert world.shipped == [] and len(model.requests) == 1
+    assert "ship" not in {t["function"]["name"] for t in model.requests[0]["tools"]}
+    assert "Say a person will look at it." in model.requests[0]["messages"][0]["content"]
+    assert "program: used memory hold" in result.metacognition.events
+
+
+async def test_a_memory_routed_to_the_llm_runs_at_its_reasoning_level(model):
+    notes = ("ship_it", "Requests to ship an order.", "Ids look like O-1.", "medium", False)
+    served = """async def decide(request, kit):
+    if "Don't" in request:
+        return {"handoff": "no", "read_only": True}
+    if "101" in request:
+        return {"serve": "direct"}
+    return {"serve": "ship_it"}
+"""
+    direct = ("direct", "Ship directly.", SHIP_IT, "program", False)
+    agent, meta, _ = await installed(notes, direct, router=served, bar=0.5)
+    with model.active():
+        result, _ = await run(agent, {**task(2), "judge": False})
+    assert len(model.requests) == 1 and model.requests[0]["reasoning_effort"] == "medium"
+    assert "Ids look like O-1." in model.requests[0]["messages"][0]["content"]
+    assert result.metacognition.effort == "medium"
+
+
+async def test_recall_finds_the_closest_memory_in_the_tier():
+    router = """async def decide(request, kit):
+    found = await kit.recall(request, k=1)
+    return {"serve": found[0]["name"]}
+"""
+    packed = pack_memories(router, [
+        {"name": "ship_it", "description": "ship an order out", "route": "program", "read_only": False, "body": SHIP_IT},
+        {"name": "other", "description": "questions about invoices and payments", "route": "none", "read_only": True,
+         "body": "n"}])
+    _, meta = build()
+    judged = await meta.programs.judge(packed, ["c101"])
+    assert judged.accepted == 1 and judged.acted == 1
+
+
+async def test_a_component_that_serves_nothing_itself_is_not_admitted():
+    _, meta, events = await installed(ALL_LLM, HOLDS)
+    assert meta.programs.current() is None
+    assert any("the gate refused" in e for e in events), events
+
+
+@pytest.mark.parametrize("method", METHODS)
+async def test_a_search_can_rewrite_a_component_from_the_llm_to_a_decision_memory(method):
+    variant = component(SHIPS, HOLDS)
+    designer = RespondingModel(lambda request: text(variant))
+    agent, meta = build(mechanisms=[("seed", component(ALL_LLM, HOLDS))], route_practice=routed_right,
+                        search=ProgramSearch(method=method, population=1, generations=1, seed=3))
+    meta.agent = agent
+    events: list[str] = []
+    with designer.active():
+        await meta.programs.improve(events)
+    assert any("wrote a program the gate admits" in e for e in events), events
+    assert meta.store.trusted("memory:ship_it")["info"]["route"] == "program"
+    assert meta.store.trusted("memory:ship_it")["source"] == SHIP_IT
+
+
+async def test_a_variant_starts_from_what_its_parent_stored():
+    moves = (f"ROUTER = {PICK!r}\n\n\nasync def learn(lab):\n    for memory in lab.memories:\n"
+             f"        lab.remember(**memory)\n"
+             f"    lab.remember('ship_it', 'Requests to ship an order.', {SHIP_IT!r}, route='program')\n"
+             "    return ROUTER\n")
+    designer = RespondingModel(lambda request: text(moves))
+    agent, meta = build(mechanisms=[("seed", component(ALL_LLM, HOLDS))], route_practice=routed_right,
+                        search=ProgramSearch(population=1, generations=1, seed=3))
+    meta.agent = agent
+    events: list[str] = []
+    with designer.active():
+        await meta.programs.improve(events)
+    assert any("gate admits" in e and "no design" not in e for e in events), events
+    assert meta.store.trusted("memory:hold")["source"] == HOLDS[2]  # inherited, never written by the variant
+    assert meta.store.trusted("memory:ship_it")["info"]["route"] == "program"
+
+
+async def test_a_variant_reaches_the_gate_only_if_it_clears_the_bar_on_its_own_cases():
+    designer = RespondingModel(lambda request: text(mechanism(RECKLESS)))
+    seen = {"c201": task(201, "Don't ship O-201.", "handoff")}
+    agent, meta = build(RECKLESS, search=ProgramSearch(population=1, generations=1, seed=3), search_cases=seen)
+    meta.agent = agent
+    with designer.active():
+        await meta.programs.improve([])
+    rows = [row for row in meta.programs.search_log if row.get("outcome", "").startswith("refused")]
+    assert rows and all(row["outcome"] == "refused on its own cases" and "right" not in row for row in rows)
+
+
+def test_an_edit_may_rewrite_how_a_memory_is_retrieved_but_not_what_it_does():
+    def packed(body: str = SHIP_IT, description: str = "ship", route: str = "program") -> str:
+        return pack_memories(PICK, [{"name": "ship_it", "description": description, "route": route, "read_only": False,
+                                     "body": body}])
+
+    assert frozen_change(packed(), packed(description="Only a new shipment.")) is None
+    assert frozen_change(packed(), packed(route="none", body="Notes.")) is None
+    assert "in the memory ship_it" in frozen_change(packed(), packed(body=SHIP_IT.replace("Shipped.", "Sent.")))
+    other = pack_memories(PICK, [{"name": "z", "description": "d", "route": "none", "body": "b"}])
+    assert "removed the memory" in frozen_change(packed(), other)
+
+
+def test_memories_survive_being_packed_into_a_program():
+    memories = [{"name": "a", "description": "d", "route": "program", "read_only": False, "body": SHIP_IT},
+                {"name": "b", "description": "has 'quotes' and a \\ slash", "route": "low", "read_only": True,
+                 "body": 'ends in "'}]
+    router, unpacked = unpack_memories(pack_memories(PICK, memories))
+    assert router == PICK and unpacked == memories
+    assert unpack_memories(PICK) == (PICK, [])
+
+
+SEEDS = Path(helix.__file__).parent / "metacognition" / "programs"
+KINDS = json.dumps([
+    {"name": "ship_it", "description": "Requests to ship an order.", "guidance": "Ids look like O-1.", "acts": True},
+    {"name": "hold", "description": "Requests not to ship something.", "guidance": "Answer only.", "acts": False}])
+
+
+class KindJev(FakeJev):
+    async def ask_with_usage(self, state: Any, questions: dict[str, Any]) -> tuple[dict[str, Any], DecisionUsage]:
+        if "kind" not in questions:
+            return await super().ask_with_usage(state, questions)
+        kind = "hold" if "Don't" in state["request"] else "ship_it"
+        answer = Answer("choice", kind, 0.9, {kind: 0.9})
+        return {"kind": answer}, DecisionUsage(calls=1, input_tokens=100, dollars=0.0, seconds=0.01)
+
+
+def replying(*replies: str) -> ScriptedModel:
+    return ScriptedModel([text(reply) for reply in replies])
+
+
+async def test_the_llm_seed_stores_guidance_and_nothing_that_serves_without_the_model():
+    source = (SEEDS / "component_llm.py").read_text(encoding="utf-8")
+    assert "kit.ask" not in source and '"program"' not in source
+    agent, meta = build(mechanisms=[("component_llm", source)], route_practice=routed_right)
+    meta.agent = agent
+    events: list[str] = []
+    writer = replying(KINDS)
+    with writer.active():
+        await meta.programs.improve(events)
+    assert meta.programs.current() is None and any("the gate refused" in e for e in events), events
+    assert len(writer.requests) == 1
+
+
+async def test_the_control_seed_writes_a_decision_memory_for_each_kind_that_acts():
+    source = (SEEDS / "component_judgment.py").read_text(encoding="utf-8")
+    desk_tier = tier(mechanisms=[("component_judgment", source)])
+    desk_tier.decider = KindJev()
+    meta = Metacognition([order_status], verifier=lambda ctx, result: ctx.context.check(), learning="inline",
+                         relearn_after=10**9, programs=desk_tier, executor="guarded")
+    meta.install("order_status", STATUS)
+    agent = Agent(name="Shop", instructions="Ship orders.", tools=[read_order, ship], model="gpt-5.4-mini",
+                  metacognition=meta)
+    meta.agent = agent
+    events: list[str] = []
+    with replying(KINDS, SHIP_IT).active():
+        await meta.programs.improve(events)
+    assert any("memories ship_it (program), hold (none, read-only)" in e for e in events), events
+    assert meta.programs.current() is not None
+    assert meta.store.trusted("memory:ship_it")["source"].strip() == SHIP_IT.strip()
+
+
+async def test_a_search_learns_only_how_many_gate_requests_went_wrong():
+    designer = RespondingModel(lambda request: text(mechanism(RECKLESS)))
+    agent, meta = build(RECKLESS, search=ProgramSearch(population=1, generations=1, seed=3), search_cases={"c201": task(201)})
+    meta.agent = agent
+    with designer.active():
+        await meta.programs.improve([])
+    shown = designer.requests[0]["messages"][1]["content"]
+    assert "On 4 other requests" in shown and "3 right, with 1 wrong actions" in shown
+    assert "O-104" not in shown
+    seed_row = meta.programs.search_log[0]
+    assert seed_row["outcome"] == "refused by gate" and seed_row["search_score"] < 1.0  # 1.0 on what it can see
+
+
+async def test_a_later_search_starts_from_the_memories_kept_in_the_archive(tmp_path):
+    counts = (f"ROUTER = {PICK!r}\n\n\nasync def learn(lab):\n"
+              "    lab.remember('count', str(len(lab.memories)), 'x', route='none', read_only=True)\n"
+              "    return ROUTER\n")
+    designer = RespondingModel(lambda request: text(counts))
+    spec = ProgramSearch(archive=str(tmp_path / "a.sqlite"), population=1, generations=1, seed=3, max_searches=2)
+    agent, meta = build(mechanisms=[("seed", component(ALL_LLM, HOLDS))], route_practice=routed_right, search=spec)
+    meta.agent = agent
+    with designer.active():
+        await meta.programs.improve([])
+        await meta.programs.improve([])
+    last = unpack_memories(meta.programs.search_log[-1]["program"])[1][0]
+    assert last["name"] == "count" and last["description"] in ("1", "2")
+
+
+def attempt(outcome: str, memory: str | None = None, should_act: bool = True) -> Attempt:
+    return Attempt("c1", "Ship O-1.", should_act, outcome, 0.5, "because", memory, dollars=0.002, seconds=2.0)
+
+
+def test_the_gap_is_the_mean_distance_from_good():
+    good = Good(wrong_action=3.0)
+    assert gap_of([attempt("program"), attempt("read_only", should_act=False)], good) == 0.0
+    assert gap_of([attempt("program"), attempt("llm")], good) == pytest.approx(0.2)
+    assert gap_of([attempt("wrong"), attempt("program")], good) == pytest.approx(1.5)
+    assert gap_of([attempt("handoff"), attempt("lost"), attempt("llm_wrong")], good) == pytest.approx(1.0)
+
+
+def test_the_gap_report_says_where_the_gap_is_and_shows_every_request():
+    tried = [attempt("llm", "ship_it"), attempt("llm", "ship_it"), attempt("program", "other"), attempt("wrong", "hold")]
+    written = report(tried, Good(wrong_action=3.0))
+    assert "Gap from good: 0.95 over 4 requests" in written
+    assert "- wrong actions: 1 requests, 0.75 of the gap" in written
+    assert "- right, but served by the language model: 2 requests, 0.20 of the gap" in written
+    assert written.index("- hold: 0.75") < written.index("- ship_it: 0.20")
+    assert written.count("'Ship O-1.'") == 4
+
+
+async def test_sharing_every_test_run_shows_the_rewriter_the_gates_requests_too():
+    designer = RespondingModel(lambda request: text(mechanism(RECKLESS)))
+    spec = ProgramSearch(population=1, generations=1, seed=3, share_all=True)
+    agent, meta = build(RECKLESS, search=spec, search_cases={"c201": task(201)})
+    meta.agent = agent
+    with designer.active():
+        await meta.programs.improve([])
+    shown = designer.requests[0]["messages"][1]["content"]
+    assert "Gap from good" in shown and "Don't ship O-104." in shown and "O-201" in shown
+
+
+async def test_the_gap_measurement_is_a_helix_signal():
+    agent, meta = build(RECKLESS)
+    meta.agent = agent
+    signal = ServiceGap(meta.programs, Good())
+    assert isinstance(signal, Signal)
+    measured = await signal.measure(GOOD)
+    assert measured.signal_id == "service_gap" and measured.score == pytest.approx(1.0) and measured.raw_value == 0.0
+    assert not measured.triggered
+
+
+async def test_a_search_can_stop_at_the_first_variant_the_gate_admits():
+    designer = RespondingModel(lambda request: text(mechanism(GOOD)))
+    spec = ProgramSearch(population=4, generations=1, seed=3, stop_when_admitted=True)
+    agent, meta = build(RECKLESS, search=spec)
+    meta.agent = agent
+    events: list[str] = []
+    with designer.active():
+        await meta.programs.improve(events)
+    assert any("wrote a program the gate admits" in e for e in events), events
+    assert len(designer.requests) == 1
+
+
+PRACTICES_ON_SHARED = (f"ROUTER = {PICK!r}\n\n\nasync def learn(lab):\n"
+                       "    lab.remember('hold', 'x', 'x', route='none', read_only=True)\n"
+                       "    lab.remember('ship_it', 'x', 'x', route='none')\n"
+                       "    tried = []\n"
+                       "    for test in lab.tests:\n"
+                       "        outcome = await lab.practice(ROUTER, test['id'])\n"
+                       "        tried.append([test['id'], lab.request(test['id']), test['should_act'], outcome[0]])\n"
+                       "    lab.remember('ship_it', str(tried), 'x', route='none')\n"
+                       "    return ROUTER\n")
+
+
+@pytest.mark.parametrize("share_all", [True, False])
+async def test_a_variant_can_practice_on_the_requests_a_search_shares(share_all):
+    designer = RespondingModel(lambda request: text(PRACTICES_ON_SHARED))
+    spec = ProgramSearch(population=1, generations=1, seed=3, share_all=share_all)
+    agent, meta = build(mechanisms=[("seed", component(ALL_LLM, HOLDS))], route_practice=routed_right, search=spec,
+                        search_cases={"c201": task(201)})
+    meta.agent = agent
+    with designer.active():
+        await meta.programs.improve([])
+    stored = {m["name"]: m["description"] for m in unpack_memories(meta.programs.search_log[-1]["program"])[1]}
+    assert "['c201', 'Ship O-201.', True, 0.6]" in stored["ship_it"]
+    assert ("['c104', \"Don't ship O-104.\", False, 1.0]" in stored["ship_it"]) == share_all
+
+
+def test_a_variant_practices_on_what_its_gap_report_shows():
+    _, meta = build(RECKLESS, search_cases={"c201": task(201)})
+    assert [test["id"] for test in meta.programs._shared_tests(False)] == ["c201"]
+    assert {"c201", "c104"} <= {test["id"] for test in meta.programs._shared_tests(True)}
+    _, meta = build(RECKLESS)  # with no search cases of its own, the report shows the gate's
+    assert {test["id"] for test in meta.programs._shared_tests(False)} == set(LABELED)
+
+
+async def test_a_program_the_guard_refuses_never_ran_so_it_took_no_wrong_action():
+    agent, meta = build(RECKLESS)
+    meta.agent = agent
+    judged = await meta.programs.judge("async def decide(request, kit:\n")
+    assert judged.wrong == 0 and judged.acted == 0 and not meta.programs._gate(judged).passed
+    assert {a.outcome for a in judged.attempts} == {"refused"}
+    assert gap_of(judged.attempts, Good()) == 1.0
+    written = report(judged.attempts, Good())
+    assert "No request ran" in written and "does not parse" in written and "Ship O-" not in written

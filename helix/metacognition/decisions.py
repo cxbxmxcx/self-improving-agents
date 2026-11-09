@@ -24,7 +24,6 @@ from __future__ import annotations
 
 import asyncio
 import inspect
-import json
 import random
 import time
 from collections.abc import Sequence
@@ -35,16 +34,18 @@ from typing import Any
 from helix.archive import SQLiteArchive
 from helix.artifact import ArtifactKind, genesis
 from helix.memory.learning_mechanisms import Contract, Episode
-from helix.memory.mechanism_runtime import MechanismBudget, UnsafeMechanism, check_mechanism
+from helix.memory.mechanism_runtime import (MECHANISM_BUILTINS, MechanismBudget, UnsafeMechanism, check_mechanism,
+                                             pack_memories, unpack_memories)
 from helix.scaffold.common import META_KEY
 from helix.search.base import SearchBudget
 from helix.search.methods import build_search
-from helix.signal import GapMeasurement
+from helix.signal import Cost, GapMeasurement, SignalKind
 from helix.trajectory import StepKind, Trajectory
 
 from helix.deciders.base import Decider, MissingAnswer
-from helix.metacognition.decide import Desk, Kit, UnsafeProgram, check_program, frozen_change, run_program, serve
+from helix.metacognition.decide import RUNG, Desk, Kit, UnsafeProgram, check_program, frozen_change, run_program, serve
 from helix.metacognition.api import SkillAPI
+from helix.metacognition.gap import Attempt, Good, gap_of, report
 from helix.metacognition.mechanisms import contract_text
 from helix.metacognition.parts import Detector, GateResult
 from helix.metacognition.prompts import GENERIC
@@ -56,7 +57,7 @@ from helix.metacognition.result import RunResult
 from helix.metacognition.run_context import RunContextWrapper
 
 DECISION = "decision_program"
-RUNG = "program"
+MEMORY = "memory:"  # a stored memory's versions are kept under this prefix, beside the program that retrieves them
 HANDOFF_REWARD = 0.25  # better than a wrong action, far from serving the request
 ROUTED_REWARD = 0.6  # the LLM got it right where the program sent it: served, but not for free
 ROUTED_WRONG = 0.1  # the program's choice of route failed; the LLM's own mistake is not a program's wrong action
@@ -64,50 +65,81 @@ READ_ONLY_LOST = 0.15  # real work sent where nothing can do it: no wrong action
 _LOOP = "decision:loop"
 _OUTCOMES = "decision:outcomes"
 
-PROGRAM_LAB = """A program-learning mechanism is Python source, and it is a whole learning component: what it learns from
-experience, how that is stored, and how it is used. It writes a decision program: code that keeps what was learned as
-constants, and for each request retrieves what applies and decides how to serve it. Some requests the program serves
-itself with no language model, calling tools and procedures and asking Jev, a small model that returns typed
-judgments, for what code can't decide. Others it hands to the language model, naming the reasoning level to use and the
-memory to read. The mechanism is given runs a language model already did, each judged by a checker. It is scored on
-held-out requests: an action must be right, a request outside the job must be handed off, a wrong action is penalized
-heavily, a request routed to the language model earns less than one served without it, and a plain hand-off of work the
-program could have done earns little. It must work for any job, so nothing in it may assume one domain; the job is
-described by `lab.contract`.
+PROGRAM_LAB = """A learning component is Python source. It decides what is learned from experience, how that is stored as
+memories, and how each request is served from them. It is given runs a language model already did, each judged by a
+checker.
+
+A memory has a name, a description, a body and a route, and the route says how a request that retrieves it is served:
+- "program": the body is a decision program, `async def decide(request, kit)`, that serves the request with no language
+  model. It calls tools and procedures and asks Jev, a small model that returns typed judgments, for what code can't
+  decide, and it returns an action or a hand-off as the contract says.
+- "none", "low", "medium" or "high": the language model serves the request at that reasoning, reading the body first.
+  With read_only true it can read and answer but has no way to act.
+
+The component's entry point, `async def learn(lab)`, stores memories with
+`lab.remember(name, description, body, route=..., read_only=...)` and returns the source of the program that picks a
+memory for each request. That program is also `async def decide(request, kit)`. It can call `await kit.recall(text, k)`
+for the closest memories (each a dict with "name", "description", "route" and "read_only") and can ask Jev. It returns
+{"serve": name}, or acts or hands off itself as the contract says.
+
+Whatever a program decides about what a request asks for, it decides by asking Jev, never by looking for words in the
+request: a list of words fits only the wordings it was built from, and the requests that score a component are worded
+differently. Code is for what code can know exactly, such as finding an id or calling a tool.
+
+The component is scored on held-out requests: an action must be right, a request outside the job must be handed off
+read-only, a wrong action is penalized heavily, a request served by the language model earns less than one served
+without it, and a plain hand-off of work the program could have done earns little. A component that serves nothing
+without the language model can't be admitted. It must work for any job, so nothing in it may assume one domain; the job
+is described by `lab.contract`.
 
 Its form:
-- top-level constants (prompts are plain strings with {{placeholder}} fields) and helper functions;
-- one entry point, `async def learn(lab)`, returning the decision program's source as a string;
+- top-level constants (prompts are plain strings with {placeholder} fields) and helper functions;
+- one entry point, `async def learn(lab)`;
 - no imports, no names that start with an underscore, no bare `except`, and no str.format; fill a template
-  with `lab.fill(TEMPLATE, name=value, ...)`.
+  with `lab.fill(TEMPLATE, name=value, ...)`;
+- the only builtins, here and in the programs it writes, are """ + ", ".join(sorted(MECHANISM_BUILTINS)) + """.
 
-What `lab` offers, every call metered (a mechanism over budget stops and scores nothing):
-- `lab.episodes`: the judged runs, each with .task_id, .request, .steps, .success and .reason;
-- `lab.render(episode)`: a run as text; `lab.contract`: the decision program's contract as text;
-- `await lab.ask(prompt)`: the writer's text reply, from which the mechanism takes the program's source;
-- `await lab.practice(source, task_id)`: try a program on a run's request, returning (reward, reason, observations);
+What `lab` offers, every call metered (a component over budget stops and scores nothing):
+- `lab.episodes`: the judged runs, each with .task_id, .request, .steps (each a dict with "tool", "arguments" and
+  "result"), .success and .reason;
+- `lab.memories`: what this component's parent stored, as dicts whose keys are remember's arguments, so
+  `lab.remember(**memory)` keeps one. It is empty on a first run, and nothing is kept unless it is remembered again;
+- `lab.render(episode)`: a run as text; `lab.contract`: a decision program's contract as text;
+- `await lab.ask(prompt)`: the writer's text reply; `lab.parse(reply)`: the JSON value in a reply;
+- `await lab.practice(source, task_id)`: try a program, with what is remembered so far, on a run's request, returning
+  (reward, reason, the name of the memory that served it, if one did). The reward is 1 if a program did the work or a
+  request that should not be acted on went read-only, """ + str(ROUTED_REWARD) + """ if the language model got it right, """ + str(HANDOFF_REWARD) + """ or less if it
+  wasn't done, and 0 for a wrong action;
 - `lab.stream()`: the distinct task ids in order; `lab.request(task_id)`: a task's request;
+- `lab.tests`: the labeled test requests the search shares with this component, each a dict with "id", "request" and
+  "should_act", empty if it shares none. `lab.practice` and `lab.request` take a test's id, so `learn` can try a change on
+  the very requests the gap report names before deciding to keep it;
 - `lab.note(text)`: keep a note.
 
 Writer calls are the cost: the budget is {writer_calls} per problem."""
 
-MUTATION_PROMPT = """You are improving a program-learning mechanism by reflective mutation in a population-based search.
+MUTATION_PROMPT = """You are improving a learning component by rewriting its code, in a search that keeps every variant.
 
 """ + PROGRAM_LAB + """
 
-You will see the current mechanism, feedback from scoring the programs it wrote (requests served right, wrong actions,
-hand-offs, and why they failed), and sometimes a sibling mechanism. Produce an improved mechanism that fixes what the
-feedback shows and keeps what works.
+You will see the current component and its gap: what good is, how far the component is from it, where that gap sits,
+what happened on every request it was tried on, what it stored and the program it returned. You may also see a sibling
+component. Build one variant that closes the largest part of the gap and keeps what works.
 
-Output only the mechanism's source."""
+If requests are right only because the language model served them, that is the gap to close. Choose one memory that acts
+and is still served by the language model, and change the code so that memory is served by a decision program: `learn`
+writes the program and stores it with route "program", and keeps the other memories. Move one memory at a time. If wrong
+actions or requests left undone are a larger part of the gap, fix those first.
 
-CROSSOVER_PROMPT = """You are combining two program-learning mechanisms into one offspring.
+Output only the component's source."""
+
+CROSSOVER_PROMPT = """You are combining two learning components into one offspring.
 
 """ + PROGRAM_LAB + """
 
 Take what each parent does well and drop what either does poorly.
 
-Output only the mechanism's source."""
+Output only the component's source."""
 
 PROGRAM_RULES = """A decision program serves requests with no language model, and asks Jev, a small model that returns typed
 judgments, for what code can't decide. Its contract:
@@ -116,10 +148,12 @@ judgments, for what code can't decide. Its contract:
 
 What you may change is how the program judges a request, in the body of `decide`: the questions it asks Jev, the state
 it gives Jev, the thresholds it applies to the answers, and its hand-offs, including any hand-off the contract lets it
-route. You may add constants and helpers.
+route. You may add constants and helpers. In its MEMORIES list, you may change a memory's description, route and
+read_only.
 
 Everything else is frozen, and a proposal that changes it is rejected: every existing constant and helper, every call to
 `kit.find`, `kit.read`, `kit.procedure` or a helper, and every action the program returns. You may add no new action.
+A decision memory's body follows the same rules, and no memory may be removed.
 
 Decide what a request asks for with Jev, never with a list of words. A wrong action costs far more than a hand-off."""
 
@@ -139,12 +173,12 @@ Take the judgments that work in each. Output only the program's source."""
 
 @dataclass
 class ProgramSearch:
-    """A search for when no mechanism writes a program the gate admits.
+    """A search for when no mechanism writes a program the gate admits: a model rewrites code, and each variant is kept.
 
     `method` is any of helix.search.METHODS. `archive` is a path to keep the search's history across searches: a
-    later gap forks from anything earlier ones found instead of starting over. `target` is what it changes:
-    "mechanism" rewrites the mechanism, whose every variant then writes a program from scratch. "program" edits the
-    best program the mechanisms wrote, so a good change is inherited, and `frozen_change` keeps what already works.
+    later gap forks from anything earlier ones found instead of starting over. `target` is the code it changes:
+    "mechanism" rewrites the whole learning component, and each variant starts from the memories its parent stored.
+    "program" edits the best program the components wrote, and `frozen_change` keeps what already works.
     """
 
     method: str = "dgm"
@@ -158,6 +192,9 @@ class ProgramSearch:
     seed: int = 7
     label: str | None = None
     max_searches: int = 1
+    share_all: bool = False  # hand the rewriter every test run, the gate's too, try every variant on the gate, and
+    # let a variant's `learn` practice on the gate's requests as well as the search's
+    stop_when_admitted: bool = False  # end the search at the first variant the gate admits
 
 
 @dataclass
@@ -203,7 +240,8 @@ class Judgment:
     failures: list[str]
     routed: int = 0  # requests sent to the LLM with a route and a memory
     routed_right: int = 0
-    answers: dict[str, Any] = field(default_factory=dict)  # what Jev said on each failure, by case id
+    acted: int = 0  # requests the program served right with no language model
+    attempts: list[Attempt] = field(default_factory=list)  # every request tried, and what happened
 
     def score(self, penalty: float) -> float:
         if not self.total:
@@ -216,6 +254,64 @@ class Judgment:
         return (f"{self.accepted}/{self.total} requests served right or rightly handed off, {self.wrong} wrong "
                 f"actions, {self.handoffs} hand-offs of work it could have done, {self.routed} routed to the language "
                 f"model ({self.routed_right} right).\n{shown}")
+
+
+class ServiceGap:
+    """The gap between a decision program and what good is, as a helix Signal.
+
+    A program is tried on the search's cases and the gate's. Its gap is the mean distance from good over every request
+    it was tried on, and the report of that gap, with what happened on each request, goes with the candidate to the model
+    that builds the next variant. By default the gate's requests stay hidden and a variant reaches them only if it clears
+    the bar on its own, and the report gives only counts for them. `share_all` hands over every test run instead, which
+    leaves the held-out stream as the only requests no part of the search has seen.
+    """
+
+    kind = SignalKind.GROUND_TRUTH
+    signal_id = "service_gap"
+    signal_version = 1
+    cost_estimate = Cost()
+
+    def __init__(self, loop: DecisionLoop, good: Good, *, share_all: bool = False) -> None:
+        self.loop = loop
+        self.good = good
+        self.share_all = share_all
+
+    async def tried(self, program: str) -> tuple[Judgment | None, Judgment | None]:
+        """The program on the search's cases, and on the gate's if everything is shared or it earned that."""
+        loop = self.loop
+        seen = await loop.judge(program, list(loop.tier.search_cases)) if loop.tier.search_cases else None
+        reached = seen is None or self.share_all or loop._gate(seen).passed
+        return seen, await loop.judge(program) if reached else None
+
+    def admits(self, seen: Judgment | None, judged: Judgment | None) -> bool:
+        if judged is None or not self.loop._gate(judged).passed:
+            return False
+        return seen is None or not self.share_all or self.loop._gate(seen).passed
+
+    @staticmethod
+    def _held_back(judged: Judgment) -> str:
+        return (f"\n\nOn {judged.total} other requests, which you can't see and which are worded differently from those "
+                f"above, it got {judged.accepted} right, with {judged.wrong} wrong actions and {judged.handoffs} hand-offs "
+                "of work it could have done.")
+
+    def measurement(self, seen: Judgment | None, judged: Judgment | None, *, passed: bool, notes: str = "") -> GapMeasurement:
+        looked_at = seen.attempts if seen is not None else []
+        everything = [*looked_at, *(judged.attempts if judged is not None else [])]
+        shown = everything if self.share_all or seen is None else looked_at
+        gap = gap_of(everything, self.good)
+        feedback = report(shown, self.good)
+        if seen is not None and judged is not None and not self.share_all:
+            feedback += self._held_back(judged)
+        behavior = sorted(a.case_id for a in shown if self.good.gap(a.outcome) > 0)
+        return GapMeasurement(score=max(0.0, 1.0 - gap), signal_id=self.signal_id, signal_version=self.signal_version,
+                              triggered=not passed, raw_value=gap, feedback=feedback + notes,
+                              metadata={"attempts": [asdict(a) for a in shown], "behavior": behavior})
+
+    async def measure(self, candidate: Any, trajectory: Any = None, reference: Any = None,
+                      ground_truth: Any = None) -> GapMeasurement:
+        program = candidate.content if hasattr(candidate, "content") else candidate
+        seen, judged = await self.tried(program)
+        return self.measurement(seen, judged, passed=self.admits(seen, judged))
 
 
 class DecisionLoop:
@@ -294,12 +390,14 @@ class DecisionLoop:
         calls: list[dict[str, Any]] = []
         kit = self._kit(agent, ctx, loop, trajectory, calls)
         try:
-            decision = await run_program(version["source"], request, kit)
+            decision = await run_program(self._packed(version), request, kit)
         except MissingAnswer:
             raise
         except Exception as exc:  # noqa: BLE001 - a program's own failure hands the request to the agent
             decision = {"handoff": f"the program failed: {type(exc).__name__}: {exc}"}
         plan.decider_calls = calls
+        if kit.served_by:
+            plan.report.events.append(f"program: used memory {kit.served_by}")
         action = decision.get("action")
         tool = next((t for t in agent.tools if t.name == action and not getattr(t, "read_only", False)), None)
         if "handoff" in decision or tool is None or self.off(str(action)):
@@ -417,8 +515,8 @@ class DecisionLoop:
     # ------------------------------------------------------------ improvement
 
     async def practice(self, source: str, case_id: str) -> tuple[float, str, str]:
-        reward, reason, _ = await self._practice(source, case_id)
-        return reward, reason, ""
+        attempt = await self._attempt(source, case_id)
+        return attempt.reward, attempt.reason, attempt.memory or ""
 
     def _practice_desk(self) -> Desk:
         """The tier's desk, calling the procedures the agent has now, so the gate passes only what would work live."""
@@ -430,38 +528,44 @@ class DecisionLoop:
 
         return replace(self.tier.desk, procedures=procedures)
 
-    async def _practice(self, source: str, case_id: str) -> tuple[float, str, dict[str, Any]]:
+    async def _attempt(self, source: str, case_id: str) -> Attempt:
+        """Try a program on one request, and say what happened."""
         task = self.tier.labeled.get(case_id) or self.tier.search_cases.get(case_id)
         if task is None:
             run = self.meta.store.case(case_id)
             if run is None or run["case_data"] is None:
-                return 0.0, f"no recorded request for {case_id}", {}
+                return Attempt(case_id, case_id, True, "wrong", 0.0, f"no recorded request for {case_id}")
             task = run["case_data"]
+        expected = task.get("expect") == "handoff"
         try:
             row = await serve(source, task, self._practice_desk(), self.tier.decider)
         except UnsafeProgram as exc:
-            return 0.0, f"the guard refused the program: {exc}", {}
-        expected = task.get("expect") == "handoff"
+            return Attempt(case_id, task["text"], not expected, "refused", 0.0, f"the guard refused the program: {exc}")
+
+        def ended(outcome: str, reward: float, reason: str, dollars: float = 0.0, seconds: float = 0.0) -> Attempt:
+            return Attempt(case_id, task["text"], not expected, outcome, reward, reason, row.served_by, row.answers,
+                           row.dollars + dollars, row.seconds + seconds)
+
         if row.read_only:
             # Known without running the agent: it has no way to act, so nothing can go wrong here or get done.
             if expected:
-                return 1.0, "handed off read-only", row.answers
-            return READ_ONLY_LOST, f"it was handed off read-only, so nothing could serve it: {row.reason}", row.answers
+                return ended("read_only", 1.0, "handed off read-only")
+            return ended("lost", READ_ONLY_LOST, f"it was handed off read-only, so nothing could serve it: {row.reason}")
         if expected and not row.handled and self.tier.read_only_handoffs:
-            return HANDOFF_REWARD, ("it was handed off with the tools to act; a request that should not be acted on "
-                                    "must be handed off read-only"), row.answers
+            return ended("handoff", HANDOFF_REWARD, ("it was handed off with the tools to act; a request that should not "
+                                                     "be acted on must be handed off read-only"))
         if row.route and (self.tier.route_practice is not None or self.tier.world is not None):
             attempt = self.tier.route_practice or self._try_route
-            accepted, reason = await attempt(task, row.route, row.memory)
-            reward = ROUTED_REWARD if accepted else ROUTED_WRONG
-            return reward, f"routed to the LLM at {row.route}: {reason}", row.answers
+            accepted, reason, *spent = await attempt(task, row.route, row.memory)
+            reward, outcome = (ROUTED_REWARD, "llm") if accepted else (ROUTED_WRONG, "llm_wrong")
+            return ended(outcome, reward, f"routed to the LLM at {row.route}: {reason}", *spent)
         if row.right:
-            return 1.0, row.reason, row.answers
+            return ended("program" if row.handled else "read_only", 1.0, row.reason)
         if not row.handled:
-            return HANDOFF_REWARD, f"it was handed off, though it could be served: {row.reason}", row.answers
-        return 0.0, row.reason, row.answers
+            return ended("handoff", HANDOFF_REWARD, f"it was handed off, though it could be served: {row.reason}")
+        return ended("wrong", 0.0, row.reason)
 
-    async def _try_route(self, task: dict[str, Any], effort: str, memory: str | None) -> tuple[bool, str]:
+    async def _try_route(self, task: dict[str, Any], effort: str, memory: str | None) -> tuple[bool, str, float, float]:
         """Run the agent as a program's route would, frozen so the try teaches nothing, and judge the outcome."""
         from helix.metacognition.exceptions import AgentsException
         from helix.metacognition.parts import Verdict
@@ -473,10 +577,11 @@ class DecisionLoop:
             result = await Runner.run(self.meta.agent, task["text"], context=self.tier.world(task), max_turns=12,
                                       run_config=config)
         except AgentsException as exc:
-            return False, f"the run failed: {exc}"
+            return False, f"the run failed: {exc}", 0.0, 0.0
+        spent = float(result.cost.dollars or 0.0), float(result.cost.seconds or 0.0)
         verdict = self.meta.verifier(result.context_wrapper, result)
         verdict = Verdict.coerce(await verdict if inspect.isawaitable(verdict) else verdict)
-        return (False, "no verdict") if verdict is None else (verdict.accepted, verdict.reason or "accepted")
+        return (False, "no verdict", *spent) if verdict is None else (verdict.accepted, verdict.reason or "accepted", *spent)
 
     def _cases(self) -> list[str]:
         """The gate's labeled requests, and every request a program served wrongly since the last install."""
@@ -486,26 +591,23 @@ class DecisionLoop:
         return [*self.tier.labeled, *[c for c in dict.fromkeys(recent) if c not in self.tier.labeled]]
 
     async def judge(self, source: str, cases: Sequence[str] | None = None) -> Judgment:
-        accepted, wrong, handoffs, routed, routed_right, failures, answers = 0, 0, 0, 0, 0, [], {}
-        cases = list(self._cases() if cases is None else cases)
-        for case_id in cases:
-            reward, reason, said = await self._practice(source, case_id)
-            accepted += int(reward >= 1.0 or reward == ROUTED_REWARD)
-            wrong += int(reward == 0.0)
-            handoffs += int(reward in (HANDOFF_REWARD, READ_ONLY_LOST))
-            routed += int(reward in (ROUTED_REWARD, ROUTED_WRONG))
-            routed_right += int(reward == ROUTED_REWARD)
-            if reward < 1.0:
-                failures.append(f"{case_id}: {reason}")
-                answers[case_id] = said
-        return Judgment(accepted, len(cases), wrong, handoffs, failures, routed, routed_right, answers)
+        tried = [await self._attempt(source, case_id) for case_id in (self._cases() if cases is None else cases)]
+        return Judgment(accepted=sum(a.reward >= 1.0 or a.reward == ROUTED_REWARD for a in tried), total=len(tried),
+                        wrong=sum(a.outcome == "wrong" for a in tried),
+                        handoffs=sum(a.reward in (HANDOFF_REWARD, READ_ONLY_LOST) for a in tried),
+                        failures=[f"{a.case_id}: {a.reason}" for a in tried if a.reward < 1.0],
+                        routed=sum(a.reward in (ROUTED_REWARD, ROUTED_WRONG) for a in tried),
+                        routed_right=sum(a.reward == ROUTED_REWARD for a in tried),
+                        acted=sum(a.outcome == "program" for a in tried), attempts=tried)
 
     def _gate(self, judged: Judgment) -> GateResult:
         # Each route answers for itself: what the program serves must clear the bar with next to no wrong actions,
-        # and what it sends to the LLM must do as well as the tier asks of the LLM.
+        # and what it sends to the LLM must do as well as the tier asks of the LLM. A program that serves nothing
+        # itself hasn't closed the gap, however well the LLM does.
         own = judged.accepted - judged.routed_right
         own_total = judged.total - judged.routed
-        passed = (own_total > 0 and own / own_total >= self.tier.bar and judged.wrong <= self.tier.max_wrong
+        passed = (judged.acted > 0 and own_total > 0 and own / own_total >= self.tier.bar
+                  and judged.wrong <= self.tier.max_wrong
                   and (judged.routed == 0 or judged.routed_right / judged.routed >= self.tier.routed_bar))
         return GateResult(judged.accepted, judged.total, passed, judged.failures)
 
@@ -518,11 +620,56 @@ class DecisionLoop:
         found = self.meta.store.setting("program_mechanisms") or []
         return [(m["name"], m["source"]) for m in found] + list(self.tier.mechanisms)
 
-    async def _learn(self, problem: LearningProblem, name: str, source: str) -> tuple[Any, Judgment | None]:
-        learner = SourceLearner(source, name, GENERIC, self.tier.budget)
+    def _stored(self) -> list[dict[str, Any]]:
+        """The memories of the current program, from the versions the store keeps of each."""
+        store, found = self.meta.store, []
+        for name in store.state(_LOOP).get("memories", []):
+            version = store.trusted(MEMORY + name)
+            if version is not None:
+                found.append({"name": name, **version["info"], "body": version["source"]})
+        return found
+
+    def _packed(self, version: dict[str, Any]) -> str:
+        return pack_memories(version["source"], self._stored())
+
+    def _store_memories(self, memories: list[dict[str, Any]], created_by: str) -> None:
+        """Keep each memory as its own version: one that didn't change keeps the version it has."""
+        store = self.meta.store
+        state = store.state(_LOOP)
+        names = [memory["name"] for memory in memories]
+        for name in state.get("memories", []):
+            old = store.trusted(MEMORY + name)
+            if name not in names and old is not None:
+                store.set_state(MEMORY + name, old["version"], "retired")
+        for memory in memories:
+            key = MEMORY + memory["name"]
+            info = {"description": memory["description"], "route": memory["route"],
+                    "read_only": bool(memory.get("read_only"))}
+            old = store.trusted(key)
+            if old is not None and old["source"] == memory["body"] and old["info"] == info:
+                continue
+            if old is not None:
+                store.set_state(key, old["version"], "retired")
+            store.add_version(key, memory["body"], state="trusted", created_by=created_by, info=info)
+        state["memories"] = names
+        store.put_state(_LOOP, state)
+
+    def _shared_tests(self, share_all: bool) -> list[dict[str, Any]]:
+        """The labeled requests a variant can practice on: those its gap report shows, never a gate held back."""
+        tier = self.tier
+        cases = {**tier.search_cases, **(tier.labeled if share_all or not tier.search_cases else {})}
+        return [{"id": case_id, "request": task["text"], "should_act": task.get("expect") != "handoff"}
+                for case_id, task in cases.items()]
+
+    async def _write(self, problem: LearningProblem, name: str, source: str, memories: Sequence[dict[str, Any]],
+                     tests: Sequence[dict[str, Any]] = ()) -> Any:
+        learner = SourceLearner(source, name, GENERIC, self.tier.budget, memories=memories, tests=tests)
         choice = await run_tournament(problem, [learner], writer_model=self.tier.writer_model or DEFAULT_MODEL,
                                       writer_params=self.tier.writer_params, prices=self.tier.prices)
-        trial = choice.winner
+        return choice.winner
+
+    async def _learn(self, problem: LearningProblem, name: str, source: str) -> tuple[Any, Judgment | None]:
+        trial = await self._write(problem, name, source, self._stored())
         return trial, await self.judge(trial.source) if trial.source else None
 
     def _install(self, program: str, mechanism: str, problem: LearningProblem, trial: Any, gate: GateResult,
@@ -531,7 +678,9 @@ class DecisionLoop:
         current = self.current()
         if current is not None:
             store.set_state(DECISION, current["version"], "retired")
-        version = store.add_version(DECISION, program, state="trusted", created_by=mechanism)
+        router, memories = unpack_memories(program)
+        version = store.add_version(DECISION, router, state="trusted", created_by=mechanism)
+        self._store_memories(memories, mechanism)
         for key in self._classes():
             store.put_state(key, {})
         state = store.state(_LOOP)
@@ -543,6 +692,12 @@ class DecisionLoop:
                            outcome="passed, installed")
         events.append(f"program: {mechanism} wrote {DECISION}@{version}; gate {gate.accepted}/{gate.total} "
                       "passed, installed")
+        if memories:
+            events.append("program: memories " + ", ".join(self._label(memory) for memory in memories))
+
+    @staticmethod
+    def _label(memory: dict[str, Any]) -> str:
+        return f"{memory['name']} ({memory['route']}{', read-only' if memory.get('read_only') else ''})"
 
     async def _retest(self, events: list[str]) -> bool:
         """Switch classes back on if the current program now passes: what broke may not have been the program."""
@@ -550,7 +705,7 @@ class DecisionLoop:
         off = [key for key in self._classes() if store.state(key).get("off")]
         if current is None or not off:
             return False
-        judged = await self.judge(current["source"])
+        judged = await self.judge(self._packed(current))
         gate = self._gate(judged)
         label = f"{DECISION}@{current['version']}"
         if not gate.passed:
@@ -610,17 +765,11 @@ class DecisionLoop:
         _, _, name, source = max(scored, key=lambda row: (row[0], -row[1]))
         return name, source
 
-    def _edit_feedback(self, seen: Judgment) -> str:
-        """The score, and each failure as the request itself and what Jev answered: what an edit needs to see."""
-        shown = []
-        for failure in seen.failures[:14]:
-            case_id, reason = failure.split(": ", 1)
-            request = (self.tier.search_cases.get(case_id) or self.tier.labeled.get(case_id) or {}).get("text", case_id)
-            shown.append(f"- Request: {request}\n  Outcome: {reason}\n  Jev answered: "
-                         f"{json.dumps(seen.answers.get(case_id, {}))}")
-        return (f"{seen.accepted}/{seen.total} requests served right or rightly handed off, {seen.wrong} wrong "
-                f"actions, {seen.handoffs} hand-offs of work it could have done, {seen.routed} routed to the language "
-                f"model ({seen.routed_right} right).\n" + "\n".join(shown))
+    def _stored_summary(self, program: str) -> str:
+        """What a component stored and the program it returned: a rewrite doesn't see those in its own source."""
+        router, memories = unpack_memories(program)
+        stored = "\n".join(f"- {self._label(memory)}: {memory['description']}" for memory in memories)
+        return f"\n\nIt stored these memories:\n{stored or '(none)'}\n\nThe program it returned:\n{router}"
 
     async def _search(self, problem: LearningProblem, events: list[str],
                       written: Sequence[tuple[str, Any]] = ()) -> None:
@@ -635,43 +784,58 @@ class DecisionLoop:
         else:
             name, seed_source = self._mechanisms()[0]
         best: dict[str, Any] = {}
+        signal = ServiceGap(self, Good(wrong_action=1.0 + spec.penalty), share_all=spec.share_all)
+        built: dict[Any, list[dict[str, Any]]] = {}  # what each variant stored, so its children start from it
+        starting = self._stored()
+        learning = replace(problem, cases=[])  # a variant is measured below, not by the tournament
+        shared = [] if editing else self._shared_tests(spec.share_all)
 
         def logged(source: str, outcome: str, **fields: Any) -> None:
             self.search_log.append({"design": source_id(source), "outcome": outcome, "source": source, **fields})
             detail = "; ".join(f"{k}={v}" for k, v in fields.items() if k != "program")
             events.append(f"search: design {source_id(source)} {outcome} {detail}")
 
+        async def inherited(parent: Any) -> list[dict[str, Any]]:
+            """What a variant's parent stored: from this search, or from the archive of an earlier one."""
+            if parent in built or parent is None:
+                return built.get(parent, starting)
+            history = await archive.get_measurement_history(*parent)
+            return history[-1].metadata.get("memories", starting) if history else starting
+
         async def evaluate(candidate: Any, questions: Any = None) -> GapMeasurement:
             source = candidate.content if hasattr(candidate, "content") else candidate
             if editing:
                 trial = SimpleNamespace(source=source, writer_calls=0, dollars=0.0, note="")
-                judged = await self.judge(source)
             else:
+                memories = await inherited(getattr(candidate, "parent_id", None))
                 try:
-                    trial, judged = await self._learn(problem, f"design_{source_id(source)}", source)
+                    trial = await self._write(learning, f"design_{source_id(source)}", source, memories, shared)
                 except UnsafeMechanism as exc:
                     logged(source, "refused by guard", reason=str(exc))
                     return GapMeasurement(score=0.0, signal_id="program_gate", signal_version=1, triggered=True,
                                           raw_value=0.0, feedback=f"refused by the mechanism guard: {exc}", metadata={})
-            if judged is None:
+            if not trial.source:
                 logged(source, "wrote nothing", note=trial.note, writer_calls=trial.writer_calls)
                 return GapMeasurement(score=0.0, signal_id="program_gate", signal_version=1, triggered=True,
                                       raw_value=0.0, feedback=f"it wrote no program: {trial.note}", metadata={})
-            # The proposer sees only the search's own cases. The gate's verdict decides admission and stays hidden.
-            seen = await self.judge(trial.source, list(tier.search_cases)) if tier.search_cases else judged
-            score = seen.score(spec.penalty)
-            passed = self._gate(judged).passed
-            logged(source, "admitted" if passed else "refused by gate", right=f"{judged.accepted}/{judged.total}",
-                   wrong=judged.wrong, handoffs=judged.handoffs, routed=f"{judged.routed_right}/{judged.routed}",
-                   seen=f"{seen.accepted}/{seen.total}", seen_wrong=seen.wrong, search_score=round(score, 2),
-                   writer_calls=trial.writer_calls, program=trial.source)
-            if passed and (not best or score > best["score"]):
-                best.update(score=score, source=source, trial=trial, judged=judged)
-            behavior = sorted(failure.split(":", 1)[0] for failure in seen.failures)
-            return GapMeasurement(score=score, signal_id="program_gate", signal_version=1, triggered=not passed,
-                                  raw_value=score,
-                                  feedback=self._edit_feedback(seen) if editing else seen.feedback(),
-                                  metadata={"judged": asdict(seen), "behavior": behavior})
+            if hasattr(candidate, "ref"):
+                built[candidate.ref] = unpack_memories(trial.source)[1]
+            seen, judged = await signal.tried(trial.source)
+            passed = signal.admits(seen, judged)
+            outcome = "admitted" if passed else "refused by gate" if judged is not None else "refused on its own cases"
+            looked_at = seen if seen is not None else judged
+            on_gate = {} if judged is None else {"right": f"{judged.accepted}/{judged.total}", "wrong": judged.wrong,
+                                                 "handoffs": judged.handoffs,
+                                                 "routed": f"{judged.routed_right}/{judged.routed}"}
+            measurement = signal.measurement(seen, judged, passed=passed,
+                                             notes="" if editing else self._stored_summary(trial.source))
+            measurement.metadata["memories"] = unpack_memories(trial.source)[1]
+            logged(source, outcome, **on_gate, seen=f"{looked_at.accepted}/{looked_at.total}", seen_wrong=looked_at.wrong,
+                   seen_acted=looked_at.acted, seen_routed=f"{looked_at.routed_right}/{looked_at.routed}",
+                   search_score=round(measurement.score, 2), writer_calls=trial.writer_calls, program=trial.source)
+            if passed and (not best or measurement.score > best["score"]):
+                best.update(score=measurement.score, source=source, trial=trial, judged=judged)
+            return measurement
 
         def validate(source: str) -> str | None:
             try:
@@ -694,8 +858,11 @@ class DecisionLoop:
         archive = SQLiteArchive(spec.archive)
         seed = genesis(DECISION if editing else "program_mechanism", ArtifactKind.CODE, seed_source, created_by=name)
         limit = SearchBudget(max_candidates=spec.population * spec.generations)
-        async for _ in search.propose(seed, None, archive, limit):
-            pass
+        proposals = search.propose(seed, signal, archive, limit)
+        async for _ in proposals:
+            if spec.stop_when_admitted and best:
+                await proposals.aclose()
+                break
         archive.close()
         for rejected in search.discarded:
             self.search_log.append({"design": None, "outcome": "proposal failed validation", **rejected})
@@ -715,4 +882,4 @@ class DecisionLoop:
         self._install(best["trial"].source, design, problem, best["trial"], self._gate(best["judged"]), events)
 
 
-__all__ = ["DECISION", "RUNG", "DecisionLoop", "ProgramSearch", "ProgramTier", "Judgment"]
+__all__ = ["DECISION", "RUNG", "DecisionLoop", "Judgment", "ProgramSearch", "ProgramTier", "ServiceGap"]

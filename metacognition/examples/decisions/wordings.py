@@ -99,6 +99,27 @@ NEAR_MISS_FRESH: dict[str, list[str]] = {
            "What account code should document {document} post to?"],
 }
 
+# The gate's own near misses: the same kinds as the others, in words no search or learner sees.
+NEAR_MISS_GATE: dict[str, list[str]] = {
+    "d1": ["Has finance received the claim for {trip} yet?",
+           "Please wait before you file anything for {trip}; I'm still checking the receipts.",
+           "Did the claim for {trip} get approved?", "Withdraw the expense claim for {trip}.",
+           "The claim on {trip} needs the airport shuttle added.",
+           "Give me a ballpark for the {trip} claim, but hold the filing.",
+           "Send a copy of the {trip} claim over to accounting.", "Which person signs off on the claim for {trip}?",
+           "No need to touch {trip}, my assistant already filed that claim.",
+           "File the claim for {trip} once I'm back from leave, not now."],
+    "d3": ["Can you confirm whether {invoice} has been queued for payment?",
+           "Keep invoice {invoice} unpaid until legal has reviewed it.",
+           "I only need the payable figure for {invoice}, please don't set anything up.",
+           "Bring the payment date on {invoice} forward by a week.", "Did {invoice} go out before its due date?",
+           "Which of our approvers cleared {invoice} for payment?",
+           "Was document {document} ever booked into the ledger?",
+           "Document {document} is a duplicate, so it shouldn't go into the ledger.",
+           "Reverse the ledger entry made from document {document}.",
+           "What cost centre would document {document} fall under?"],
+}
+
 PROMPT = """Someone at a company sent their assistant this request:
 
 {text}
@@ -232,8 +253,11 @@ def load(domain: str, split: str) -> list[dict[str, Any]]:
     """The split's requests as tasks: each is its base task's world with the new words and what's expected.
 
     Besides dev and test: `dev+near` adds near misses for a learner to practice on, `stress` is the first
-    held-out near-miss set, and `stress2` a second, written before any program learned with near misses existed.
+    held-out near-miss set, `stress2` a second, written before any program learned with near misses existed, and
+    `gate` a third, for a gate that must not share wordings with what a search sees.
     """
+    if split == "gate":
+        return _near_miss(domain, "test", NEAR_MISS_GATE[domain], "gate")
     if split == "stress":
         return _near_miss(domain, "test", NEAR_MISS[domain], "near")
     if split == "stress2":

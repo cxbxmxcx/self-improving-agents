@@ -32,7 +32,7 @@ from typing import Any
 
 from helix.metacognition import GENERIC, SEEDS, LearningProblem, SourceLearner, run_tournament
 from helix.metacognition.design import design_learners
-from helix.metacognition.pricing import PRICES
+from helix.metacognition.pricing import PRICES, call_dollars
 
 from examples.learning.problems import (
     REGIMES,
@@ -52,7 +52,7 @@ TESTS = ("multi_attendee", "same_time", "invoices_intake", "invoices_payment")
 
 
 class BudgetSpent(BaseException):
-    """New spending passed the cap. A BaseException, so no learner's `except Exception` swallows it."""
+    """New spending reached the cap. A BaseException, so no learner's `except Exception` swallows it."""
 
 
 class Spend:
@@ -66,9 +66,15 @@ class Spend:
     def total(self) -> float:
         return sum(r.spent(PRICES) for r in self.recordings)
 
+    def largest(self, model: str | None, effort: str | None) -> float:
+        """The most one new call at this model and effort has cost: what the next one might."""
+        rows = [row for recording in self.recordings for row in recording.live_rows
+                if (row.get("model"), row.get("effort")) == (model, effort)]
+        return max((call_dollars(model or "", row.get("usage") or {}, PRICES) or 0.0 for row in rows), default=0.0)
+
 
 class CappedRecording(Recording):
-    """A recording that stops the study once new calls, across every capped recording, pass the budget."""
+    """A recording that stops the study before a new call, across every capped recording, could pass the budget."""
 
     def __init__(self, path: Path, *, mode: str, spend: Spend) -> None:
         super().__init__(path, mode=mode)
@@ -76,10 +82,10 @@ class CappedRecording(Recording):
         spend.recordings.append(self)
 
     async def __call__(self, **kwargs: Any) -> Any:
-        reply = await super().__call__(**kwargs)
-        if self.spend.total > self.spend.limit:
-            raise BudgetSpent(f"${self.spend.total:.2f} of new calls is over the ${self.spend.limit:.2f} budget")
-        return reply
+        spent = self.spend.total
+        if spent + self.spend.largest(kwargs.get("model"), kwargs.get("reasoning_effort")) > self.spend.limit:
+            raise BudgetSpent(f"${spent:.2f} of new calls, and the next could pass the ${self.spend.limit:.2f} budget")
+        return await super().__call__(**kwargs)
 
 
 async def build_problems(args: argparse.Namespace, spend: Spend) -> dict[str, LearningProblem]:

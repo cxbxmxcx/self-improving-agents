@@ -10,9 +10,9 @@ which says nothing about Jev. The stream has three parts:
     drift        (D3) a vendor changes its invoice layout, the parser goes stale, intake is switched off and
                  payments stay on the program; a corrected parser arrives and the loop relearns and switches it back
 
-A search sees half the gate's wordings and the first near-miss set on half its invoices; the gate holds the rest, so
-it asks the same kinds of near miss about other invoices. The held-out stream is the other half of the test wordings
-and the second near-miss set, worded apart from both.
+A search sees half the gate's wordings and the first near-miss set. The gate holds the rest of the wordings and a
+near-miss set of its own, so a program that only knows the words a search showed it can't pass. The held-out stream is
+the other half of the test wordings and the second near-miss set, worded apart from both.
 """
 
 from __future__ import annotations
@@ -65,16 +65,19 @@ def tier_for(domain: str, jev: Decider, args: argparse.Namespace) -> ProgramTier
     desk, _, _ = study.domain(domain)
     gate, _ = split_test(domain)
     # A search and the gate must not share cases, or a search grades its own exam: half the bases are the search's to
-    # see and the rest stay hidden behind the gate. Near misses split by base too: the search sees every kind, and the
-    # gate asks the same kinds about other invoices. The held-out stream's near misses are worded apart from both.
+    # see and the rest stay hidden behind the gate. The search sees every kind of near miss; the gate asks the same
+    # kinds about other invoices in words of its own. The held-out stream's near misses are worded apart from both.
     bases = list(dict.fromkeys(t["id"].split("~")[0] for t in gate))
     for_search = set(bases[: len(bases) // 2])
-    near_seen, near_hidden = split_near(load(domain, "stress"))
+    near_seen, _ = split_near(load(domain, "stress"))
+    _, near_hidden = split_near(load(domain, "gate"))
     seen = [*[t for t in gate if t["id"].split("~")[0] in for_search], *near_seen]
     hidden = [*[t for t in gate if t["id"].split("~")[0] not in for_search], *near_hidden]
     labeled = {t["id"]: t for t in hidden}
     source = (SEEDS / f"{args.mechanism}.py").read_text(encoding="utf-8")
     search = ProgramSearch(method=args.search_method, target=args.search_target, archive=args.archive, population=args.population,
+                           designer_model=args.designer_model, designer_params={"reasoning_effort": args.designer_effort},
+                           share_all=args.share_all, stop_when_admitted=args.stop_when_admitted,
                            generations=args.generations, seed=args.seed, label=args.label) if args.search else None
     return ProgramTier(desk=desk, decider=jev, contract=contract(domain, routes=args.routes), labeled=labeled, mechanisms=[(args.mechanism, source)],
                        search=search, search_cases={t["id"]: t for t in seen}, min_runs=args.min_runs,
@@ -96,12 +99,13 @@ async def phase(name: str, tasks: list[dict[str, Any]], agent: Any, meta: Any, w
         handed = any(e.startswith("program: handed off") for e in report.events)
         routed = any(e.startswith("program: routed") for e in report.events)
         read_only = any(e.startswith("program: handed off read-only") for e in report.events)
+        memory = next((e.split("program: used memory ", 1)[1] for e in report.events if e.startswith("program: used memory ")), None)
         rows.append({"phase": name, "id": task["id"], "style": task["style"], "kind": task.get("kind"),
-                     "tier": "program" if served else "llm", "handed_off": handed, "read_only": read_only, "routed": routed,
+                     "tier": "program" if served else "llm", "handed_off": handed, "read_only": read_only, "routed": routed, "memory": memory,
                      "right": bool(report.verdict.accepted), "reply": str(result.final_output)[:400] if read_only else None,
                      "dollars": float(result.cost.dollars or 0.0), "seconds": float(result.cost.seconds or 0.0)})
         for event in report.events:
-            if not event.startswith(("program: handed off", "program: routed")) and not quiet:
+            if not event.startswith(("program: handed off", "program: routed", "program: used memory")) and not quiet:
                 print(f"  [{name} #{n + 1} {task['id']}] {event}")
 
 
@@ -178,6 +182,7 @@ async def main(args: argparse.Namespace) -> dict[str, Any]:
         current = meta.programs.current()
         if current is not None:
             (args.output / f"loop_{args.domain}_program.py").write_text(current["source"], encoding="utf-8", newline="\n")
+            (args.output / f"loop_{args.domain}_memories.json").write_text(json.dumps(meta.programs._stored(), indent=1), encoding="utf-8")
         found = meta.store.setting("program_mechanisms") or []
         for mechanism in found:
             (args.output / f"{mechanism['name']}.py").write_text(mechanism["source"], encoding="utf-8", newline="\n")
@@ -200,6 +205,10 @@ def parse(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--search-target", default="mechanism", choices=["mechanism", "program"],
                         help="rewrite the mechanism, or edit the program it wrote with what works frozen")
     parser.add_argument("--max-attempts", type=int, default=6, help="times the loop tries to close a gap")
+    parser.add_argument("--designer-model", default=None, help="the model that rewrites the code in a search (default: the writer's)")
+    parser.add_argument("--designer-effort", default="medium", help="that model's reasoning")
+    parser.add_argument("--share-all", action="store_true", help="show the search every test run, the gate's too")
+    parser.add_argument("--stop-when-admitted", action="store_true", help="end the search at the first variant the gate admits")
     parser.add_argument("--archive", default=":memory:", help="a path keeps the search's history between runs")
     parser.add_argument("--population", type=int, default=4)
     parser.add_argument("--generations", type=int, default=2)

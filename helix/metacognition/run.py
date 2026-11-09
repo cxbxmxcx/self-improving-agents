@@ -197,8 +197,9 @@ def _settings_hook(params: dict[str, Any]):
     return patch
 
 
-_READ_ONLY = ("This request is not one to act on. You can read and answer, and you can't take any action here. If it "
-              "asks for something to be done, say that a person needs to handle it.")
+_READ_ONLY = ("This request is not one to act on. You can read and answer, and you can't take any action here. State "
+              "only what your tools show; if they don't show something, say you can't tell. If the request asks for "
+              "something to be done, say that a person needs to handle it.")
 
 
 def _effort_hook(params: dict[str, Any]):
