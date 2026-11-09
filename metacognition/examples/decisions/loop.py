@@ -63,11 +63,6 @@ def split_near(tasks: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[
 
 def tier_for(domain: str, jev: Decider, args: argparse.Namespace) -> ProgramTier:
     desk, _, _ = study.domain(domain)
-    if domain == "d3":  # the gate calls the procedures the agent has, or it passes what the agent fails
-        from examples.invoices.agent import PARSER_BEFORE
-        from examples.invoices.decide import desk as ap_desk
-
-        desk = ap_desk(PARSER_BEFORE)
     gate, _ = split_test(domain)
     # A search and the gate must not share cases, or a search grades its own exam: half the bases are the search's to
     # see and the rest stay hidden behind the gate. Near misses split by base too: the search sees every kind, and the
@@ -83,7 +78,7 @@ def tier_for(domain: str, jev: Decider, args: argparse.Namespace) -> ProgramTier
                            generations=args.generations, seed=args.seed, label=args.label) if args.search else None
     return ProgramTier(desk=desk, decider=jev, contract=contract(domain, routes=args.routes), labeled=labeled, mechanisms=[(args.mechanism, source)],
                        search=search, search_cases={t["id"]: t for t in seen}, min_runs=args.min_runs,
-                       max_wrong=args.max_wrong, bar=args.bar, routed_bar=args.routed_bar,
+                       max_wrong=args.max_wrong, bar=args.bar, routed_bar=args.routed_bar, read_only_handoffs=args.routes,
                        writer_model=llm.MODEL, retry_after=12, max_attempts=args.max_attempts, gating_sources=("verifier",))
 
 
@@ -100,8 +95,10 @@ async def phase(name: str, tasks: list[dict[str, Any]], agent: Any, meta: Any, w
         served = report.effort == RUNG
         handed = any(e.startswith("program: handed off") for e in report.events)
         routed = any(e.startswith("program: routed") for e in report.events)
+        read_only = any(e.startswith("program: handed off read-only") for e in report.events)
         rows.append({"phase": name, "id": task["id"], "style": task["style"], "kind": task.get("kind"),
-                     "tier": "program" if served else "llm", "handed_off": handed, "routed": routed, "right": bool(report.verdict.accepted),
+                     "tier": "program" if served else "llm", "handed_off": handed, "read_only": read_only, "routed": routed,
+                     "right": bool(report.verdict.accepted), "reply": str(result.final_output)[:400] if read_only else None,
                      "dollars": float(result.cost.dollars or 0.0), "seconds": float(result.cost.seconds or 0.0)})
         for event in report.events:
             if not event.startswith(("program: handed off", "program: routed")) and not quiet:
@@ -114,13 +111,14 @@ def report(rows: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
         part = [r for r in rows if r["phase"] == name]
         program = [r for r in part if r["tier"] == "program"]
         out[name] = {"requests": len(part), "program": len(program), "program_right": sum(r["right"] for r in program),
-                     "handed_off": sum(r["handed_off"] for r in part), "routed": sum(r["routed"] for r in part),
+                     "handed_off": sum(r["handed_off"] for r in part), "read_only": sum(r["read_only"] for r in part),
+                     "routed": sum(r["routed"] for r in part),
                      "right": sum(r["right"] for r in part),
                      "dollars_per_request": sum(r["dollars"] for r in part) / len(part),
                      "seconds_per_request": sum(r["seconds"] for r in part) / len(part)}
         c = out[name]
         print(f"{name:<11} {c['requests']:>3} requests: program served {c['program']:>3} ({c['program_right']} right), "
-              f"routed {c['routed']:>3}, handed off {c['handed_off']:>3}; right {c['right']:>3}; ${c['dollars_per_request']:.5f} and "
+              f"routed {c['routed']:>3}, handed off {c['handed_off']:>3} ({c['read_only']} read-only); right {c['right']:>3}; ${c['dollars_per_request']:.5f} and "
               f"{c['seconds_per_request']:.2f} s a request")
     return out
 
@@ -160,7 +158,6 @@ async def main(args: argparse.Namespace) -> dict[str, Any]:
             meta.programs.paused = False
             if args.domain == "d3":
                 from examples.invoices.agent import PARSER
-                from examples.invoices.decide import desk
                 from examples.invoices.world import task_set
 
                 drift = [{**t, "style": "drift", "expect": "handoff" if t["kind"] == "question" else "act"}
@@ -170,7 +167,6 @@ async def main(args: argparse.Namespace) -> dict[str, Any]:
                     if n == args.fixed_at:
                         print(f"  [drift #{n + 1}] a person installs a corrected parser")
                         meta.install("parse_invoice", PARSER)
-                        tier.desk = desk(PARSER)
                 await phase("drift", drift, agent, meta, world_of, rows, quiet=args.quiet, on_request=fix_parser)
     finally:
         summary = report(rows)

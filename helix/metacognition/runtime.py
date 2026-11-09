@@ -112,8 +112,9 @@ class RunPlan:
     model: str | None = None
     scores: dict[str, float] = field(default_factory=dict)
     program: dict[str, Any] | None = None  # the trusted decision program that gets the first try at this request
-    program_outcome: str | None = None  # "served", "routed" or "handoff"
+    program_outcome: str | None = None  # "served", "routed", "read_only" or "handoff"
     memory: str | None = None  # what a program's route tells the agent to read first
+    read_only: bool = False  # a program said this request should not be acted on: the agent gets no action tools
     program_action: str | None = None
     decider_calls: list[dict[str, Any]] = field(default_factory=list)  # Jev's calls, charged to the run
 

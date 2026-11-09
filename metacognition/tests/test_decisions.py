@@ -8,12 +8,12 @@ import pytest
 from helix.deciders import Answer, DecisionUsage
 from helix.memory.learning_mechanisms import Contract
 from helix.metacognition import Metacognition, procedure
-from helix.metacognition.decide import KIT_GUIDE, RETURNS, Desk, frozen_change
+from helix.metacognition.decide import KIT_GUIDE, RETURNS, Desk, Kit, frozen_change, run_program
 from helix.metacognition.decisions import DECISION, RUNG, ProgramSearch, ProgramTier
 from helix.search.methods import METHODS
 
 from metacog import Agent, RunConfig, RunContextWrapper, Runner, function_tool
-from metacog.testing import RespondingModel, text
+from metacog.testing import RespondingModel, ScriptedModel, call, text
 
 
 class World:
@@ -294,6 +294,7 @@ async def decide(request, kit):
     HELPED.replace('    return {"action"',
                    '    if len(ids) > 1:\n        return {"handoff": "which?", "route": "low"}\n    return {"action"'),  # a route
     HELPED.replace("async def decide", "NEW = 1\n\n\nasync def decide"),  # a constant
+    HELPED.replace('{"handoff": "no"}', '{"handoff": "no", "read_only": True}'),  # a hand-off that can't act
 ])
 def test_an_edit_may_change_how_a_program_judges(edited):
     assert frozen_change(HELPED, edited) is None
@@ -387,3 +388,64 @@ async def test_nothing_is_retested_when_no_class_is_off(model):
     with model.active():
         await meta.programs.improve(events)
     assert not any("re-tested" in e for e in events), events
+
+
+READ_ONLY = GOOD.replace('{"handoff": "not sure"}', '{"handoff": "not sure", "read_only": True}')
+NEAR_MISS = task(104, "Don't ship O-104.", "handoff")
+
+
+async def test_a_read_only_handoff_leaves_the_agent_no_way_to_act():
+    tries = ScriptedModel([call("ship", {"order_id": "O-104"}), text("A person needs to handle that.")])
+    agent, _ = build(trusted=READ_ONLY)
+    with tries.active():
+        result, world = await run(agent, NEAR_MISS)
+    offered = {t["function"]["name"] for t in tries.requests[0]["tools"]}
+    assert "ship" not in offered and "read_order" in offered
+    assert "can't take any action" in tries.requests[0]["messages"][0]["content"]
+    assert world.shipped == []
+    assert any(e.startswith("program: handed off read-only") for e in result.metacognition.events)
+
+
+@pytest.mark.parametrize(("program", "share"), [(READ_ONLY, 0.0), (GOOD, 1.0)])
+async def test_only_a_handoff_of_work_counts_as_handing_off_too_much(model, program, share):
+    agent, meta = build(trusted=program)
+    with model.active():
+        await run(agent, NEAR_MISS)
+    assert meta.programs.signal()["handoff_share"] == share
+
+
+async def test_with_read_only_handoffs_a_near_miss_must_be_handed_off_read_only():
+    _, meta = build(read_only_handoffs=True)
+    plain, safe = await meta.programs.judge(GOOD), await meta.programs.judge(READ_ONLY)
+    assert not meta.programs._gate(plain).passed and "must be handed off read-only" in plain.failures[0]
+    assert meta.programs._gate(safe).passed and (safe.accepted, safe.wrong) == (4, 0)
+
+
+async def test_real_work_sent_read_only_is_lost_but_is_not_a_wrong_action():
+    everything = 'async def decide(request, kit):\n    return {"handoff": "no", "read_only": True}\n'
+    _, meta = build()
+    judged = await meta.programs.judge(everything)
+    assert (judged.accepted, judged.wrong, judged.handoffs) == (1, 0, 3)
+    assert "nothing could serve it" in judged.failures[0]
+
+
+async def test_read_only_means_nothing_on_an_action():
+    source = 'async def decide(request, kit):\n    return {"action": "ship", "read_only": True}\n'
+    assert "read_only" not in await run_program(source, "x", Kit({}, {}))
+
+
+CAREFUL = """async def decide(request, kit):
+    ids = kit.find("O-[0-9]+", request)
+    found = await kit.procedure("order_status", order_id=ids[0])
+    if found["status"] != "ok":
+        return {"handoff": "held"}
+    return {"action": "ship", "arguments": {"order_id": ids[0]}, "reply": "Shipped."}
+"""
+
+
+async def test_the_gate_calls_the_procedures_the_agent_has_now():
+    _, meta = build()
+    assert (await meta.programs.judge(CAREFUL, ["c101"])).accepted == 1
+    meta.install("order_status", 'def order_status(api, order_id: str) -> dict:\n    return {"status": "held"}\n')
+    after = await meta.programs.judge(CAREFUL, ["c101"])
+    assert (after.accepted, after.handoffs) == (0, 1)

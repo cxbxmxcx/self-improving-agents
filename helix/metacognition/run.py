@@ -197,6 +197,10 @@ def _settings_hook(params: dict[str, Any]):
     return patch
 
 
+_READ_ONLY = ("This request is not one to act on. You can read and answer, and you can't take any action here. If it "
+              "asks for something to be done, say that a person needs to handle it.")
+
+
 def _effort_hook(params: dict[str, Any]):
     async def patch(**_: Any) -> RequestPatch:
         return RequestPatch(params=dict(params), source="metacognition:controller")
@@ -352,10 +356,13 @@ async def _run(agent: Agent, input: str | list[dict[str, Any]], *, context: Any,
 
     if plan is not None and plan.memory:
         instructions = f"{instructions}\n\n{plan.memory}"
+    read_only = plan is not None and plan.read_only
+    if read_only:
+        instructions = f"{instructions}\n\n{_READ_ONLY}"
 
     helix_agent = HelixAgent(
         system_prompt=genesis(f"prompt.{_slug(agent.name)}", Subtype.PROMPT, instructions or ""),
-        tools=[_helix_tool(t, ctx, config.tool_executor) for t in agent.tools]
+        tools=[_helix_tool(t, ctx, config.tool_executor) for t in agent.tools if not read_only or t.read_only]
         + (plan.tools if plan is not None else []),
         model=model,
         max_iterations=max_turns,

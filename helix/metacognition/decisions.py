@@ -12,8 +12,9 @@ same loop:
     switch   a trusted program runs before the agent; an action it takes ends the run with no model. A class that
              was switched off comes back when the program it has passes the gate again, or a new one does. A hand-off
              continues into the agent in the same run, at the reasoning and with the memory the program named, if it
-             named them. Each action is a task class with its own detector window, so a class that starts failing is
-             switched off alone and goes back to the LLM until a new program passes.
+             named them, and with no way to act if the program said it should not. Each action is a task class with
+             its own detector window, so a class that starts failing is switched off alone and goes back to the LLM
+             until a program passes.
 
 Programs are kept as versions of `DECISION` in the store, beside the procedures. Runs a program served are
 recorded with the reasoning setting "program". Jev's calls are charged as the run's decider calls.
@@ -21,6 +22,7 @@ recorded with the reasoning setting "program". Jev's calls are charged as the ru
 
 from __future__ import annotations
 
+import asyncio
 import inspect
 import json
 import random
@@ -51,12 +53,14 @@ from helix.metacognition.sources import SourceLearner, source_id
 from helix.metacognition.model_settings import DEFAULT_MODEL
 from helix.metacognition.pricing import PRICES, run_cost
 from helix.metacognition.result import RunResult
+from helix.metacognition.run_context import RunContextWrapper
 
 DECISION = "decision_program"
 RUNG = "program"
 HANDOFF_REWARD = 0.25  # better than a wrong action, far from serving the request
 ROUTED_REWARD = 0.6  # the LLM got it right where the program sent it: served, but not for free
 ROUTED_WRONG = 0.1  # the program's choice of route failed; the LLM's own mistake is not a program's wrong action
+READ_ONLY_LOST = 0.15  # real work sent where nothing can do it: no wrong action, but the request is lost
 _LOOP = "decision:loop"
 _OUTCOMES = "decision:outcomes"
 
@@ -183,6 +187,7 @@ class ProgramTier:
     prices: dict[str, tuple[float, ...]] = field(default_factory=lambda: dict(PRICES))
     gating_sources: Sequence[str] = ("verifier", "human", "harness")  # verdicts that can switch a class off
     routed_bar: float = 0.0  # the share of routed requests the LLM must get right, at the program's chosen route
+    read_only_handoffs: bool = False  # a request that should not be acted on is right only if handed off read-only
     world: Any = None  # task -> the agent's context; with it, a program's route is tried on the real agent
     route_practice: Any = None  # async (task, effort, memory) -> (accepted, reason); overrides `world`
 
@@ -230,6 +235,19 @@ class DecisionLoop:
     def off(self, action: str) -> bool:
         return bool(self.meta.store.state(f"program:{action}").get("off"))
 
+    def _trusted_tools(self, ctx: Any, loop: Any) -> dict[str, Any]:
+        """The procedures the agent has at this moment, as tools on this context."""
+        api = SkillAPI(self.meta._api_tools(), ctx, loop)
+        tools = {}
+        for name, spec in self.meta.procedures.items():
+            version = self.meta.store.trusted(name)
+            if version is not None:
+                entry = SimpleNamespace(content={"skill_name": name, "description": spec.description,
+                                                 "body": version["source"], "body_kind": "python"},
+                                        metadata={"created_by": version["created_by"], "version": version["version"]})
+                tools[name] = self.meta._procedure_tool(entry, api)
+        return tools
+
     def _kit(self, agent: Any, ctx: Any, loop: Any, trajectory: Trajectory, calls: list[dict[str, Any]]) -> Kit:
         def noted(name: str, arguments: dict[str, Any], result: Any) -> None:
             trajectory.append(StepKind.TOOL_CALL, {"name": name, "arguments": arguments})
@@ -246,14 +264,7 @@ class DecisionLoop:
 
             return call
 
-        api = SkillAPI(self.meta._api_tools(), ctx, loop)
-
-        def procedure(name: str, version: dict[str, Any]) -> Any:
-            entry = SimpleNamespace(content={"skill_name": name, "description": self.meta.procedures[name].description,
-                                             "body": version["source"], "body_kind": "python"},
-                                    metadata={"created_by": version["created_by"], "version": version["version"]})
-            tool = self.meta._procedure_tool(entry, api)
-
+        def procedure(name: str, tool: Any) -> Any:
             async def call(**arguments: Any) -> Any:
                 result = await tool.call(**arguments)
                 noted(name, arguments, result)
@@ -261,9 +272,9 @@ class DecisionLoop:
 
             return call
 
-        trusted = {name: v for name in self.meta.procedures if (v := self.meta.store.trusted(name)) is not None}
         kit = Kit(reads={t.name: read(t) for t in agent.tools if getattr(t, "read_only", False)},
-                  procedures={name: procedure(name, v) for name, v in trusted.items()}, decider=self.tier.decider)
+                  procedures={name: procedure(name, tool) for name, tool in self._trusted_tools(ctx, loop).items()},
+                  decider=self.tier.decider)
         ask = kit.ask
 
         async def metered(state: Any, questions: dict[str, Any]) -> dict[str, Any]:
@@ -295,8 +306,14 @@ class DecisionLoop:
             why = decision.get("handoff") or (f"{action} is switched off" if tool else f"no action {action!r}")
             route = decision.get("route")
             if route:
-                plan.program_outcome = "routed"
                 plan.effort, plan.report.effort, plan.memory = route, route, decision.get("memory") or None
+            if decision.get("read_only"):
+                plan.program_outcome, plan.read_only = "read_only", True
+                at = f" at {route}" if route else ""
+                plan.report.events.append(f"program: handed off read-only{at} ({why})")
+                return None
+            if route:
+                plan.program_outcome = "routed"
                 plan.report.events.append(f"program: routed to the LLM at {route} ({why})")
                 return None
             plan.program_outcome = "handoff"
@@ -403,6 +420,16 @@ class DecisionLoop:
         reward, reason, _ = await self._practice(source, case_id)
         return reward, reason, ""
 
+    def _practice_desk(self) -> Desk:
+        """The tier's desk, calling the procedures the agent has now, so the gate passes only what would work live."""
+        loop = asyncio.get_running_loop()
+
+        def procedures(world: Any) -> dict[str, Any]:
+            tools = self._trusted_tools(RunContextWrapper(context=world), loop)
+            return {name: tool.call for name, tool in tools.items()}
+
+        return replace(self.tier.desk, procedures=procedures)
+
     async def _practice(self, source: str, case_id: str) -> tuple[float, str, dict[str, Any]]:
         task = self.tier.labeled.get(case_id) or self.tier.search_cases.get(case_id)
         if task is None:
@@ -411,9 +438,18 @@ class DecisionLoop:
                 return 0.0, f"no recorded request for {case_id}", {}
             task = run["case_data"]
         try:
-            row = await serve(source, task, self.tier.desk, self.tier.decider)
+            row = await serve(source, task, self._practice_desk(), self.tier.decider)
         except UnsafeProgram as exc:
             return 0.0, f"the guard refused the program: {exc}", {}
+        expected = task.get("expect") == "handoff"
+        if row.read_only:
+            # Known without running the agent: it has no way to act, so nothing can go wrong here or get done.
+            if expected:
+                return 1.0, "handed off read-only", row.answers
+            return READ_ONLY_LOST, f"it was handed off read-only, so nothing could serve it: {row.reason}", row.answers
+        if expected and not row.handled and self.tier.read_only_handoffs:
+            return HANDOFF_REWARD, ("it was handed off with the tools to act; a request that should not be acted on "
+                                    "must be handed off read-only"), row.answers
         if row.route and (self.tier.route_practice is not None or self.tier.world is not None):
             attempt = self.tier.route_practice or self._try_route
             accepted, reason = await attempt(task, row.route, row.memory)
@@ -456,7 +492,7 @@ class DecisionLoop:
             reward, reason, said = await self._practice(source, case_id)
             accepted += int(reward >= 1.0 or reward == ROUTED_REWARD)
             wrong += int(reward == 0.0)
-            handoffs += int(reward == HANDOFF_REWARD)
+            handoffs += int(reward in (HANDOFF_REWARD, READ_ONLY_LOST))
             routed += int(reward in (ROUTED_REWARD, ROUTED_WRONG))
             routed_right += int(reward == ROUTED_REWARD)
             if reward < 1.0:
@@ -583,8 +619,8 @@ class DecisionLoop:
             shown.append(f"- Request: {request}\n  Outcome: {reason}\n  Jev answered: "
                          f"{json.dumps(seen.answers.get(case_id, {}))}")
         return (f"{seen.accepted}/{seen.total} requests served right or rightly handed off, {seen.wrong} wrong "
-                f"actions, {seen.handoffs} hand-offs of work it could have done, {seen.routed} routed to the language model "
-                f"({seen.routed_right} right).\n" + "\n".join(shown))
+                f"actions, {seen.handoffs} hand-offs of work it could have done, {seen.routed} routed to the language "
+                f"model ({seen.routed_right} right).\n" + "\n".join(shown))
 
     async def _search(self, problem: LearningProblem, events: list[str],
                       written: Sequence[tuple[str, Any]] = ()) -> None:

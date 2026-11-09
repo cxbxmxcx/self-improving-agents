@@ -9,6 +9,7 @@ takes the agent out too. It is source with one entry point:
         return {"action": "file_claim", "arguments": {...}, "reply": "..."}   # served without a model
         return {"handoff": "why"}                                            # the agent (an LLM) serves it
         return {"handoff": "why", "route": "low", "memory": "what applies"}  # the LLM, at that reasoning, reading that
+        return {"handoff": "why", "read_only": True}                         # the LLM, able to read and answer, not act
 
 and it may use only what `kit` offers:
 
@@ -79,7 +80,11 @@ RETURNS_ROUTED = RETURNS + (' When the agent should serve a request, you can als
                             'should use (none, low, medium or high), and "memory", text it reads first with what you '
                             'have learned that applies to this request. Keep what you learn as constants in the '
                             'program, and choose for each request whether to act, or which memory and reasoning to '
-                            'hand over. The cheapest way that gets the request right is the best one.')
+                            'hand over. The cheapest way that gets the request right is the best one. A request '
+                            'that should not be acted on, because it is outside the job or asks about the work '
+                            'rather than for it, goes to the agent read-only: add "read_only": true, and the agent '
+                            'can read and answer but can take no action. Never mark work you could not finish '
+                            'read-only, because the agent could not do it either.')
 
 
 class UnsafeProgram(ValueError):
@@ -247,12 +252,17 @@ async def run_program(source: str, request: str, kit: Kit, *, timeout: float = 6
         return {"handoff": f"the program returned {decision!r}, neither an action nor a hand-off"}
     if "route" in decision and decision["route"] not in EFFORTS:
         decision = {key: value for key, value in decision.items() if key not in ("route", "memory")}
+    if "handoff" not in decision or decision.get("read_only") is not True:
+        decision = {key: value for key, value in decision.items() if key != "read_only"}
     return decision
 
 
 @dataclass
 class Desk:
-    """A domain's side of serving a request with a program: its world, tools, trusted procedures and verdict."""
+    """A domain's side of serving a request with a program: its world, tools, trusted procedures and verdict.
+
+    In a ProgramTier the loop calls the procedures the agent has at that moment, and `procedures` here goes unused.
+    """
 
     world: Callable[[dict[str, Any]], Any]
     reads: Callable[[Any], dict[str, Callable[..., Any]]]
@@ -276,6 +286,7 @@ class Served:
     route: str | None = None  # the reasoning the agent should use, when a hand-off says
     memory: str | None = None  # what the agent should read first, when a hand-off says
     answers: dict[str, dict[str, Any]] = field(default_factory=dict)  # what Jev said, for a search to read
+    read_only: bool = False  # handed to an agent that can read and answer but can take no action
 
     def to_dict(self) -> dict[str, Any]:
         return dict(vars(self))
@@ -302,8 +313,11 @@ async def serve(source: str, task: dict[str, Any], desk: Desk, decider: Decider 
             "dollars": kit.usage.dollars, "seconds": seconds, "answers": kit.answers}
     expected_handoff = task.get("expect") == "handoff"
     if "handoff" in decision:
-        return Served(handled=False, right=True if expected_handoff and not decision.get("route") else None,
-                      reason=str(decision["handoff"]), route=decision.get("route"), memory=decision.get("memory"), **base)
+        read_only = bool(decision.get("read_only"))
+        right = True if expected_handoff and (read_only or not decision.get("route")) else None
+        return Served(handled=False, right=right,
+                      reason=str(decision["handoff"]), route=decision.get("route"), memory=decision.get("memory"),
+                      read_only=read_only, **base)
     act = desk.actions.get(decision["action"])
     if act is None:
         return Served(handled=False, right=None, reason=f"no action {decision['action']!r}", **base)
