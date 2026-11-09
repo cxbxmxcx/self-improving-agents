@@ -35,7 +35,7 @@ from helix.archive import SQLiteArchive
 from helix.artifact import ArtifactKind, genesis
 from helix.memory.learning_mechanisms import Contract, Episode
 from helix.memory.mechanism_runtime import (MECHANISM_BUILTINS, MechanismBudget, UnsafeMechanism, check_mechanism,
-                                             pack_memories, unpack_memories)
+                                             check_runnable, pack_memories, unpack_memories)
 from helix.scaffold.common import META_KEY
 from helix.search.base import SearchBudget
 from helix.search.methods import build_search
@@ -839,7 +839,11 @@ class DecisionLoop:
 
         def validate(source: str) -> str | None:
             try:
-                check_program(source) if editing else check_mechanism(source)
+                if editing:
+                    check_program(source)
+                else:
+                    check_mechanism(source)
+                    check_runnable(source)
             except (UnsafeMechanism, UnsafeProgram) as exc:
                 return str(exc)
             return frozen_change(seed_source, source) if editing else None

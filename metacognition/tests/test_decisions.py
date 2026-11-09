@@ -10,7 +10,7 @@ import helix
 import pytest
 from helix.deciders import Answer, DecisionUsage
 from helix.memory.learning_mechanisms import Contract
-from helix.memory.mechanism_runtime import pack_memories, unpack_memories
+from helix.memory.mechanism_runtime import UnsafeMechanism, check_runnable, pack_memories, unpack_memories
 from helix.metacognition import Metacognition, procedure
 from helix.metacognition.decide import KIT_GUIDE, RETURNS, Desk, Kit, frozen_change, run_program
 from helix.metacognition.gap import Attempt, Good, gap_of, report
@@ -795,3 +795,37 @@ async def test_a_program_the_guard_refuses_never_ran_so_it_took_no_wrong_action(
     assert gap_of(judged.attempts, Good()) == 1.0
     written = report(judged.attempts, Good())
     assert "No request ran" in written and "does not parse" in written and "Ship O-" not in written
+
+
+@pytest.mark.parametrize(("source", "refusal"), [
+    ("async def learn(lab):\n    return repr(lab)\n", "'repr' is not defined"),
+    ("PROMPT = 'Return {\"serve\": name}.'\n\n\nasync def learn(lab):\n    return lab.fill(PROMPT, name='x')\n",
+     "PROMPT can't be filled"),
+    ("async def learn(lab):\n    return lab.fill('a {b}')\n", "leaves out b"),
+])
+def test_a_search_refuses_what_would_stop_a_mechanism_when_it_ran(source, refusal):
+    with pytest.raises(UnsafeMechanism, match=refusal):
+        check_runnable(source)
+
+
+@pytest.mark.parametrize("source", [
+    "PROMPT = 'Return {{\"serve\": {name}}}.'\n\n\nasync def learn(lab):\n    return lab.fill(PROMPT, name='x')\n",
+    "async def learn(lab):\n    values = {'b': 1}\n    return lab.fill('a {b}', **values)\n",
+    "async def learn(lab):\n    text = 'a {\"b\"}'\n    return text.replace('a', lab.contract)\n",
+    "async def learn(lab):\n    items = [x for x in lab.stream()]\n    return str(len(items))\n",
+])
+def test_a_search_passes_what_can_run(source):
+    check_runnable(source)
+
+
+async def test_a_rewrite_that_could_not_run_goes_back_to_the_rewriter_with_the_reason():
+    replies = iter([text("async def learn(lab):\n    return repr(lab)\n"), text(mechanism(GOOD))])
+    designer = RespondingModel(lambda request: next(replies))
+    spec = ProgramSearch(population=1, generations=1, seed=3, stop_when_admitted=True)
+    agent, meta = build(RECKLESS, search=spec)
+    meta.agent = agent
+    events: list[str] = []
+    with designer.active():
+        await meta.programs.improve(events)
+    assert len(designer.requests) == 2 and "'repr' is not defined" in designer.requests[1]["messages"][1]["content"]
+    assert any("wrote a program the gate admits" in e for e in events), events
