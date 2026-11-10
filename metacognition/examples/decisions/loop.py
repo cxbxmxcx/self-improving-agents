@@ -196,7 +196,7 @@ async def main(args: argparse.Namespace) -> dict[str, Any]:
 
 def parse(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--domain", default="d3", choices=["d1", "d3", "d5"])
+    parser.add_argument("--domain", default="d3", choices=["d1", "d3", "d5", "d6", "d7"])
     parser.add_argument("--mechanism", default="program_synthesis")
     parser.add_argument("--no-search", dest="search", action="store_false")
     parser.add_argument("--no-routes", dest="routes", action="store_false", help="programs only act or hand off")

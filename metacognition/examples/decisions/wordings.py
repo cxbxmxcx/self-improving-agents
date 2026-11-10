@@ -256,10 +256,10 @@ def load(domain: str, split: str) -> list[dict[str, Any]]:
     held-out near-miss set, `stress2` a second, written before any program learned with near misses existed, and
     `gate` a third, for a gate that must not share wordings with what a search sees.
     """
-    if domain == "d5":
-        from examples.shifts.world import load as shifts
+    if domain in ("d5", "d6", "d7"):
+        from importlib import import_module
 
-        return shifts(split)
+        return import_module(f"examples.{ {'d5': 'shifts', 'd6': 'billing', 'd7': 'triage'}[domain] }.world").load(split)
     if split == "gate":
         return _near_miss(domain, "test", NEAR_MISS_GATE[domain], "gate")
     if split == "stress":

@@ -1,8 +1,9 @@
 """One agent from high reasoning to Jev: a learned procedure lowers its reasoning, and a search then replaces the LLM.
 
     python -m examples.decisions.continuous --mode record --budget 3
+    python -m examples.decisions.continuous --domain d6 --mode record --budget 9
 
-D1, with nothing given in advance but the agent's tools. The same held-out requests are measured at each stage, and
+D1 or D6, with nothing given in advance but the agent's tools. The same held-out requests are measured at each stage, and
 they teach nothing:
 
     start       no procedure, at high reasoning, with no reasoning as a control
@@ -20,6 +21,7 @@ import json
 import os
 import random
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -34,47 +36,70 @@ from helix.metacognition.pricing import PRICES
 from examples.decisions import llm
 from examples.decisions import loop as decision_loop
 from examples.decisions.wordings import load
-from examples.expenses.agent import assistant, check, practice, reimbursable_total
-from examples.expenses.world import ExpenseWorld, task_set
 from examples.learning.study import BudgetSpent, CappedRecording, Spend
 from metacog import RunConfig, Runner
 
 HERE = Path(__file__).parent
-PROCEDURE = "reimbursable_total"
 ACTING = ("buried", "casual", "distractor", "shorthand")
 BAR = 7 / 8  # the share of validation trips a reasoning setting must get right
 
 
-def world_for(task: dict[str, Any]) -> ExpenseWorld:
-    world = ExpenseWorld(task)
-    world.style = task.get("style", "plain")
-    return world
+@dataclass(frozen=True)
+class Domain:
+    """What the pipeline needs from a domain: its procedure to learn, world, agent, and how a candidate is tried."""
+
+    key: str
+    name: str
+    procedure: Any
+    make_world: Any
+    assistant: Any
+    check: Any
+    practice: Any
+    acted: Any
+    task_set: Any
+
+    def world_for(self, task: dict[str, Any]) -> Any:
+        world = self.make_world(task)
+        world.style = task.get("style", "plain")
+        return world
+
+    async def on_base(self, source: str, case_id: str) -> tuple[float, str, str]:
+        """Try a procedure on the case behind a worded request: its job is the answer, however the request was put."""
+        return await self.practice(source, case_id.split("~")[0])
 
 
-async def on_base_trip(source: str, case_id: str) -> tuple[float, str, str]:
-    """Try a procedure on the trip behind a worded request: its job is the total, however the request was put."""
-    return await practice(source, case_id.split("~")[0])
+def domain_of(key: str) -> Domain:
+    if key == "d1":
+        from examples.expenses.agent import assistant, check, practice, reimbursable_total
+        from examples.expenses.world import ExpenseWorld, task_set
+
+        return Domain(key, "reimbursable_total", reimbursable_total, ExpenseWorld, assistant, check, practice,
+                      lambda world: world.claims, task_set)
+    from examples.billing.agent import assistant, check, credit_due, practice
+    from examples.billing.world import BillingWorld, task_set
+
+    return Domain(key, "credit_due", credit_due, BillingWorld, assistant, check, practice, lambda world: world.credits, task_set)
 
 
-def build(args: argparse.Namespace, jev: Any) -> tuple[Any, Metacognition]:
+def build(args: argparse.Namespace, jev: Any, domain: Domain) -> tuple[Any, Metacognition]:
     """The agent at its starting reasoning, with no procedure, a learner for one, and the decision tier."""
-    flags = ["--domain", "d1", "--mode", args.mode, "--mechanism", "component_llm", "--search-method", "dgm",
+    flags = ["--domain", domain.key, "--mode", args.mode, "--mechanism", "component_llm", "--search-method", "dgm",
              "--search-target", "mechanism", "--population", str(args.population), "--generations", "1", "--seed",
              str(args.seed), "--label", args.label, "--max-wrong", "0", "--stop-when-admitted", "--designer-model",
              args.designer_model, "--writer-model", args.writer_model, "--archive", str(args.archive), "--output",
              str(args.output)]
-    tier = decision_loop.tier_for("d1", jev, decision_loop.parse(flags))
-    tier.world = world_for
-    meta = Metacognition([reimbursable_total], verifier=llm._judged(check, lambda world: world.claims),
-                         controller=Controller({"memory": args.start, "no_memory": args.start}), practice=on_base_trip,
-                         gate=Gate(cases=[t["id"] for t in task_set("validation")]), recall_k=1, learning="inline",
+    tier = decision_loop.tier_for(domain.key, jev, decision_loop.parse(flags))
+    tier.world = domain.world_for
+    meta = Metacognition([domain.procedure], verifier=llm._judged(domain.check, domain.acted),
+                         controller=Controller({"memory": args.start, "no_memory": args.start}), practice=domain.on_base,
+                         gate=Gate(cases=[t["id"] for t in domain.task_set("validation")]), recall_k=1, learning="inline",
                          relearn_after=args.learn_after, gating_sources=(), prices=PRICES, programs=tier,
                          writer_model=args.writer_model)
-    return assistant(llm.MODEL, metacognition=meta), meta
+    return domain.assistant(llm.MODEL, metacognition=meta), meta
 
 
 async def frozen_phase(name: str, tasks: list[dict[str, Any]], agent: Any, meta: Metacognition, effort: str,
-                       rows: list[dict[str, Any]], *, concurrency: int = 6, world: Any = world_for) -> None:
+                       rows: list[dict[str, Any]], *, world: Any, concurrency: int = 6) -> None:
     """The agent on `tasks` at `effort`, offered what it trusts now, with nothing recorded and nothing learned."""
     slots = asyncio.Semaphore(concurrency)
 
@@ -101,9 +126,9 @@ async def frozen_phase(name: str, tasks: list[dict[str, Any]], agent: Any, meta:
 
 
 async def measure_floor(agent: Any, meta: Metacognition, start: str, trips: list[dict[str, Any]],
-                        efforts: tuple[str, ...]) -> tuple[str, list[dict[str, Any]]]:
+                        efforts: tuple[str, ...], world: Any) -> tuple[str, list[dict[str, Any]]]:
     """The lowest reasoning at which the agent, with its learned procedure, clears the bar; else where it started."""
-    floors = await calibrate(agent, [Case(t["id"], t["text"], t) for t in trips], verifier=meta.verifier, world=world_for,
+    floors = await calibrate(agent, [Case(t["id"], t["text"], t) for t in trips], verifier=meta.verifier, world=world,
                              efforts=efforts, arms=("memory",), concurrency=4, max_turns=12,
                              run_config=RunConfig(max_tool_calls=24), prices=PRICES)
     return floors.floor("memory", BAR) or start, floors.rows()
@@ -129,53 +154,54 @@ async def main(args: argparse.Namespace) -> None:
         os.environ.setdefault("TYPESAFE_API_KEY", os.environ.get("JEV_API_KEY", ""))
     args.output.mkdir(parents=True, exist_ok=True)
     jev = recorded_decider(args.jev_recording, mode=args.mode, model=JEV_MODEL)
-    agent, meta = build(args, jev)
-    stream = load("d1", "dev+near")
+    domain = domain_of(args.domain)
+    agent, meta = build(args, jev, domain)
+    stream = load(domain.key, "dev+near")
     random.Random(11).shuffle(stream)
-    _, held = decision_loop.split_test("d1")
-    held_out = [*held, *load("d1", "stress2")]
+    _, held = decision_loop.split_test(domain.key)
+    held_out = [*held, *load(domain.key, "stress2")]
     random.Random(12).shuffle(held_out)
     recording = CappedRecording(args.recording, mode=args.mode, spend=Spend(args.budget))
     rows: list[dict[str, Any]] = []
     measured: dict[str, Any] = {}
     try:
         with recording.active():
-            await frozen_phase(f"start: {args.start}, no procedure", held_out, agent, meta, args.start, rows)
-            await frozen_phase("start: none, no procedure", held_out, agent, meta, "none", rows)
+            await frozen_phase(f"start: {args.start}, no procedure", held_out, agent, meta, args.start, rows, world=domain.world_for)
+            await frozen_phase("start: none, no procedure", held_out, agent, meta, "none", rows, world=domain.world_for)
             show_stages(rows)
             for task in stream:
-                await decision_loop.phase("experience", [task], agent, meta, world_for, rows, quiet=args.quiet)
-                if not measured and meta.store.trusted(PROCEDURE) is not None:
-                    floor, sweep = await measure_floor(agent, meta, args.start, task_set("validation")[:args.floor_trips],
-                                                       tuple(args.floor_efforts))
+                await decision_loop.phase("experience", [task], agent, meta, domain.world_for, rows, quiet=args.quiet)
+                if not measured and meta.store.trusted(domain.name) is not None:
+                    floor, sweep = await measure_floor(agent, meta, args.start, domain.task_set("validation")[:args.floor_trips],
+                                                       tuple(args.floor_efforts), domain.world_for)
                     measured.update(floor=floor, sweep=sweep)
                     print(f"floor with the learned procedure: {floor}; "
                           f"{[(r['effort'], r['solved'], r['total']) for r in sweep]}")
                     meta.controller = Controller({"memory": floor, "no_memory": args.start})
-                    await frozen_phase(f"procedure: {floor}", held_out, agent, meta, floor, rows)
+                    await frozen_phase(f"procedure: {floor}", held_out, agent, meta, floor, rows, world=domain.world_for)
                     show_stages(rows[-len(held_out):])
             if meta.programs.current() is not None:
                 meta.programs.paused = True  # the held-out requests measure the loop; they must not teach it
-                await decision_loop.phase("program", held_out, agent, meta, world_for, rows, quiet=args.quiet)
+                await decision_loop.phase("program", held_out, agent, meta, domain.world_for, rows, quiet=args.quiet)
                 meta.programs.paused = False
             else:
                 print("the search installed no program, so there is no program stage")
     finally:
         print()
         show_stages(rows)
-        (args.output / "continuous_d1.json").write_text(json.dumps(
-            {"rows": rows, "floor": measured, "learning": {"procedure": meta.store.learning(PROCEDURE),
+        (args.output / f"continuous_{domain.key}.json").write_text(json.dumps(
+            {"rows": rows, "floor": measured, "learning": {"procedure": meta.store.learning(domain.name),
                                                           "program": meta.store.learning(decision_loop.DECISION)},
              "signal": meta.programs.signal(), "search": meta.programs.search_log}, indent=1, default=str), encoding="utf-8")
         current = meta.programs.current()
         if current is not None:
-            (args.output / "continuous_d1_program.py").write_text(current["source"], encoding="utf-8", newline="\n")
-            (args.output / "continuous_d1_memories.json").write_text(json.dumps(meta.programs._stored(), indent=1),
-                                                                     encoding="utf-8")
-        trusted = meta.store.trusted(PROCEDURE)
+            (args.output / f"continuous_{domain.key}_program.py").write_text(current["source"], encoding="utf-8", newline="\n")
+            (args.output / f"continuous_{domain.key}_memories.json").write_text(json.dumps(meta.programs._stored(), indent=1),
+                                                                                encoding="utf-8")
+        trusted = meta.store.trusted(domain.name)
         if trusted is not None:
-            (args.output / "continuous_d1_procedure.py").write_text(trusted["source"], encoding="utf-8", newline="\n")
-        for entry in meta.store.learning(PROCEDURE) + meta.store.learning(decision_loop.DECISION):
+            (args.output / f"continuous_{domain.key}_procedure.py").write_text(trusted["source"], encoding="utf-8", newline="\n")
+        for entry in meta.store.learning(domain.name) + meta.store.learning(decision_loop.DECISION):
             print(f"  learning: {entry['name'][:18]:<18} {entry['mechanism'][:24]:<24} {entry['outcome']:<20} "
                   f"${entry['dollars'] or 0:.4f}")
         if args.mode != "replay":
@@ -185,6 +211,7 @@ async def main(args: argparse.Namespace) -> None:
 
 def parse(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--domain", default="d1", choices=["d1", "d6"])
     parser.add_argument("--start", default="high", choices=["low", "medium", "high"], help="the reasoning it starts at")
     parser.add_argument("--learn-after", type=int, default=32, help="runs before a learning attempt, and between attempts")
     parser.add_argument("--floor-trips", type=int, default=8, help="validation trips the floor is measured on")

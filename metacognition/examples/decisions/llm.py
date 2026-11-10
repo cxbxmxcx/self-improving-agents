@@ -58,6 +58,14 @@ def _setup(domain: str, model: str, *, programs: Any = None, stale_parser: bool 
                              recall_k=1, learning="inline", relearn_after=10**9, gating_sources=(), prices=PRICES, programs=programs)
         meta.install("available_people", AVAILABLE)
         return desk(model, metacognition=meta), meta, ShiftWorld
+    if domain == "d7":
+        from examples.triage.agent import PLAN_OF, check, desk, ticket_plan
+        from examples.triage.world import TriageWorld
+
+        meta = Metacognition([ticket_plan], verifier=_judged(check, lambda w: w.actions), controller=controller,
+                             recall_k=1, learning="inline", relearn_after=10**9, gating_sources=(), prices=PRICES, programs=programs)
+        meta.install("ticket_plan", PLAN_OF)
+        return desk(model, metacognition=meta), meta, TriageWorld
     from examples.invoices.agent import CONTRACTS, PARSER, PARSER_BEFORE, PAYABLE, ap_desk, check
     from examples.invoices.world import InvoiceWorld
 
@@ -126,7 +134,7 @@ async def main(args: argparse.Namespace) -> dict[str, Any]:
 
 def parse(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--domain", default="d3", choices=["d1", "d3", "d5"])
+    parser.add_argument("--domain", default="d3", choices=["d1", "d3", "d5", "d7"])
     parser.add_argument("--split", default="test", choices=["dev", "dev+near", "test", "stress", "stress2"])
     parser.add_argument("--model", default=MODEL)
     parser.add_argument("--mode", default="replay", choices=["replay", "record", "live"])

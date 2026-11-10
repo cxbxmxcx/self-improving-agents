@@ -1,0 +1,692 @@
+{
+  "triage_requests": {
+    "dev": {
+      "casual": [
+        "Hey, can you triage {ticket}? Read through the thread and set severity and the owning team.",
+        "New one just landed - {ticket}. Give it a triage pass now, please."
+      ],
+      "shorthand": [
+        "Triage ticket {number} - severity and team, go.",
+        "Run triage on {number} right away, please."
+      ],
+      "distractor": [
+        "Triage {ticket} only - {other} was handled earlier and needs nothing from you.",
+        "Of the two new arrivals, {ticket} needs triage now; {other} is already classified, so skip it."
+      ],
+      "buried": [
+        "Standup ran short today so I'm clearing the queue early. A few tickets came in overnight from the EU customers. Please triage {ticket} now - read the thread and set its severity and owning team. The rest I'll get to after lunch.",
+        "The on-call rotation flipped at nine and the handoff notes were thin. Most of the backlog is routine follow-ups. The exception is {ticket}, which needs triage right away, so please set the severity and team on it. Ping me if the thread looks off."
+      ]
+    },
+    "search": {
+      "casual": [
+        "Morning - {ticket} is sitting untriaged and the customer is getting loud. Can you sort its severity and team now?",
+        "Would you take a look through {ticket} and get it triaged? It needs a severity and an owning team right now."
+      ],
+      "shorthand": [
+        "Severity and team on {number}, please - triage it now.",
+        "Ticket {number} needs its triage done immediately."
+      ],
+      "distractor": [
+        "Two ids in the escalation channel: triage {ticket} right away, but leave {other} be - it already has severity and team set.",
+        "{other} is covered, so don't spend time there. It's {ticket} that needs a fresh triage - please do it now."
+      ],
+      "buried": [
+        "Support volume doubled after yesterday's release went out. We've been dividing the pile between the two desks. While you're in the queue, triage {ticket} - read it through and set severity and owning team right now. Everything tagged after noon can wait for the next shift.",
+        "The customer advisory board meets on Thursday and wants clean metrics. I've been scrubbing the open list all morning. Next up, please run a triage on {ticket} and set its severity and team. Once that's recorded the dashboard should finally match reality."
+      ]
+    },
+    "gate": {
+      "casual": [
+        "hey, {ticket} just came in hot - triage it for me now, yeah?",
+        "Can you do the triage honors on {ticket}? Needs severity and a team before the hour's out."
+      ],
+      "shorthand": [
+        "Please triage {number} straight away.",
+        "Get {number} classified now - severity plus owning team."
+      ],
+      "distractor": [
+        "Priority check: {ticket} gets triaged this minute, while {other} stays as-is since its triage is complete.",
+        "Don't worry about {other} - it's squared away. Triage {ticket} instead, right now."
+      ],
+      "buried": [
+        "The platform team shipped a hotfix twenty minutes ago and things are calming down. A few reports are still trickling in from earlier. In the middle of all that, {ticket} needs to be triaged now - please set its severity and owning team. I'll update the incident channel once you're done.",
+        "We promised the account manager an update before her two o'clock. Her customer filed several reports this week. The open one is {ticket}; please triage it now so it has a severity and a team. Then I can draft the summary she asked for."
+      ]
+    },
+    "held": {
+      "casual": [
+        "yo - fresh ticket {ticket} in the pile, can you triage it right now?",
+        "Afternoon! {ticket} still has no severity or team. Please give it the full triage treatment now."
+      ],
+      "shorthand": [
+        "Triage {number} asap - the thread is short, shouldn't take long.",
+        "Needs doing now: severity and owning team on ticket {number}."
+      ],
+      "distractor": [
+        "For clarity, {ticket} is the one awaiting triage - handle it now. {other} already went through the process and requires nothing.",
+        "Set aside {other}; its triage closed out yesterday. {ticket} is the live one, so please triage it immediately."
+      ],
+      "buried": [
+        "QA flagged a cluster of regressions during the overnight run. Most mapped to known issues and were closed automatically. One escaped the filter: {ticket}, which needs triage now, so please read it and set severity and owning team. After that I'll rerun the automation to confirm the queue is clear.",
+        "Our weekly ops review starts in forty minutes and I'm still gathering numbers. The triage queue is nearly empty for once. Please take {ticket} and triage it before the meeting - severity and team both. That leaves me one less red cell on the spreadsheet."
+      ]
+    }
+  },
+  "assign_requests": {
+    "dev": {
+      "casual": [
+        "Hey, can you assign {ticket} to {owner} right now?",
+        "Put {ticket} on {owner}'s plate, please - she's expecting it."
+      ],
+      "shorthand": [
+        "Assign {number} to {owner} now.",
+        "Ticket {number} goes to {owner} - make it so."
+      ],
+      "distractor": [
+        "Assign {ticket} to {owner} today; {other} already has an assignee and needs nothing.",
+        "Between {ticket} and {other}, only {ticket} changes hands - give it to {owner} now. {other} stays put."
+      ],
+      "buried": [
+        "The mobile squad reshuffled after two people went on leave. Coverage is mostly sorted now. One gap remains: please assign {ticket} to {owner} right away. He'll pick it up first thing after his code review.",
+        "I just got out of the capacity-planning meeting and workloads are lopsided. We agreed to rebalance a few items. As part of that, assign {ticket} over to {owner} now. The remaining moves I'll make myself this afternoon."
+      ]
+    },
+    "search": {
+      "casual": [
+        "Quick favor - hand {ticket} to {owner}, would you? Right now if possible.",
+        "Hiya! {owner} offered to take {ticket}, so please assign it to her straightaway."
+      ],
+      "shorthand": [
+        "Please route {number} to {owner} immediately.",
+        "{owner} gets ticket {number} - assign it now."
+      ],
+      "distractor": [
+        "Only one reassignment today: {ticket} goes to {owner} now. {other} keeps its current assignee.",
+        "Leave {other} where it is - that one's owned. Assign {ticket} to {owner} this morning instead."
+      ],
+      "buried": [
+        "On-call just rotated and the handoff doc is half-written. Most tickets already follow their owners automatically. The manual one is {ticket} - please assign it to {owner} now. She said she'd start on it before her one-on-one.",
+        "Customer escalations spiked after the pricing announcement went out. The team split the load pretty evenly. The leftover item is {ticket}, which should go to {owner} right away, so please make that assignment. I'll let the escalation channel know once it's his."
+      ]
+    },
+    "gate": {
+      "casual": [
+        "hey - can {owner} get {ticket}? assign it to him now please.",
+        "Drop {ticket} into {owner}'s queue for me, right away."
+      ],
+      "shorthand": [
+        "Set {owner} as assignee on {number} right now.",
+        "Move ticket {number} to {owner}, effective immediately."
+      ],
+      "distractor": [
+        "To be explicit: {ticket} is the one being reassigned to {owner} now, and {other} is not changing owners at all.",
+        "{other} needs no action - its assignee is fine. Please give {ticket} to {owner} right away."
+      ],
+      "buried": [
+        "Sprint planning wrapped and the board is mostly tidy. A couple of orphaned tickets surfaced during the cleanup. Please assign {ticket} to {owner} now - she volunteered for it in the meeting. I'll archive the rest of the orphans before end of day.",
+        "The security review ate most of my morning, sorry for the delay here. Backlog grooming is otherwise on track. One thing can't wait: assign {ticket} to {owner} immediately. He's blocked until it lands in his queue."
+      ]
+    },
+    "held": {
+      "casual": [
+        "yo, {owner} is free now - toss {ticket} her way, please.",
+        "Hey hey, can you make {owner} the owner of {ticket}? Needs to happen right now."
+      ],
+      "shorthand": [
+        "Assign ticket {number} over to {owner} right away.",
+        "Give {number} to {owner} now, please."
+      ],
+      "distractor": [
+        "One swap only: {ticket} becomes {owner}'s now. {other} is already with the right person, so no change there.",
+        "Skip {other} - its ownership is settled. {ticket} is the one to assign to {owner}, and please do it now."
+      ],
+      "buried": [
+        "The data team finished their migration dry run late last night. Follow-up items got scattered across three boards. The one that matters is {ticket}: please assign it to {owner} now. He wants to reproduce the issue while the logs are still warm.",
+        "We're onboarding two new support engineers this week and spreading work around. Most of the starter tickets are already distributed. Please take {ticket} and assign it to {owner} right now - it's a good fit for her first week. I'll pair her with a mentor for the rest."
+      ]
+    }
+  },
+  "out_of_scope": {
+    "dev": [
+      "Can you send me a copy of the full thread on {ticket}?",
+      "Merge the attachment from the customer's email into {ticket}, please.",
+      "What's the current status of {ticket}?",
+      "Add the customer's phone number to the notes on {ticket}."
+    ],
+    "test": [
+      "How long has {ticket} been open?",
+      "Please link {ticket} to the incident writeup in the wiki.",
+      "Export {ticket} as a PDF for the account review.",
+      "Subscribe me to updates on {ticket}."
+    ]
+  },
+  "near_miss": {
+    "dev": [
+      "What severity is {ticket} currently set to?",
+      "Hold off on triaging {ticket} - more details are coming from the customer.",
+      "Was {ticket} already triaged during the night shift?",
+      "Please unassign {owner} from {ticket}; that was a mistake.",
+      "If you were to triage {ticket}, what severity would you land on? Don't actually set it.",
+      "{owner} said she's handling {ticket} herself, so leave it untouched."
+    ],
+    "search": [
+      "Which team owns {ticket} right now?",
+      "Has anyone gotten around to triaging {ticket} yet, or is it still raw?",
+      "Don't assign {ticket} to anyone for now - we're waiting on legal.",
+      "Can you undo the triage on {ticket}? The severity that was set looks wrong.",
+      "Hypothetically, where would {ticket} sit on the severity scale? No need to record anything.",
+      "{owner} already claimed {ticket}, so no assignment is necessary.",
+      "Let's triage {ticket} tomorrow once the logs are in, not today.",
+      "Is {ticket} assigned to {owner} or still floating?",
+      "Who decided the owning team for {ticket} last week?",
+      "Pause on {ticket} - the reporter wants to add a reproduction first."
+    ],
+    "gate": [
+      "Does {ticket} have a severity on it yet?",
+      "Remind me who {ticket} is assigned to these days.",
+      "Hold {ticket} back from triage until the duplicate check finishes.",
+      "Take {owner} off {ticket} - he's out sick this week.",
+      "Out of curiosity, would {ticket} count as critical? Just an opinion, not a change.",
+      "No need to touch {ticket}; the platform team said they've got it.",
+      "Put {ticket} on the triage list for Friday's session, not before.",
+      "Was {ticket} re-triaged after the customer added the crash dump?",
+      "Should {owner} really be the one on {ticket}? Just asking, don't move it.",
+      "Back out yesterday's triage on {ticket}; it was done on the wrong thread."
+    ],
+    "held": [
+      "Is there an owning team recorded on {ticket} at the moment?",
+      "Check whether {ticket} went through triage before the weekend.",
+      "Please don't triage {ticket} yet - the thread is mid-conversation.",
+      "Revert the assignment on {ticket}; it shouldn't have gone to {owner}.",
+      "What severity would you guess for {ticket}? Keep it as a guess only.",
+      "{owner} messaged that {ticket} is already on her desk, so there's nothing to do.",
+      "We'll assign {ticket} after Monday's planning - not now.",
+      "Who approved bumping {ticket} to the top severity?",
+      "Just wondering if {ticket} looks like a billing-team problem to you - no changes though.",
+      "Keep {ticket} parked; the incident commander will call for triage when ready."
+    ]
+  },
+  "thread": {
+    "dev": {
+      "openers": [
+        "Hi there, hope your week is going well - I wanted to flag something we've run into.",
+        "Hello! Thanks in advance for taking a look at this one.",
+        "Hey team, appreciate all your help lately; I've got a new issue to report."
+      ],
+      "acks": [
+        "Thanks for reaching out - we're looking into it now.",
+        "Got it, I've logged this and the team is on it.",
+        "Appreciate the report; we'll dig in right away."
+      ],
+      "customer": {
+        "environment": {
+          "production": [
+            "This is happening on our live system that real customers use.",
+            "We're seeing it in production, as far as I can tell."
+          ],
+          "staging": [
+            "So far it only shows up on our staging setup, not the live one.",
+            "I believe this is confined to the test environment we use for trials."
+          ]
+        },
+        "scope": {
+          "all": [
+            "From what I can see, every single one of our users is hitting this.",
+            "It looks like nobody on our side is unaffected - everyone has the problem."
+          ],
+          "some": [
+            "A portion of our users are running into it, though not everybody.",
+            "Several people here have the issue, but others seem fine."
+          ],
+          "one": [
+            "As far as I know, only one person on our team is affected.",
+            "It seems to be just a single user who's hitting this."
+          ]
+        },
+        "workaround": {
+          "yes": [
+            "We did find a temporary way around it that keeps us going for now.",
+            "There's a stopgap we can use in the meantime, thankfully."
+          ],
+          "no": [
+            "We haven't found any way to work around it, so we're stuck.",
+            "Nothing we've tried gets us past it - there's no workaround on our end."
+          ]
+        },
+        "data_loss": {
+          "yes": [
+            "I'm fairly sure some of our data has gone missing because of this.",
+            "It looks like we've actually lost records, which has us worried."
+          ],
+          "no": [
+            "As far as I can tell, none of our data has been lost.",
+            "Our records all seem intact - I don't think anything was lost."
+          ]
+        },
+        "security": {
+          "yes": [
+            "I'm concerned this might be exposing information it shouldn't - it feels like a security problem.",
+            "It looks to me like there's a security hole here."
+          ],
+          "no": [
+            "I don't think there's any security angle to this, for what it's worth.",
+            "Nothing about it seems security-related from where I sit."
+          ]
+        },
+        "area": {
+          "billing": [
+            "The trouble is in the billing section of the product.",
+            "It's the invoicing and payments part that's misbehaving for us."
+          ],
+          "login": [
+            "The problem is with signing in - the login flow is where it happens.",
+            "It's the sign-in screen that's giving us grief."
+          ],
+          "search": [
+            "The search feature is where we're seeing the issue.",
+            "It's your search functionality that's acting up."
+          ],
+          "mobile": [
+            "We're seeing it in the mobile app specifically.",
+            "The phone app is where this shows up for us."
+          ]
+        }
+      },
+      "engineer": {
+        "environment": {
+          "production": [
+            "We've confirmed the fault is present in the production environment.",
+            "Our investigation places this squarely on the live system."
+          ],
+          "staging": [
+            "Engineering has verified the issue reproduces only in staging.",
+            "We've established that production is clean and the defect lives in the test environment."
+          ]
+        },
+        "scope": {
+          "all": [
+            "Telemetry shows the failure affecting the entire user base.",
+            "We've determined that one hundred percent of users encounter the bug."
+          ],
+          "some": [
+            "Our metrics indicate a subset of users is impacted, not the full population.",
+            "Engineering has narrowed the impact to a fraction of accounts."
+          ],
+          "one": [
+            "Logs confirm exactly one user account triggers the failure.",
+            "We've isolated the impact to a single affected user."
+          ]
+        },
+        "workaround": {
+          "yes": [
+            "We've validated a workaround that restores functionality in the interim.",
+            "A temporary mitigation exists and has been tested on our side."
+          ],
+          "no": [
+            "We have found no viable workaround at this time.",
+            "Engineering confirms there is currently no way to mitigate the behavior."
+          ]
+        },
+        "data_loss": {
+          "yes": [
+            "We can confirm that some customer data was lost in the incident.",
+            "Our audit shows records were in fact destroyed and are unrecoverable."
+          ],
+          "no": [
+            "We've verified that no customer data was lost.",
+            "The audit came back clean: every record is accounted for."
+          ]
+        },
+        "security": {
+          "yes": [
+            "Our review identified a genuine security exposure tied to this bug.",
+            "We've confirmed the flaw does leak information it should not."
+          ],
+          "no": [
+            "Security review found no exposure associated with this issue.",
+            "We've ruled out any security impact."
+          ]
+        },
+        "area": {
+          "billing": [
+            "The defect has been traced to the billing module.",
+            "Root cause sits in our payments and invoicing code."
+          ],
+          "login": [
+            "We've pinned the failure to the authentication service.",
+            "The bug originates in the login path."
+          ],
+          "search": [
+            "Engineering traced the issue to the search backend.",
+            "The fault is in the query and indexing layer that powers search."
+          ],
+          "mobile": [
+            "We've reproduced the problem only in the mobile client.",
+            "The defect is specific to the phone application build."
+          ]
+        }
+      }
+    },
+    "gate": {
+      "openers": [
+        "Good morning! I hope this finds you well - something odd cropped up on our end.",
+        "Hi folks, long-time happy customer here with a problem we noticed.",
+        "Hello support, thanks for the great service so far; I need to raise an issue."
+      ],
+      "acks": [
+        "Thank you - ticket received and we're on the case.",
+        "Understood, we've opened an investigation.",
+        "Thanks for the details; someone from our side is reviewing now."
+      ],
+      "customer": {
+        "environment": {
+          "production": [
+            "This is affecting the real site our customers actually visit.",
+            "We're hitting this on production itself, not some sandbox."
+          ],
+          "staging": [
+            "The good news is it's only our staging instance that misbehaves.",
+            "We only ever see it in the test environment, never live."
+          ]
+        },
+        "scope": {
+          "all": [
+            "Every account we checked has the problem - it appears to be universal here.",
+            "I can't find a single user on our side who isn't affected."
+          ],
+          "some": [
+            "Maybe a third of our people are seeing it; the rest carry on fine.",
+            "It's hitting some of our users but definitely not all of them."
+          ],
+          "one": [
+            "One colleague is the only person experiencing this so far.",
+            "Just a lone user here is affected, from everything I can tell."
+          ]
+        },
+        "workaround": {
+          "yes": [
+            "We've cobbled together a workaround that holds for the moment.",
+            "There is a manual detour that keeps us operational for now."
+          ],
+          "no": [
+            "No workaround exists on our side - we're completely blocked.",
+            "We've exhausted our ideas and can't route around it."
+          ]
+        },
+        "data_loss": {
+          "yes": [
+            "Some of our information appears to be gone for good because of this.",
+            "I believe we've lost actual data here, not just access to it."
+          ],
+          "no": [
+            "Happily, nothing seems to have been lost - the data all looks fine.",
+            "I double-checked and none of our records appear to be missing."
+          ]
+        },
+        "security": {
+          "yes": [
+            "My worry is that this opens us up to a security breach.",
+            "It seems like private information could be exposed - that's a security issue in my book."
+          ],
+          "no": [
+            "I see no sign of any security problem connected to this.",
+            "To be clear, I don't believe security is involved at all."
+          ]
+        },
+        "area": {
+          "billing": [
+            "It's the payments area of your product where things go wrong.",
+            "Our issue lives in the billing screens."
+          ],
+          "login": [
+            "Logging in is the broken piece for us.",
+            "The authentication step is where everything falls apart."
+          ],
+          "search": [
+            "Searching is what doesn't work properly.",
+            "The problem shows itself whenever we use the search box."
+          ],
+          "mobile": [
+            "Only the mobile application gives us this trouble.",
+            "On our phones is where the issue appears."
+          ]
+        }
+      },
+      "engineer": {
+        "environment": {
+          "production": [
+            "Diagnostics confirm the regression is live in production.",
+            "We have reproduced the failure on the production cluster."
+          ],
+          "staging": [
+            "The defect has been confirmed in staging and nowhere else.",
+            "Our tests show the live environment is unaffected; it's a staging-only issue."
+          ]
+        },
+        "scope": {
+          "all": [
+            "Monitoring indicates every active user is experiencing the fault.",
+            "The blast radius covers the complete user population."
+          ],
+          "some": [
+            "We've measured the impact at a portion of users rather than everyone.",
+            "Data shows only part of the customer base encounters the error."
+          ],
+          "one": [
+            "Instrumentation points to one solitary account being affected.",
+            "The failure is confined to a single user, per our logs."
+          ]
+        },
+        "workaround": {
+          "yes": [
+            "We've documented an interim workaround that our tests confirm works.",
+            "A mitigation path is available while the fix is in progress."
+          ],
+          "no": [
+            "No mitigation is available; the behavior cannot currently be bypassed.",
+            "We've confirmed there is no interim workaround."
+          ]
+        },
+        "data_loss": {
+          "yes": [
+            "Forensics show customer records were permanently lost.",
+            "We regret to confirm actual data loss occurred."
+          ],
+          "no": [
+            "We have verified all customer data remains intact.",
+            "No data loss of any kind has been detected."
+          ]
+        },
+        "security": {
+          "yes": [
+            "The investigation surfaced a confirmed security vulnerability.",
+            "This bug does constitute a security exposure, per our assessment."
+          ],
+          "no": [
+            "Our security team found nothing exploitable here.",
+            "There is no security dimension to this defect."
+          ]
+        },
+        "area": {
+          "billing": [
+            "The root cause lives in the billing service.",
+            "We traced it to the invoicing subsystem."
+          ],
+          "login": [
+            "The fault sits in our sign-in flow.",
+            "Engineering localized the bug to the login service."
+          ],
+          "search": [
+            "The search index pipeline is where the defect originates.",
+            "We've attributed the failure to the search component."
+          ],
+          "mobile": [
+            "The issue is exclusive to the mobile app codebase.",
+            "Our analysis points to the native phone client."
+          ]
+        }
+      }
+    },
+    "held": {
+      "openers": [
+        "Hey there! Hope all's well on your side - writing in about something we spotted.",
+        "Hi, it's us again - sorry to be a bother, but we've got a new one for you.",
+        "Greetings from the whole team here; we'd love a hand with something."
+      ],
+      "acks": [
+        "Received, thank you - we'll take it from here.",
+        "Noted - escalating to the right folks as we speak.",
+        "Thanks, we're reviewing your message right now."
+      ],
+      "customer": {
+        "environment": {
+          "production": [
+            "Unfortunately this is on the live environment where our real traffic runs.",
+            "It's the production site that's acting up for us."
+          ],
+          "staging": [
+            "Thankfully it only happens in our staging copy.",
+            "The test instance is the only place we can trigger it."
+          ]
+        },
+        "scope": {
+          "all": [
+            "Our whole user base seems to be caught by this.",
+            "Absolutely all of our users appear to be impacted."
+          ],
+          "some": [
+            "A handful of our users have it while plenty of others don't.",
+            "It's affecting part of our team, though many are untouched."
+          ],
+          "one": [
+            "So far it's limited to one individual on our account.",
+            "A single employee is the only one reporting it."
+          ]
+        },
+        "workaround": {
+          "yes": [
+            "We found a temporary trick that gets us by for the time being.",
+            "There's an interim path that keeps things moving, so we're not dead in the water."
+          ],
+          "no": [
+            "Sadly there's nothing we can do to sidestep it.",
+            "We've got no workaround at all - everything just stops."
+          ]
+        },
+        "data_loss": {
+          "yes": [
+            "It appears some records vanished on us, which is alarming.",
+            "We think genuine data has been lost in the process."
+          ],
+          "no": [
+            "No data seems to have gone anywhere - everything's still there.",
+            "From our checks, nothing has been lost at all."
+          ]
+        },
+        "security": {
+          "yes": [
+            "We suspect this leaves us exposed from a security standpoint.",
+            "Honestly it smells like a security leak to us."
+          ],
+          "no": [
+            "Nothing suggests a security concern as far as we can see.",
+            "We're confident this isn't a security matter."
+          ]
+        },
+        "area": {
+          "billing": [
+            "The glitch sits in the invoicing part of the app.",
+            "Billing is the corner of the product that's broken for us."
+          ],
+          "login": [
+            "The sign-in area is where our trouble lives.",
+            "It's the login portion of the product causing our headache."
+          ],
+          "search": [
+            "Search results are where the misbehavior shows up.",
+            "Whenever we search, that's when the problem appears."
+          ],
+          "mobile": [
+            "It's strictly the app on our phones that's affected.",
+            "The mobile experience is the part that's broken."
+          ]
+        }
+      },
+      "engineer": {
+        "environment": {
+          "production": [
+            "We've verified this is occurring on live production infrastructure.",
+            "Production telemetry confirms the defect is active there."
+          ],
+          "staging": [
+            "Our reproduction attempts succeed only in the staging environment.",
+            "We've determined this never manifests outside the test stack."
+          ]
+        },
+        "scope": {
+          "all": [
+            "Every user session we sampled exhibits the failure.",
+            "Impact analysis shows the entire customer population is hit."
+          ],
+          "some": [
+            "We estimate a meaningful fraction of users, but not all, are affected.",
+            "The failure appears for some accounts while others behave normally, per our data."
+          ],
+          "one": [
+            "Our traces identify precisely one account experiencing the bug.",
+            "Only a single user ID appears in the error logs."
+          ]
+        },
+        "workaround": {
+          "yes": [
+            "We can offer a verified temporary workaround while we build the fix.",
+            "An interim mitigation has been tested and holds up."
+          ],
+          "no": [
+            "At present no bypass exists for this behavior.",
+            "We've ruled out every candidate workaround; none is viable."
+          ]
+        },
+        "data_loss": {
+          "yes": [
+            "Our audit establishes that customer data was irrecoverably lost.",
+            "We confirm genuine loss of stored records."
+          ],
+          "no": [
+            "Integrity checks pass across the board; no data went missing.",
+            "We can state definitively that no records were lost."
+          ]
+        },
+        "security": {
+          "yes": [
+            "Analysis confirms an active security exposure stemming from this flaw.",
+            "This has been classified as a security vulnerability by our team."
+          ],
+          "no": [
+            "No security implications were identified during review.",
+            "We've cleared this of any security concern."
+          ]
+        },
+        "area": {
+          "billing": [
+            "The bug resides in our billing pipeline.",
+            "Code inspection places the fault within the payments module."
+          ],
+          "login": [
+            "We've isolated the defect to the authentication layer.",
+            "The sign-in service contains the offending code."
+          ],
+          "search": [
+            "Root-cause analysis lands on the search infrastructure.",
+            "The indexing service behind search is responsible."
+          ],
+          "mobile": [
+            "The regression exists solely in the mobile build.",
+            "We've confirmed the desktop and web clients are fine; it's the phone app."
+          ]
+        }
+      }
+    }
+  }
+}

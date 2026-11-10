@@ -1,10 +1,11 @@
 """A desk where part of the work can lose the LLM and part can't: does the loop know which is which?
 
     python -m examples.decisions.mixed --mode record --budget 8
+    python -m examples.decisions.mixed --domain d7 --mode record --budget 9
 
-D5, the on-call desk. Changing one shift needs only a name and a day. Planning a week brings new constraints each time,
-in forms the gate and the held-out requests don't share with the search, so the reasoning differs from one plan to the
-next. The agent starts at high reasoning on everything. The same held-out requests are measured three ways before any
+D5 is an on-call desk. Changing one shift needs only a name and a day, and planning a week brings new constraints each time,
+in forms the gate and the held-out requests don't share with the search. D7 is a support desk. Assigning a ticket is routine,
+and triaging one means weighing what its thread really establishes. The agent starts at high reasoning on everything. The same held-out requests are measured three ways before any
 learning, at each reasoning setting, and once more after the loop has run:
 
     start       the LLM alone at each setting, frozen so it teaches nothing
@@ -34,7 +35,6 @@ from examples.decisions import continuous, llm
 from examples.decisions import loop as decision_loop
 from examples.decisions.wordings import load
 from examples.learning.study import BudgetSpent, CappedRecording, Spend
-from examples.shifts.world import ShiftWorld
 
 HERE = Path(__file__).parent
 
@@ -49,7 +49,7 @@ def show(rows: list[dict[str, Any]]) -> None:
         part = [r for r in rows if r["phase"] == name]
         print(f"{name}: right {sum(r['right'] for r in part)}/{len(part)}, "
               f"${sum(r['dollars'] for r in part) / len(part):.5f} and {sum(r['seconds'] for r in part) / len(part):.2f} s")
-        for kind in ("assign", "plan", "near miss"):
+        for kind in dict.fromkeys(kind_of(r) for r in sorted(part, key=kind_of)):
             group = [r for r in part if kind_of(r) == kind]
             if not group:
                 continue
@@ -68,26 +68,26 @@ async def main(args: argparse.Namespace) -> None:
         os.environ.setdefault("TYPESAFE_API_KEY", os.environ.get("JEV_API_KEY", ""))
     args.output.mkdir(parents=True, exist_ok=True)
     jev = recorded_decider(args.jev_recording, mode=args.mode, model=JEV_MODEL)
-    flags = ["--domain", "d5", "--mode", args.mode, "--mechanism", "component_llm", "--search-method", args.method,
+    flags = ["--domain", args.domain, "--mode", args.mode, "--mechanism", "component_llm", "--search-method", args.method,
              "--search-target", "mechanism", "--population", str(args.population), "--generations", str(args.generations),
              "--seed", str(args.seed), "--label", args.label, "--max-wrong", "0", "--stop-when-admitted",
              "--designer-model", args.designer_model, "--writer-model", args.writer_model, "--archive", str(args.archive),
              "--output", str(args.output)]
-    tier = decision_loop.tier_for("d5", jev, decision_loop.parse(flags))
+    tier = decision_loop.tier_for(args.domain, jev, decision_loop.parse(flags))
     tier.search.lower_reasoning = args.lower_reasoning
-    agent, meta, _ = llm._setup("d5", llm.MODEL, programs=tier)
+    agent, meta, make_world = llm._setup(args.domain, llm.MODEL, programs=tier)
     meta.controller = Controller({"memory": args.start, "no_memory": args.start})
 
-    def tried_on(task: dict[str, Any]) -> ShiftWorld:
-        world = ShiftWorld(task)
+    def tried_on(task: dict[str, Any]) -> Any:
+        world = make_world(task)
         world.style = task.get("style", "plain")
         return world
 
     tier.world = tried_on
-    stream = load("d5", "dev+near")
+    stream = load(args.domain, "dev+near")
     random.Random(11).shuffle(stream)
-    _, held = decision_loop.split_test("d5")
-    held_out = [*held, *load("d5", "stress2")]
+    _, held = decision_loop.split_test(args.domain)
+    held_out = [*held, *load(args.domain, "stress2")]
     random.Random(12).shuffle(held_out)
     recording = CappedRecording(args.recording, mode=args.mode, spend=Spend(args.budget))
     rows: list[dict[str, Any]] = []
@@ -111,14 +111,14 @@ async def main(args: argparse.Namespace) -> None:
     finally:
         print()
         show(rows)
-        (args.output / "mixed_d5.json").write_text(json.dumps(
+        (args.output / f"mixed_{args.domain}.json").write_text(json.dumps(
             {"rows": rows, "learning": meta.store.learning(decision_loop.DECISION), "signal": meta.programs.signal(),
              "search": meta.programs.search_log}, indent=1, default=str), encoding="utf-8")
         current = meta.programs.current()
         if current is not None:
-            (args.output / "mixed_d5_program.py").write_text(current["source"], encoding="utf-8", newline="\n")
-            (args.output / "mixed_d5_memories.json").write_text(json.dumps(meta.programs._stored(), indent=1),
-                                                                encoding="utf-8")
+            (args.output / f"mixed_{args.domain}_program.py").write_text(current["source"], encoding="utf-8", newline="\n")
+            (args.output / f"mixed_{args.domain}_memories.json").write_text(json.dumps(meta.programs._stored(), indent=1),
+                                                                            encoding="utf-8")
         for entry in meta.store.learning(decision_loop.DECISION):
             print(f"  learning: {entry['mechanism'][:24]:<24} {entry['outcome']:<20} ${entry['dollars'] or 0:.4f}")
         if args.mode != "replay":
@@ -128,6 +128,7 @@ async def main(args: argparse.Namespace) -> None:
 
 def parse(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--domain", default="d5", choices=["d5", "d7"])
     parser.add_argument("--start", default="high", choices=["low", "medium", "high"], help="the reasoning it starts at")
     parser.add_argument("--designer-model", default=llm.BUILDER, help="the model that rewrites the code in a search")
     parser.add_argument("--writer-model", default=llm.BUILDER, help="the model a learning component asks to write code")

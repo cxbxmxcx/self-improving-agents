@@ -54,6 +54,18 @@ Read tools: read_team(), answering each person's skills and the standing rules; 
 which days; read_rota(), answering the current rota. Procedure: available_people(day), answering {"people": [str]}.
 Actions: assign_shift, with the arguments {"day": str, "person": str}, and publish_rota, with the arguments
 {"monday": str, "tuesday": str, "wednesday": str, "thursday": str, "friday": str}.""",
+    "d6": """Serve one request to a software company's billing desk. Its only job is issuing the prorated credit one account is
+owed after a plan change. Anything else, such as whether a credit went out, what it would come to, or holding or reversing
+one, must be handed off.
+Read tools: read_account(account_id), read_policy(). Procedure: credit_due(account_id), answering {"credit_usd": float}.
+Action: issue_credit, with arguments {"account_id": str, "amount_usd": float}.""",
+    "d7": """Serve one request to a software company's support desk. Its jobs are triaging a ticket, which means reading its
+thread and the policy and setting its severity and team, and assigning a ticket to a named person. Anything else, such as
+asking about a ticket's severity or owner, or holding or undoing a change, must be handed off.
+Read tools: read_ticket(ticket_id), answering its thread; read_account(ticket_id), answering the customer's plan;
+read_policy(), answering the triage rules. Procedure: ticket_plan(ticket_id), answering {"plan": str}. Actions: triage_ticket,
+with the arguments {"ticket_id": str, "severity": str, "team": str}, and assign_ticket, with the arguments
+{"ticket_id": str, "owner": str}.""",
 }
 
 

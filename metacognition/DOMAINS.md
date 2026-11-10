@@ -654,3 +654,43 @@ run.
 
 The method **holds** if both domains pass all four, **holds in part** if one does, and **doesn't hold** if neither does.
 Each criterion is reported as measured, and none of these numbers changes after the runs. Drift isn't part of this test.
+
+### Result of the frozen-method test (2026-11-10)
+
+**By the rule above, the method holds in part.** D6 passed all four criteria. D7 passed three and missed the cost limit by
+0.04 points: its cost was 60.04% of the LLM alone at high reasoning, and the limit was 60%.
+
+Both runs used the method as committed with these criteria (`07cbdda`), and nothing under `helix/` changed until both had
+finished. Each ran once, with its seed, under its $9 cap. Neither crashed or was restarted. A separate agent wrote the
+request wordings, near misses and thread sentences from a brief that described only the two desks. The sanity check ran ten
+development requests per domain at high reasoning (7 of 10 right in each), and no world was changed after it.
+
+| Criterion | D6 billing credits | D7 ticket triage |
+|---|---|---|
+| Admitted | Pass: the first measured rewrite | Pass: the first measured rewrite |
+| Accurate | Pass: 52 of 52, against 37 at high reasoning | Pass: 51 of 52, against 44 at high reasoning |
+| Cheaper | Pass: $0.000498 a request against $0.003564, 14% | **Fail: $0.001375 against $0.002290, 60.04%** |
+| Safe | Pass: no wrong action by a program | Pass: no wrong action by a program |
+
+- **D6** (`examples/billing`, continuous pipeline, seed 61, $2.20 of model calls). At high reasoning with no procedure the
+  agent got 37 of 52 held-out requests right, at 6.01 s a request. With the procedure it learned from its first 32 runs,
+  at no reasoning, it got 41. With the admitted component it got 52: decision programs served all 32 acting requests with
+  no language model, and all 20 near misses went read-only, at 0.75 s a request. The hidden gate was 26 of 26.
+- **D7** (`examples/triage`, mixed pipeline, seed 71, $1.17 of model calls). The LLM alone got 44 of 52 at high reasoning,
+  41 at low and 40 at none. The admitted component kept triage on the language model, at no reasoning with a memory it
+  wrote, and got 15 of 16 triage requests right against 12 at high reasoning. It moved ticket assignment to a decision
+  program, which served 8 of the 16 assignments, and sent the other 8 to the language model at medium reasoning. All 20
+  near misses went read-only. Time fell from 4.74 s to 2.32 s a request. The hidden gate was 24 of 26.
+- No gate or held-out sentence appears in any variant's code, stored programs or feedback.
+
+What this does and doesn't show. These are the first runs on domains the method wasn't tuned on, with criteria set
+beforehand and text written blind. They are still two simulated domains with one run each, and the worlds' logic was written
+by whoever built the method. High reasoning is a weak baseline on both (37 and 44 of 52). A near miss counts as right when
+no action is taken, so those answers aren't graded. Drift wasn't tested.
+
+To replay either run from the committed recordings, name the models it was recorded with:
+
+    python -m examples.decisions.continuous --domain d6 --seed 61 --population 6 --label frozen_d6 \
+        --designer-model claude-opus-5-5 --writer-model claude-opus-5-5
+    python -m examples.decisions.mixed --domain d7 --seed 71 --population 6 --label frozen_d7 \
+        --designer-model claude-opus-5-5 --writer-model claude-opus-5-5

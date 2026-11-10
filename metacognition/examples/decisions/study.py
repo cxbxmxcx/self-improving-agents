@@ -41,6 +41,16 @@ def domain(name: str):
         from examples.shifts.world import task_set
 
         return desk(), task_set, None
+    if name == "d6":
+        from examples.billing.decide import desk
+        from examples.billing.world import task_set
+
+        return desk(), task_set, None
+    if name == "d7":
+        from examples.triage.decide import desk
+        from examples.triage.world import task_set
+
+        return desk(), task_set, None
     raise SystemExit(f"no domain {name!r}")
 
 
