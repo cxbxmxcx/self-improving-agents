@@ -13,6 +13,8 @@ from typing import Any
 
 # The model a run, a writer, or a search uses when nothing names one.
 DEFAULT_MODEL = os.environ.get("METACOG_DEFAULT_MODEL", "gpt-5.4-mini")
+# A search for code needs the strongest model there is. A small model only iterates, so it serves as the agent and no more.
+BUILDER_MODEL = os.environ.get("METACOG_BUILDER_MODEL", "claude-opus-5-5")
 
 
 @dataclass

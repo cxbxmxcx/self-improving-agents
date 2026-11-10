@@ -82,7 +82,7 @@ def tier_for(domain: str, jev: Decider, args: argparse.Namespace) -> ProgramTier
     return ProgramTier(desk=desk, decider=jev, contract=contract(domain, routes=args.routes), labeled=labeled, mechanisms=[(args.mechanism, source)],
                        search=search, search_cases={t["id"]: t for t in seen}, min_runs=args.min_runs,
                        max_wrong=args.max_wrong, bar=args.bar, routed_bar=args.routed_bar, read_only_handoffs=args.routes,
-                       writer_model=llm.MODEL, retry_after=12, max_attempts=args.max_attempts, gating_sources=("verifier",))
+                       writer_model=args.writer_model, retry_after=12, max_attempts=args.max_attempts, gating_sources=("verifier",))
 
 
 async def phase(name: str, tasks: list[dict[str, Any]], agent: Any, meta: Any, world_of: Any, rows: list[dict[str, Any]],
@@ -196,7 +196,7 @@ async def main(args: argparse.Namespace) -> dict[str, Any]:
 
 def parse(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--domain", default="d3", choices=["d1", "d3"])
+    parser.add_argument("--domain", default="d3", choices=["d1", "d3", "d5"])
     parser.add_argument("--mechanism", default="program_synthesis")
     parser.add_argument("--no-search", dest="search", action="store_false")
     parser.add_argument("--no-routes", dest="routes", action="store_false", help="programs only act or hand off")
@@ -205,7 +205,8 @@ def parse(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--search-target", default="mechanism", choices=["mechanism", "program"],
                         help="rewrite the mechanism, or edit the program it wrote with what works frozen")
     parser.add_argument("--max-attempts", type=int, default=6, help="times the loop tries to close a gap")
-    parser.add_argument("--designer-model", default=None, help="the model that rewrites the code in a search (default: the writer's)")
+    parser.add_argument("--designer-model", default=llm.BUILDER, help="the model that rewrites the code in a search")
+    parser.add_argument("--writer-model", default=llm.BUILDER, help="the model a learning component asks to write code")
     parser.add_argument("--designer-effort", default="medium", help="that model's reasoning")
     parser.add_argument("--share-all", action="store_true", help="show the search every test run, the gate's too")
     parser.add_argument("--stop-when-admitted", action="store_true", help="end the search at the first variant the gate admits")

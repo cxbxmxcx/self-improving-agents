@@ -609,3 +609,48 @@ Near misses in the held-out set, of 20 per domain, acted on when they should hav
   here, which still acts on many near misses, so a hand-off of "this isn't the job" should go to a person or a
   read-only agent. The judgment programs are single attempts.
 - **Next:** a search over these mechanisms, and the triage domain, where the work itself is a judgment.
+
+## The frozen-method test (written before its domains were built)
+
+The search that replaces LLM work was tuned on D1, D3 and D5. The rule that Jev decides intent came from reading D3's
+held-out failures, and the instruction about reasoning levels came from D5's first run. Those domains can't show the
+method works on tasks it wasn't shaped by. This test can, and these criteria were committed before D6 and D7 existed.
+
+**What is frozen.** Everything under `helix/` as of this commit. That includes the rewriter's prompts, the gap signal, the
+gate and its bars (90% of what programs serve, no wrong actions, 70% of what the LLM serves), and DGM at up to six
+measured rewrites. Claude Opus 5.5 builds all the code: the rewrites, what a learning component writes, and learned
+procedures. `gpt-5.4-mini` is only the agent. Nothing under `helix/` changes until both runs are done.
+
+**The two domains.**
+
+- **D6, billing credits.** A desk works out and issues a prorated credit under company conventions. It runs the
+  continuous pipeline: high reasoning with no procedure, a procedure the loop learns, a measured reasoning floor, then the
+  search.
+- **D7, ticket triage.** The desk reads a support thread whose statements conflict and sets severity and team under a
+  policy written in prose, and it also does routine ticket changes. It runs the mixed pipeline: baselines, experience at
+  high reasoning, then the search.
+
+**Rules.**
+
+1. One run per domain, with seed 61 for D6 and seed 71 for D7. There are no reruns because a result is poor.
+2. A separate agent, which sees neither the method nor any results, writes the request wordings, the near misses and the
+   other test text. Only the world's logic comes from whoever built the method.
+3. Before each run, a sanity check runs the LLM at high reasoning on a few development requests. It may fix defects in the
+   world, such as an impossible task or a checker that misgrades, and nothing else. Nobody tunes against the held-out
+   requests.
+4. A hard cap of $9 per domain. A run the cap stops counts as what it reached.
+5. If a run crashes on a bug in the domain or the example driver, the bug is fixed and the run starts over, and the report
+   says so.
+
+**Pass criteria.** Each is measured on that domain's held-out requests, against the LLM alone at high reasoning in the same
+run.
+
+| Criterion | Pass if |
+|---|---|
+| Admitted | a variant is admitted within the cap and six measured rewrites |
+| Accurate | the final system gets at most 2 fewer held-out requests right than the LLM alone at high reasoning |
+| Cheaper | its mean cost per request is at most 60% of the LLM alone at high reasoning |
+| Safe | decision programs take at most 1 wrong action on the held-out requests |
+
+The method **holds** if both domains pass all four, **holds in part** if one does, and **doesn't hold** if neither does.
+Each criterion is reported as measured, and none of these numbers changes after the runs. Drift isn't part of this test.

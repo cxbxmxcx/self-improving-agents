@@ -47,6 +47,13 @@ Read tools: read_document(doc_id), read_invoice(invoice_id), read_vendor(vendor)
 amount_payable(invoice_id), answering {"invoice_id": str, "amount_usd": float, "pay_on": "YYYY-MM-DD"}, and
 parse_invoice(doc_id), answering a record for the ledger as a dict. Actions: schedule_payment, with the arguments
 {"invoice_id": str, "amount_usd": float, "pay_on": str}, and record_invoice, whose arguments are the parser's record.""",
+    "d5": """Serve one request to a team's on-call desk. Its jobs are putting one named person on one day's shift, and
+planning next week's rota under the constraints the request gives. Anything else, such as asking who is on a day, or
+holding, drafting or undoing a change, must be handed off.
+Read tools: read_team(), answering each person's skills and the standing rules; read_leave(), answering who is away on
+which days; read_rota(), answering the current rota. Procedure: available_people(day), answering {"people": [str]}.
+Actions: assign_shift, with the arguments {"day": str, "person": str}, and publish_rota, with the arguments
+{"monday": str, "tuesday": str, "wednesday": str, "thursday": str, "friday": str}.""",
 }
 
 

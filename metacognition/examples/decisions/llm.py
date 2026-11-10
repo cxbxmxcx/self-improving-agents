@@ -22,7 +22,8 @@ from examples.decisions.wordings import load
 from metacog import Recording, RunConfig, Runner
 
 HERE = Path(__file__).parent
-MODEL = "gpt-5.4-mini"
+MODEL = "gpt-5.4-mini"  # the agent, and nothing else
+BUILDER = "claude-opus-5-5"  # all code: a search's rewrites, what a learning component writes, and learned procedures
 
 
 def _judged(check: Any, acted: Any) -> Any:
@@ -49,6 +50,14 @@ def _setup(domain: str, model: str, *, programs: Any = None, stale_parser: bool 
                              recall_k=1, learning="inline", relearn_after=10**9, gating_sources=(), prices=PRICES, programs=programs)
         meta.install("reimbursable_total", source, created_by="value_learning")
         return assistant(model, metacognition=meta), meta, ExpenseWorld
+    if domain == "d5":
+        from examples.shifts.agent import AVAILABLE, available_people, check, desk
+        from examples.shifts.world import ShiftWorld
+
+        meta = Metacognition([available_people], verifier=_judged(check, lambda w: w.actions), controller=controller,
+                             recall_k=1, learning="inline", relearn_after=10**9, gating_sources=(), prices=PRICES, programs=programs)
+        meta.install("available_people", AVAILABLE)
+        return desk(model, metacognition=meta), meta, ShiftWorld
     from examples.invoices.agent import CONTRACTS, PARSER, PARSER_BEFORE, PAYABLE, ap_desk, check
     from examples.invoices.world import InvoiceWorld
 
@@ -117,7 +126,7 @@ async def main(args: argparse.Namespace) -> dict[str, Any]:
 
 def parse(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--domain", default="d3", choices=["d1", "d3"])
+    parser.add_argument("--domain", default="d3", choices=["d1", "d3", "d5"])
     parser.add_argument("--split", default="test", choices=["dev", "dev+near", "test", "stress", "stress2"])
     parser.add_argument("--model", default=MODEL)
     parser.add_argument("--mode", default="replay", choices=["replay", "record", "live"])

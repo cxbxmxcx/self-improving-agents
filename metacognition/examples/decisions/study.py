@@ -36,6 +36,11 @@ def domain(name: str):
         from examples.invoices.world import task_set
 
         return desk(), task_set, ROOT / "invoices" / "programs" / "ap_desk.py"
+    if name == "d5":
+        from examples.shifts.decide import desk
+        from examples.shifts.world import task_set
+
+        return desk(), task_set, None
     raise SystemExit(f"no domain {name!r}")
 
 

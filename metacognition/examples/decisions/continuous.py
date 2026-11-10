@@ -61,39 +61,41 @@ def build(args: argparse.Namespace, jev: Any) -> tuple[Any, Metacognition]:
     flags = ["--domain", "d1", "--mode", args.mode, "--mechanism", "component_llm", "--search-method", "dgm",
              "--search-target", "mechanism", "--population", str(args.population), "--generations", "1", "--seed",
              str(args.seed), "--label", args.label, "--max-wrong", "0", "--stop-when-admitted", "--designer-model",
-             args.designer_model, "--archive", str(args.archive), "--output", str(args.output)]
+             args.designer_model, "--writer-model", args.writer_model, "--archive", str(args.archive), "--output",
+             str(args.output)]
     tier = decision_loop.tier_for("d1", jev, decision_loop.parse(flags))
     tier.world = world_for
     meta = Metacognition([reimbursable_total], verifier=llm._judged(check, lambda world: world.claims),
                          controller=Controller({"memory": args.start, "no_memory": args.start}), practice=on_base_trip,
                          gate=Gate(cases=[t["id"] for t in task_set("validation")]), recall_k=1, learning="inline",
                          relearn_after=args.learn_after, gating_sources=(), prices=PRICES, programs=tier,
-                         writer_model=llm.MODEL)
+                         writer_model=args.writer_model)
     return assistant(llm.MODEL, metacognition=meta), meta
 
 
 async def frozen_phase(name: str, tasks: list[dict[str, Any]], agent: Any, meta: Metacognition, effort: str,
-                       rows: list[dict[str, Any]], *, concurrency: int = 6) -> None:
+                       rows: list[dict[str, Any]], *, concurrency: int = 6, world: Any = world_for) -> None:
     """The agent on `tasks` at `effort`, offered what it trusts now, with nothing recorded and nothing learned."""
     slots = asyncio.Semaphore(concurrency)
 
-    def row(task: dict[str, Any], right: bool, dollars: float, seconds: float) -> dict[str, Any]:
+    def row(task: dict[str, Any], right: bool, dollars: float, seconds: float, reason: str = "") -> dict[str, Any]:
         return {"phase": name, "id": task["id"], "style": task["style"], "kind": task.get("kind"), "tier": "llm",
                 "handed_off": False, "read_only": False, "routed": False, "memory": None, "right": right, "reply": None,
-                "dollars": dollars, "seconds": seconds, "effort": effort}
+                "dollars": dollars, "seconds": seconds, "effort": effort, "reason": reason}
 
     async def one(task: dict[str, Any]) -> dict[str, Any]:
-        world = world_for(task)
+        context = world(task)
+        context.style = task.get("style", "plain")
         config = RunConfig(metacognition_mode="frozen", effort=effort, max_tool_calls=24, case_id=task["id"],
                            case_data=task)
         async with slots:
             try:
-                result = await Runner.run(agent, task["text"], context=world, max_turns=12, run_config=config)
+                result = await Runner.run(agent, task["text"], context=context, max_turns=12, run_config=config)
             except AgentsException:
                 return row(task, False, 0.0, 0.0)
         verdict = Verdict.coerce(meta.verifier(result.context_wrapper, result))
         return row(task, bool(verdict and verdict.accepted), float(result.cost.dollars or 0.0),
-                   float(result.cost.seconds or 0.0))
+                   float(result.cost.seconds or 0.0), verdict.reason if verdict else "no verdict")
 
     rows.extend(await asyncio.gather(*(one(task) for task in tasks)))
 
@@ -187,7 +189,8 @@ def parse(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--learn-after", type=int, default=32, help="runs before a learning attempt, and between attempts")
     parser.add_argument("--floor-trips", type=int, default=8, help="validation trips the floor is measured on")
     parser.add_argument("--floor-efforts", nargs="+", default=["none", "low", "medium"])
-    parser.add_argument("--designer-model", default="claude-opus-5-5", help="the model that rewrites the code in a search")
+    parser.add_argument("--designer-model", default=llm.BUILDER, help="the model that rewrites the code in a search")
+    parser.add_argument("--writer-model", default=llm.BUILDER, help="the model that writes procedures and programs")
     parser.add_argument("--population", type=int, default=4, help="rewrites a search may try")
     parser.add_argument("--seed", type=int, default=41)
     parser.add_argument("--label", default="continuous")

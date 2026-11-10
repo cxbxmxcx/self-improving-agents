@@ -26,6 +26,7 @@ import asyncio
 import inspect
 import random
 import time
+from collections import Counter
 from collections.abc import Sequence
 from dataclasses import asdict, dataclass, field, replace
 from types import SimpleNamespace
@@ -46,12 +47,13 @@ from helix.deciders.base import Decider, MissingAnswer
 from helix.metacognition.decide import RUNG, Desk, Kit, UnsafeProgram, check_program, frozen_change, run_program, serve
 from helix.metacognition.api import SkillAPI
 from helix.metacognition.gap import Attempt, Good, gap_of, report
+from helix.metacognition.ladders import most_demanding
 from helix.metacognition.mechanisms import contract_text
 from helix.metacognition.parts import Detector, GateResult
 from helix.metacognition.prompts import GENERIC
 from helix.metacognition.selection import LearningProblem, run_tournament
 from helix.metacognition.sources import SourceLearner, source_id
-from helix.metacognition.model_settings import DEFAULT_MODEL
+from helix.metacognition.model_settings import BUILDER_MODEL, DEFAULT_MODEL
 from helix.metacognition.pricing import PRICES, run_cost
 from helix.metacognition.result import RunResult
 from helix.metacognition.run_context import RunContextWrapper
@@ -88,8 +90,7 @@ differently. Code is for what code can know exactly, such as finding an id or ca
 
 The component is scored on held-out requests: an action must be right, a request outside the job must be handed off
 read-only, a wrong action is penalized heavily, a request served by the language model earns less than one served
-without it, and a plain hand-off of work the program could have done earns little. A component that serves nothing
-without the language model can't be admitted. It must work for any job, so nothing in it may assume one domain; the job
+without it, and a plain hand-off of work the program could have done earns little. {admission} It must work for any job, so nothing in it may assume one domain; the job
 is described by `lab.contract`.
 
 Its form:
@@ -118,6 +119,10 @@ What `lab` offers, every call metered (a component over budget stops and scores 
 
 Writer calls are the cost: the budget is {writer_calls} per problem."""
 
+_NEEDS_A_PROGRAM = "A component that serves nothing\nwithout the language model can't be admitted."
+_OR_COSTS_LESS = ("A component that serves everything with the language model is admitted only if it gets as many test\n"
+                  "requests right as what is running now and costs less.")
+
 MUTATION_PROMPT = """You are improving a learning component by rewriting its code, in a search that keeps every variant.
 
 """ + PROGRAM_LAB + """
@@ -126,10 +131,20 @@ You will see the current component and its gap: what good is, how far the compon
 what happened on every request it was tried on, what it stored and the program it returned. You may also see a sibling
 component. Build one variant that closes the largest part of the gap and keeps what works.
 
-If requests are right only because the language model served them, that is the gap to close. Choose one memory that acts
-and is still served by the language model, and change the code so that memory is served by a decision program: `learn`
-writes the program and stores it with route "program", and keeps the other memories. Move one memory at a time. If wrong
-actions or requests left undone are a larger part of the gap, fix those first.
+Fix wrong actions and requests left undone first. If the language model gets a memory's requests wrong, raise that
+memory's reasoning level before anything else. Use the lowest level that stays right: `learn` can try each level on the
+shared requests with `lab.practice` and store the lowest that works, and a memory that is right at its level may be
+right at a lower one.
+
+After that, if requests are right only because the language model served them, that is the gap to close. Choose one
+memory that acts and is still served by the language model, and change the code so that memory is served by a decision
+program: `learn` writes the program and stores it with route "program", and keeps the other memories. Move one memory at
+a time.
+
+A decision program has to work on requests you can't see, which may be worded differently or ask for things in forms you
+haven't seen. If the report says a memory's program made wrong actions on those requests, that program doesn't
+generalize: put the memory back on the language model at a reasoning level that gets it right, and keep the programs that
+work. Some work needs the language model, and a memory that does should stay on it.
 
 Output only the component's source."""
 
@@ -195,6 +210,8 @@ class ProgramSearch:
     share_all: bool = False  # hand the rewriter every test run, the gate's too, try every variant on the gate, and
     # let a variant's `learn` practice on the gate's requests as well as the search's
     stop_when_admitted: bool = False  # end the search at the first variant the gate admits
+    lower_reasoning: bool = False  # also admit a variant that stays on the LLM, if it gets as many test requests right
+    # as what's running now does, on the same requests, and costs less
 
 
 @dataclass
@@ -275,24 +292,40 @@ class ServiceGap:
         self.loop = loop
         self.good = good
         self.share_all = share_all
+        self.running_now: dict[str, tuple[bool, float]] | None = None  # each test request: right, and what it cost
 
     async def tried(self, program: str) -> tuple[Judgment | None, Judgment | None]:
         """The program on the search's cases, and on the gate's if everything is shared or it earned that."""
         loop = self.loop
         seen = await loop.judge(program, list(loop.tier.search_cases)) if loop.tier.search_cases else None
-        reached = seen is None or self.share_all or loop._gate(seen).passed
+        reached = seen is None or self.share_all or self.passes(seen)
         return seen, await loop.judge(program) if reached else None
 
-    def admits(self, seen: Judgment | None, judged: Judgment | None) -> bool:
-        if judged is None or not self.loop._gate(judged).passed:
+    def keeps_up(self, judged: Judgment) -> bool:
+        """Whether a variant that stays on the LLM gets as many right as what's running now, and costs less."""
+        if self.running_now is None or judged.acted or judged.wrong > self.loop.tier.max_wrong:
             return False
-        return seen is None or not self.share_all or self.loop._gate(seen).passed
+        known = [attempt for attempt in judged.attempts if attempt.case_id in self.running_now]
+        right = sum(attempt.reward >= 1.0 or attempt.reward == ROUTED_REWARD for attempt in known)
+        ran = [attempt for attempt in known if attempt.outcome in ("llm", "llm_wrong")]
+        return (right >= sum(self.running_now[attempt.case_id][0] for attempt in known)
+                and sum(attempt.dollars for attempt in ran) < sum(self.running_now[attempt.case_id][1] for attempt in ran))
+
+    def passes(self, judged: Judgment) -> bool:
+        return self.loop._gate(judged).passed or self.keeps_up(judged)
+
+    def admits(self, seen: Judgment | None, judged: Judgment | None) -> bool:
+        if judged is None or not self.passes(judged):
+            return False
+        return seen is None or not self.share_all or self.passes(seen)
 
     @staticmethod
     def _held_back(judged: Judgment) -> str:
+        wrong = Counter(attempt.memory for attempt in judged.attempts if attempt.outcome == "wrong" and attempt.memory)
+        named = ", ".join(f"{count} from {memory}" for memory, count in wrong.most_common())
         return (f"\n\nOn {judged.total} other requests, which you can't see and which are worded differently from those "
                 f"above, it got {judged.accepted} right, with {judged.wrong} wrong actions and {judged.handoffs} hand-offs "
-                "of work it could have done.")
+                "of work it could have done." + (f" The wrong actions came from: {named}." if named else ""))
 
     def measurement(self, seen: Judgment | None, judged: Judgment | None, *, passed: bool, notes: str = "") -> GapMeasurement:
         looked_at = seen.attempts if seen is not None else []
@@ -583,6 +616,18 @@ class DecisionLoop:
         verdict = Verdict.coerce(await verdict if inspect.isawaitable(verdict) else verdict)
         return (False, "no verdict", *spent) if verdict is None else (verdict.accepted, verdict.reason or "accepted", *spent)
 
+    async def _running_now(self) -> dict[str, tuple[bool, float]]:
+        """The agent as it runs now on each test request: what a variant that stays on the LLM has to match."""
+        model = getattr(self.meta.agent, "model", None) or DEFAULT_MODEL
+        effort = most_demanding(self.meta.setting(name, self.meta.store.trusted(name) is not None, model)
+                                for name in self.meta.procedures)
+        attempt = self.tier.route_practice or self._try_route
+        measured: dict[str, tuple[bool, float]] = {}
+        for case_id, task in {**self.tier.search_cases, **self.tier.labeled}.items():
+            accepted, _, *spent = await attempt(task, effort, None)
+            measured[case_id] = (bool(accepted), float(spent[0]) if spent else 0.0)
+        return measured
+
     def _cases(self) -> list[str]:
         """The gate's labeled requests, and every request a program served wrongly since the last install."""
         store = self.meta.store
@@ -664,7 +709,7 @@ class DecisionLoop:
     async def _write(self, problem: LearningProblem, name: str, source: str, memories: Sequence[dict[str, Any]],
                      tests: Sequence[dict[str, Any]] = ()) -> Any:
         learner = SourceLearner(source, name, GENERIC, self.tier.budget, memories=memories, tests=tests)
-        choice = await run_tournament(problem, [learner], writer_model=self.tier.writer_model or DEFAULT_MODEL,
+        choice = await run_tournament(problem, [learner], writer_model=self.tier.writer_model or BUILDER_MODEL,
                                       writer_params=self.tier.writer_params, prices=self.tier.prices)
         return choice.winner
 
@@ -785,6 +830,10 @@ class DecisionLoop:
             name, seed_source = self._mechanisms()[0]
         best: dict[str, Any] = {}
         signal = ServiceGap(self, Good(wrong_action=1.0 + spec.penalty), share_all=spec.share_all)
+        if spec.lower_reasoning and not editing:
+            signal.running_now = await self._running_now()
+            events.append(f"search: what's running now got {sum(right for right, _ in signal.running_now.values())} of "
+                          f"{len(signal.running_now)} test requests right")
         built: dict[Any, list[dict[str, Any]]] = {}  # what each variant stored, so its children start from it
         starting = self._stored()
         learning = replace(problem, cases=[])  # a variant is measured below, not by the tournament
@@ -851,11 +900,12 @@ class DecisionLoop:
         calls = tier.budget.writer_calls if tier.budget.writer_calls is not None else "unlimited"
         run = f"\n\nThis is design search {spec.label}." if spec.label else ""
         rules = contract_text(tier.contract, GENERIC)
+        admission = _OR_COSTS_LESS if spec.lower_reasoning else _NEEDS_A_PROGRAM
         mutation = (EDIT_PROMPT.replace("{contract}", rules) if editing
-                    else MUTATION_PROMPT.replace("{writer_calls}", str(calls)))
+                    else MUTATION_PROMPT.replace("{writer_calls}", str(calls)).replace("{admission}", admission))
         crossover = (COMBINE_PROMPT.replace("{contract}", rules) if editing
-                     else CROSSOVER_PROMPT.replace("{writer_calls}", str(calls)))
-        search = build_search(spec.method, proposer_model=spec.designer_model or tier.writer_model or DEFAULT_MODEL,
+                     else CROSSOVER_PROMPT.replace("{writer_calls}", str(calls)).replace("{admission}", admission))
+        search = build_search(spec.method, proposer_model=spec.designer_model or tier.writer_model or BUILDER_MODEL,
                               evaluator=evaluate, mutation_prompt=mutation + run, crossover_prompt=crossover + run,
                               validate=validate, proposer_params=dict(spec.designer_params),
                               population=spec.population, generations=spec.generations, rng=random.Random(spec.seed))
@@ -883,7 +933,8 @@ class DecisionLoop:
         found = [m for m in (store.setting("program_mechanisms") or []) if m["name"] != design]
         store.put_setting("program_mechanisms", [{"name": design, "source": best["source"]}, *found])
         events.append(f"search: {design} wrote a program the gate admits")
-        self._install(best["trial"].source, design, problem, best["trial"], self._gate(best["judged"]), events)
+        self._install(best["trial"].source, design, problem, best["trial"], replace(self._gate(best["judged"]), passed=True),
+                      events)
 
 
 __all__ = ["DECISION", "RUNG", "DecisionLoop", "Judgment", "ProgramSearch", "ProgramTier", "ServiceGap"]

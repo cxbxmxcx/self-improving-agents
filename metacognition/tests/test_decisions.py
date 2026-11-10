@@ -11,7 +11,7 @@ import pytest
 from helix.deciders import Answer, DecisionUsage
 from helix.memory.learning_mechanisms import Contract
 from helix.memory.mechanism_runtime import UnsafeMechanism, check_runnable, pack_memories, unpack_memories
-from helix.metacognition import Metacognition, procedure
+from helix.metacognition import Controller, Metacognition, procedure
 from helix.metacognition.decide import KIT_GUIDE, RETURNS, Desk, Kit, frozen_change, run_program
 from helix.metacognition.gap import Attempt, Good, gap_of, report
 from helix.metacognition.decisions import DECISION, RUNG, ProgramSearch, ProgramTier, ServiceGap
@@ -829,3 +829,71 @@ async def test_a_rewrite_that_could_not_run_goes_back_to_the_rewriter_with_the_r
         await meta.programs.improve(events)
     assert len(designer.requests) == 2 and "'repr' is not defined" in designer.requests[1]["messages"][1]["content"]
     assert any("wrote a program the gate admits" in e for e in events), events
+
+
+async def test_a_hidden_gate_says_which_memory_made_the_wrong_actions():
+    always = 'async def decide(request, kit):\n    return {"serve": "ship_it"}\n'
+    designer = RespondingModel(lambda request: text(component(SHIPS, HOLDS, router=always)))
+    spec = ProgramSearch(population=1, generations=1, seed=3)
+    agent, meta = build(mechanisms=[("seed", component(SHIPS, HOLDS, router=always))], route_practice=routed_right, search=spec,
+                        search_cases={"c201": task(201)})
+    meta.agent = agent
+    with designer.active():
+        await meta.programs.improve([])
+    shown = designer.requests[0]["messages"][1]["content"]
+    assert "The wrong actions came from: 1 from ship_it." in shown and "O-104" not in shown
+
+
+def priced(costs: dict[str, float], right_at: set[str] | None = None) -> Any:
+    """The LLM on a request: what a run costs at each reasoning level, and the levels that get it right (all, if None)."""
+
+    async def attempt(task_: dict[str, Any], effort: str, memory: str | None) -> tuple[bool, str, float, float]:
+        accepted = right_at is None or effort in right_at
+        return accepted, "fine" if accepted else "wrong", costs[effort], 0.1
+
+    return attempt
+
+
+async def searched_on_the_llm(route_practice: Any, *, lower_reasoning: bool = True) -> tuple[Metacognition, RespondingModel, list[str]]:
+    designer = RespondingModel(lambda request: text(component(ALL_LLM, HOLDS)))
+    spec = ProgramSearch(population=1, generations=1, seed=3, lower_reasoning=lower_reasoning)
+    agent, meta = build(mechanisms=[("seed", component(ALL_LLM, HOLDS))], route_practice=route_practice, search=spec,
+                        search_cases={"c201": task(201)})
+    meta.agent = agent
+    meta.controller = Controller({"memory": "high", "no_memory": "high"})
+    events: list[str] = []
+    with designer.active():
+        await meta.programs.improve(events)
+    return meta, designer, events
+
+
+@pytest.mark.parametrize(("costs", "right_at", "admitted"), [
+    ({"high": 0.01, "none": 0.001}, None, True),  # as accurate, and cheaper
+    ({"high": 0.001, "none": 0.001}, None, False),  # as accurate, but no cheaper
+    ({"high": 0.01, "none": 0.001}, {"high"}, False),  # cheaper, but less accurate
+])
+async def test_a_variant_on_the_llm_must_match_what_is_running_and_cost_less(costs, right_at, admitted):
+    meta, designer, events = await searched_on_the_llm(priced(costs, right_at))
+    assert (meta.programs.current() is not None) == admitted, events
+    assert any("what's running now got" in e for e in events), events
+    assert "as what is running now and costs less" in designer.requests[0]["messages"][0]["content"]
+
+
+async def test_without_the_setting_a_variant_on_the_llm_is_still_refused():
+    meta, designer, _ = await searched_on_the_llm(priced({"high": 0.01, "none": 0.001}), lower_reasoning=False)
+    assert meta.programs.current() is None
+    assert "can't be admitted" in designer.requests[0]["messages"][0]["content"]
+
+
+async def test_with_no_model_named_a_search_builds_code_with_the_strong_model():
+    from helix.metacognition.model_settings import BUILDER_MODEL
+
+    writes = f"PROGRAM = {RECKLESS!r}\n\n\nasync def learn(lab):\n    await lab.ask('hello')\n    return PROGRAM\n"
+    designer = RespondingModel(lambda request: text(writes))
+    spec = ProgramSearch(population=1, generations=1, seed=3)
+    agent, meta = build(mechanisms=[("seed", writes)], search=spec)
+    meta.agent = agent
+    meta.programs.tier.writer_model = None
+    with designer.active():
+        await meta.programs.improve([])
+    assert len(designer.requests) >= 3 and {request["model"] for request in designer.requests} == {BUILDER_MODEL}
