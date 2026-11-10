@@ -10,7 +10,7 @@ turns a rung into the call parameters for one model family. Every ladder sends
   translates the rung there. `none` turns thinking off where the model can
   (`disabled` on Haiku 5.5, `between_tools` on Sonnet 5.5); every other rung is
   adaptive thinking at that effort. Models that can't turn thinking off (Opus 5.5,
-  Fable 5.1) have no `none` rung. LiteLLM's own translation, which tests/test_a1.py
+  Fable 5.1, Fable 5.2) have no `none` rung. LiteLLM's own translation, which tests/test_a1.py
   pins, sends nothing for `none`, and that leaves thinking on.
 
 A model from any other family gets the default ladder, which sends

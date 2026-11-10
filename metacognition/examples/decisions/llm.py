@@ -23,7 +23,7 @@ from metacog import Recording, RunConfig, Runner
 
 HERE = Path(__file__).parent
 MODEL = "gpt-5.4-mini"  # the agent, and nothing else
-BUILDER = "claude-opus-5-5"  # all code: a search's rewrites, what a learning component writes, and learned procedures
+BUILDER = "claude-fable-5-2"  # all code: a search's rewrites, what a learning component writes, and learned procedures
 
 
 def _judged(check: Any, acted: Any) -> Any:

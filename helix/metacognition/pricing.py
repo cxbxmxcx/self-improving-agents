@@ -17,6 +17,8 @@ PRICES: dict[str, tuple[float, ...]] = {
     "claude-haiku-5-5": (0.10, 0.50, 0.01),
     "claude-sonnet-5-5": (2.00, 10.00, 0.20),
     "claude-opus-5-5": (4.00, 20.00, 0.20),
+    # The builder: the model that writes code in a search.
+    "claude-fable-5-2": (8.00, 40.00, 0.20),
 }
 
 __all__ = ["PRICES", "call_dollars", "run_cost"]

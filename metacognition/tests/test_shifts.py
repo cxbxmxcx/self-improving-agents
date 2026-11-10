@@ -131,7 +131,7 @@ def test_the_small_model_serves_and_the_strong_model_writes_the_code():
     from examples.decisions import continuous, llm, loop, mixed
 
     tier = loop.tier_for("d5", None, loop.parse(["--domain", "d5"]))
-    assert tier.writer_model == tier.search.designer_model == llm.BUILDER == "claude-opus-5-5"
+    assert tier.writer_model == tier.search.designer_model == llm.BUILDER == "claude-fable-5-2"
     assert llm.MODEL == "gpt-5.4-mini"
     for example in (continuous, mixed):
         args = example.parse([])

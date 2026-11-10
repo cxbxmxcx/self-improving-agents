@@ -182,3 +182,26 @@ async def test_a_live_claude_call_is_recorded_with_its_thinking_and_priced(tmp_p
     again = await replayed(model="claude-haiku-5-5", messages=[{"role": "user", "content": "hi"}],
                            reasoning_effort="low")
     assert again.choices[0].message.content == "ok"
+
+
+def test_the_builder_model_is_priced_and_keeps_thinking_on():
+    from helix.metacognition.ladders import ladder_for
+    from helix.metacognition.model_settings import BUILDER_MODEL
+    from helix.metacognition.pricing import PRICES, call_dollars
+
+    assert BUILDER_MODEL == "claude-fable-5-2" and PRICES[BUILDER_MODEL] == (8.00, 40.00, 0.20)
+    assert call_dollars(BUILDER_MODEL, {"prompt_tokens": 1_000_000, "completion_tokens": 1_000_000}, PRICES) == 48.0
+    assert "none" not in ladder_for(BUILDER_MODEL).rungs
+    assert claude.thinking_params(BUILDER_MODEL, "medium") == {"thinking": {"type": "adaptive"},
+                                                              "output_config": {"effort": "medium"}}
+
+
+def test_a_declined_request_comes_back_empty_and_is_kept():
+    from types import SimpleNamespace as NS
+
+    usage = NS(input_tokens=10, output_tokens=0, cache_read_input_tokens=0, cache_creation_input_tokens=0)
+    message = NS(content=[], stop_reason="refusal", stop_details=NS(category="cyber", explanation="declined"), usage=usage)
+    before = len(claude.refusals)
+    reply = claude.to_response(message, "claude-fable-5-2")
+    assert reply.choices[0].message.content == "" and reply.choices[0].finish_reason == "refusal"
+    assert claude.refusals[before:] == [{"model": "claude-fable-5-2", "category": "cyber", "explanation": "declined"}]

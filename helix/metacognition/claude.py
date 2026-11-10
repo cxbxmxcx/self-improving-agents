@@ -23,12 +23,13 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 from types import SimpleNamespace
 from typing import Any
 
 # How each Claude model turns thinking off. Haiku 5.5 takes `disabled` (at effort high or below);
 # Sonnet 5.5 rejects `disabled` and turns thinking off with `between_tools`. The models missing
-# here (Opus 5.5, Fable 5.1) can't turn thinking off, so their lowest reasoning setting is low.
+# here (Opus 5.5, Fable 5.1, Fable 5.2) can't turn thinking off, so their lowest reasoning setting is low.
 THINKING_OFF: dict[str, dict[str, str]] = {
     "claude-haiku-5-5": {"type": "disabled"},
     "claude-sonnet-5-5": {"type": "between_tools"},
@@ -38,6 +39,10 @@ MAX_TOKENS = 32_000  # room for thinking and the reply; every call streams, so n
 KEPT_TURNS = 20_000  # assistant turns remembered for sending back, before the memory resets
 
 _clients: dict[int, Any] = {}
+_log = logging.getLogger(__name__)
+# Requests a model declined (stop_reason "refusal"), newest last: the reply is empty, so whatever asked should be
+# able to say why. No fallback model is named here: which model answered is part of what a study measures.
+refusals: list[dict[str, str]] = []
 # Each assistant turn this module returned, as the API sent it (thinking blocks included), keyed by
 # its tool calls' ids, or by its text when it called no tool: helix sends the turn back in OpenAI
 # form, and the API wants the original blocks.
@@ -158,6 +163,12 @@ def to_tool_choice(choice: Any) -> dict[str, str] | None:
 
 def to_response(message: Any, model: str) -> SimpleNamespace:
     """A Messages API reply shaped like LiteLLM's, the way helix and metacog's recordings read it."""
+    if message.stop_reason == "refusal":
+        details = getattr(message, "stop_details", None)
+        declined = {"model": model, "category": str(getattr(details, "category", None) or "unknown"),
+                    "explanation": str(getattr(details, "explanation", None) or "")}
+        refusals.append(declined)
+        _log.warning("%s declined a request (%s); its reply is empty", model, declined["category"])
     text = "".join(block.text for block in message.content if block.type == "text")
     calls = [SimpleNamespace(id=block.id, type="function",
                              function=SimpleNamespace(name=block.name, arguments=json.dumps(block.input)))
