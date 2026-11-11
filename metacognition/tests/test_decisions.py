@@ -547,6 +547,35 @@ async def test_a_long_running_tier_waits_while_a_procedure_it_stands_on_is_relea
     assert any(event.startswith("program: m0 wrote") for event in events)  # relearned, so it is the program's turn
 
 
+@pytest.mark.parametrize(("long_running", "by_day", "back_on"),
+                         [(True, True, True), (True, False, False), (False, True, False)])
+async def test_a_relearned_procedure_has_a_switched_off_action_tested_again_at_once(long_running, by_day, back_on):
+    """Waiting for the night left the fast path off for the rest of every day on which something changed."""
+    agent, meta = build(trusted=GOOD, long_running=long_running, retest_by_day=by_day)
+    meta.agent = agent
+    meta.store.put_state("program:ship", {"off": True, "reason": "two wrong actions"})
+    events: list[str] = []
+    await meta.programs.relearned("order_status", events)
+    assert (not meta.programs.off("ship")) is back_on
+    assert any("switched back on" in event for event in events) is back_on
+    assert meta.store.state("decision:loop").get("attempts", 0) == 0  # a re-test uses no attempt
+
+
+@pytest.mark.parametrize(("long_running", "quarantined", "effort"),
+                         [(True, True, "high"), (False, True, "low"), (True, False, "low")])
+async def test_a_route_does_not_lower_the_reasoning_raised_for_a_quarantined_procedure(model, long_running,
+                                                                                      quarantined, effort):
+    """In the recorded week three of a day's six failures came from a route that kept the agent at low reasoning
+    while the function it relied on was quarantined."""
+    agent, meta = build(trusted=ROUTING, long_running=long_running)
+    meta.controller = Controller({"memory": "none", "no_memory": "high"})
+    if quarantined:
+        meta.quarantine("order_status")
+    with model.active():
+        result, _ = await run(agent, {**task(3), "judge": False})
+    assert result.metacognition.effort == effort and model.requests[0]["reasoning_effort"] == effort
+
+
 async def test_a_read_only_run_that_fails_says_nothing_about_a_procedure():
     """Real work a program sent on read-only can't be done, and that isn't the fault of a procedure the agent called."""
     everything = 'async def decide(request, kit):\n    return {"handoff": "no", "read_only": True}\n'

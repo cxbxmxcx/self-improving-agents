@@ -50,6 +50,19 @@ async def test_a_short_stream_recovers_from_each_change_and_asks_the_builder_onl
     assert days[5]["program"] >= 0.9 * days[3]["program"] > 0  # the day after a change, programs serve as before
 
 
+async def test_a_stream_that_retests_by_day_has_its_fast_path_back_within_the_day(small: Path):
+    common = ["--requests", "144", "--per-day", "24", "--quiet-days", "0", "--quiet", "--weeks", str(small / "w.json")]
+    by_night = await long_run.main(long_run.parse([*common, "--output", str(small / "night.json")]))
+    by_day = await long_run.main(long_run.parse([*common, "--retest-by-day", "--output", str(small / "day.json")]))
+    night, day = by_night["summary"], by_day["summary"]
+    assert night["changes"] == day["changes"] == 2  # days 4 and 6
+    assert night["fast_path_back_same_day"] == 0 and day["fast_path_back_same_day"] == 2
+    assert day["requests_until_fast_path_back"]["max"] <= 12  # a few requests to relearn, then the re-test
+    assert day["served_by_programs_on_change_days"] > 3 * night["served_by_programs_on_change_days"]
+    assert day["right"] >= night["right"] and day["stalled_days"] == [] and day["builder_calls_on_calm_days"] == 0
+    assert by_day["calls"]["builder: rewrite"] == 1  # still only the first night's search
+
+
 async def test_a_short_load_run_gives_the_same_outcomes_at_every_level_and_relearns_once(small: Path):
     args = load.parse(["--requests", "40", "--levels", "1", "8", "--agent-seconds", "0.004", "--jev-seconds", "0.002",
                        "--verdict-seconds", "0.004", "--weeks", str(small / "weeks.json"),

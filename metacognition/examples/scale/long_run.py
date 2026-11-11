@@ -13,9 +13,13 @@ requests, some stretches with the calendar down, and one long quiet stretch. The
     overhead    the harness's own time per request, each night's time, and the store's size, over the stream
 
 `--lifetime-limits` runs the harness as it was before limits were counted for each gap, and `--keep 0` keeps every
-episode, to show what each of those costs over a long stream. Learned functions run in this process, so the time
-reported is the loop's own. `--executor subprocess` starts a new process for every call, as the chapters do; that
-isolation costs tens of milliseconds a call, which hides the loop's few.
+episode, to show what each of those costs over a long stream. `--retest-by-day` has the tier test a switched-off
+action again as soon as the function under it has been relearned, where it otherwise waits for the night. The
+requests held back from a day are then the gate from that morning on, which a deployment has to arrange.
+
+Learned functions run in this process, so the time reported is the loop's own. `--executor subprocess` starts a new
+process for every call, as the chapters do; that isolation costs tens of milliseconds a call, which hides the
+loop's few.
 """
 
 from __future__ import annotations
@@ -45,7 +49,8 @@ WATCHED = {"program: switched off": "switched_off", "detector: quarantined": "qu
 
 def build(args: argparse.Namespace, jev: Jev) -> tuple[Any, Any, Any]:
     """The calendar assistant of Chapter 7, set up for a stream that is long and keeps changing."""
-    tier = decision_tier(jev, [seed("component_llm")], search=code_search("dgm"), long_running=not args.lifetime_limits)
+    tier = decision_tier(jev, [seed("component_llm")], search=code_search("dgm"),
+                         long_running=not args.lifetime_limits, retest_by_day=args.retest_by_day)
     budget = (LearningBudget(attempts_per_day=2) if args.lifetime_limits
               else LearningBudget(attempts_per_day=3, runs_per_day=args.per_day))
     agent, meta = harness(tier, store=MetaStore(keep=args.keep or None), budget=budget, executor=args.executor,
@@ -59,7 +64,8 @@ async def a_day(day: stream.Day, tasks: list[dict[str, Any]], agent: Any) -> dic
     outcomes: Counter[str] = Counter()
     seen: Counter[str] = Counter()
     took = []
-    for task in tasks:
+    off_at = back_at = None  # where a program's action was switched off, and where a program next served
+    for index, task in enumerate(tasks):
         config = RunConfig(max_tool_calls=24, case_id=task["id"], case_data=task)
         started = time.perf_counter()
         try:
@@ -70,8 +76,13 @@ async def a_day(day: stream.Day, tasks: list[dict[str, Any]], agent: Any) -> dic
         took.append(time.perf_counter() - started)
         report = result.metacognition
         right = bool(report.verdict and report.verdict.accepted)
-        outcomes[outcome_of(right, program=report.program, should_act=task["expect"] == "act")] += 1
+        outcome = outcome_of(right, program=report.program, should_act=task["expect"] == "act")
+        outcomes[outcome] += 1
         outcomes["right"] += right
+        if off_at is None and any(event.startswith("program: switched off") for event in report.events):
+            off_at = index
+        elif off_at is not None and back_at is None and outcome == "program":
+            back_at = index
         for event in report.events:
             for start, name in WATCHED.items():
                 seen[name] += event.startswith(start)
@@ -81,6 +92,7 @@ async def a_day(day: stream.Day, tasks: list[dict[str, Any]], agent: Any) -> dic
             "outage": day.outage, "requests": len(tasks), **{k: outcomes[k] for k in (
                 "right", "program", "wrong", "llm", "llm_wrong", "read_only", "lost", "failed")},
             **{k: seen[k] for k in ("switched_off", "quarantined", "relearned", "skipped")},
+            "back_in": None if off_at is None or back_at is None else back_at - off_at,
             "ms": round(1000 * statistics.fmean(took), 2) if took else 0.0,
             "ms_p95": round(1000 * took[int(0.95 * (len(took) - 1))], 2) if took else 0.0}
 
@@ -100,6 +112,8 @@ async def main(args: argparse.Namespace) -> dict[str, Any]:
             meta.gate = Gate(cases=stream.FUNCTION_WEEKS[day.conditions])  # today's weeks judge a relearned function
             tasks = stream.served(day, args.per_day, weeks)
             gate, search = stream.held_back(day, weeks)
+            if args.retest_by_day:
+                tier.labeled, tier.search_cases = gate, search  # a re-test by day needs a gate from today
             builder_before = models.calls["builder"]
             row = await a_day(day, tasks, agent)
             tier.labeled, tier.search_cases = gate, search  # held back from today: tonight's gate and search
@@ -160,6 +174,11 @@ def summarize(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "wrong_program_actions": sum(r["wrong"] for r in rows),
         "changes": len(changes), "changes_checked": len(after), "changes_recovered": len(recovered),
         "changes_repaired_by_night": sum(rows[i]["trusted"] and not rows[i]["off"] for i in changes),
+        "fast_path_back_same_day": sum(rows[i].get("back_in") is not None for i in changes),
+        "requests_until_fast_path_back": _spread([rows[i]["back_in"] for i in changes
+                                                  if rows[i].get("back_in") is not None]),
+        "served_by_programs_on_change_days": round(
+            sum(rows[i]["program"] for i in changes) / max(1, sum(rows[i]["requests"] for i in changes)), 3),
         "days_ended_unrepaired": [r["day"] for r in rows if r["off"] or not r["trusted"]],
         "wrong_on_change_days": _spread([rows[i]["requests"] - rows[i]["right"] for i in changes]),
         "wrong_program_actions_on_change_days": _spread([rows[i]["wrong"] for i in changes]),
@@ -185,6 +204,9 @@ def show(out: dict[str, Any]) -> None:
           f"(usually {s['usual_program_share']:.0%} of a calm day)")
     print(f"changes of note: {s['changes']}; {s['changes_repaired_by_night']} repaired by that night; of "
           f"{s['changes_checked']} followed by a calm day, {s['changes_recovered']} were back to normal the next day")
+    print(f"fast path back on the day of a change: {s['fast_path_back_same_day']} of {s['changes']}, after "
+          f"{s['requests_until_fast_path_back']} requests; programs served "
+          f"{s['served_by_programs_on_change_days']:.0%} of the requests on those days")
     print(f"wrong on a day of change: {s['wrong_on_change_days']}; by programs: "
           f"{s['wrong_program_actions_on_change_days']}; wrong program actions in all: {s['wrong_program_actions']}")
     print(f"stalled days: {len(s['stalled_days'])} {s['stalled_days'][:12]}; "
@@ -207,6 +229,8 @@ def parse(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--careless", type=float, default=0.2, help="share of near misses the agent acts on")
     parser.add_argument("--misread", type=float, default=0.01, help="share of near misses Jev takes for a booking")
     parser.add_argument("--lifetime-limits", action="store_true", help="count attempts over the tier's whole life")
+    parser.add_argument("--retest-by-day", action="store_true",
+                        help="test a switched-off action again as soon as its function has been relearned")
     parser.add_argument("--executor", choices=("guarded", "subprocess", "auto"), default="guarded",
                         help="where a learned function runs: in this process, or a new process for each call")
     parser.add_argument("--weeks", type=Path, default=stream.CACHE, help="where generated weeks are kept")

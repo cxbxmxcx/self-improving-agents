@@ -30,7 +30,7 @@ Everything so far is simulated. No stream served by a real model is longer than 
 | As accurate | Held-out accuracy rose on five desks and fell on one, the on-call desk, from 50 to 47 of 52 | Mostly shown |
 | Safer | Near misses stopped being acted on. A change of conditions costs two wrong program actions when requests are served one at a time, and about the requests in flight when they are served together: 102 of 400 at 128 at once, against 300 with no loop | Contained, and the bound is known |
 | More predictable | Never measured | Not tested |
-| Robust | With a real model, one change of conditions per run, and the calendar desk's day of the change was 12 of 18 right. Scripted, 169 changes in 100,000 requests were each repaired the same day with no stalled day, and 168 of 169 at 24 requests a day | Mechanics shown. One paid event |
+| Robust | With a real model, one change of conditions per run, and the calendar desk's day of the change was 12 of 18 right. Scripted, 169 changes in 100,000 requests were each repaired the same day with no stalled day, the fast path was back within 9 requests of each change, and 168 of 169 were repaired the same day at 24 requests a day | Mechanics shown. One paid event |
 | Repeatable | Admitted on all six desks, and three of four first rewrites on the calendar desk. One to three runs per setup, and one component that ran again was refused | Partly |
 | Thousands of requests | Scripted: 100,000 requests at about 3.2 ms of harness time each from the first block to the last, a store that ends at 104 MB, and 90 requests a second from one process at 128 in flight. Paid: nothing longer than about 200 requests, and payback of about 90 to 1,700 requests is still arithmetic | Mechanics shown. Model behavior not tested |
 | A desk we did not write | None | Not tested |
@@ -62,6 +62,7 @@ The first long stream stalled, and each later run found something else. Every ro
 | With many requests in flight, those already offered a function went on calling it after it was quarantined | A trusted version answers only while it is still the trusted one. A call in flight gets an error to work around |
 | The harness spent about 14 ms on every request, most of it parsing and compiling a program and a function that had not changed | Each source is checked and compiled once. Every request still runs in a namespace of its own |
 | With the old limits, a quarantined function's backlog was read in full every few requests, and time per request reached 329 ms by day 12 | The latest runs are read from the newest back |
+| An action that was switched off stayed off until the night, so programs served 1.5% of the requests on a day of change | Setting: `ProgramTier(retest_by_day=True)` tests the action again as soon as the function under it has been relearned |
 
 ### 3.2 A stream of 100,000 requests
 
@@ -81,13 +82,22 @@ The stream is 400 days of 250 requests with a night after each, as listing 7.4 r
 | Builder calls, and how many fell on a day with no change | 679 and 0 | 679 and 4 |
 | Relearnings the budget skipped | 0 | 0 |
 | Longest night | 0.8 s | 0.3 s |
-| Store at the end | 104 MB | 59 MB |
+| Store at the end | 105 MB | 59 MB |
 
-The harness's own time on a calm day stays between 3.1 and 3.3 ms a request in every block of 5,000 requests, so nothing it does grows with the stream's length. The whole stream runs in under eight minutes.
+The harness's own time on a calm day stays between 3.1 and 3.4 ms a request in every block of 5,000 requests, so the length of the stream adds a tenth at most. The whole stream runs in under eight minutes.
 
 Three things in the table need a word. The share right falls at low volume for two reasons: each change costs the same two or three wrong answers out of 24 requests and not out of 250, and a calendar that is down for 40 requests takes half of a 24-request day. The one change at low volume that was not repaired by night was quarantined too late in the day to gather the four runs a relearning needs, and it was repaired the next morning. And the store is bounded for each run but not in total: about 50 MB for the latest 2,000 episodes, plus 0.5 KB for every run ever served.
 
-On a day of change the program serves almost nothing after its first two wrong actions, because an action that was switched off comes back at the night's re-test. In this stream that covers 42% of all requests, since every second day is a day of change.
+Both streams in the table test a switched-off action again as soon as the function under it has been relearned. Chapter 7's listings wait for the night to do that, and so did the first runs of these streams. The difference is the fast path on a day of change.
+
+| Stream | Changes that switched the action off | Back the same day | Requests until it was back, mean and most | Served by programs on days of change | Served by programs in all |
+|---|---|---|---|---|---|
+| 250 a day, re-test at night | 166 | 0 | none | 1.5% | 31,732 |
+| 250 a day, re-test by day | 166 | 166 | 5.8 and 9 | 54.6% | 54,183 |
+| 24 a day, re-test at night | 161 | 0 | none | 7.7% | 3,274 |
+| 24 a day, re-test by day | 161 | 160 | 5.8 and 11 | 38.9% | 4,551 |
+
+Everything else in the first table is the same either way, down to the count of requests right. A re-test asks no builder, so it is only a question of when.
 
 ### 3.3 Many requests at once
 
@@ -116,23 +126,23 @@ A harness can react only to a verdict it has. Every request already in flight wh
 
 ### 3.4 What the stream would cost
 
-No model was called, so cost here is arithmetic. Each request is priced at the recorded average of the arm that describes the state the system was in. Chapter 7's recordings give $0.00227 and 3.0 seconds for the agent with its learned function, $0.00106 and 1.5 seconds with the hand-written component (the one the scripted builder returns), $0.00143 and 1.9 seconds with the component the search found, and $0.00495 and 5.6 seconds for the agent alone at high reasoning. A builder call that rewrites the function is $0.165, and the search is $1.40. Requests on a day of change are priced as the agent with its function, because the program is off for nearly all of that day.
+No model was called, so cost here is arithmetic. Each request is priced at the recorded average of the arm that describes the state the system was in. Chapter 7's recordings give $0.00227 and 3.0 seconds for the agent with its learned function, $0.00106 and 1.5 seconds with the hand-written component (the one the scripted builder returns), $0.00143 and 1.9 seconds with the component the search found, and $0.00495 and 5.6 seconds for the agent alone at high reasoning. A builder call that rewrites the function is $0.165, and the search is $1.40. A request served while the program's action is off is priced as the agent with its function: the first day, and the six requests or so after each change.
 
 | Assistant | Serving | Learning | Per 1,000 requests | Mean time |
 |---|---|---|---|---|
 | Agent alone at high reasoning | $495 | none | $4.95 | 5.6 s |
 | Agent with Chapter 6's loop | $227 | $111 | $3.39 | 3.0 s |
-| Full system, priced as the searched component | $179 | $113 | $2.92 | 2.4 s |
-| Full system, priced as the hand-written component | $157 | $113 | $2.70 | 2.2 s |
+| Full system, priced as the searched component | $144 | $113 | $2.57 | 1.9 s |
+| Full system, priced as the hand-written component | $107 | $113 | $2.20 | 1.5 s |
 
-Learning is about 40% of the full system's bill here, and that is the stress schedule at work: 169 relearnings of four builder calls each. Chapter 6's loop relearns the function too, so that cost is the same in both rows. How often conditions change decides the rest.
+Learning is about half of the full system's bill here, and that is the stress schedule at work: 169 relearnings of four builder calls each. Chapter 6's loop relearns the function too, so that cost is the same in both rows. Re-testing only at night would put the full system at $2.69 to $2.91. How often conditions change decides the rest.
 
 | Requests between changes | Chapter 6's loop | Full system, searched component | Full system, hand-written component |
 |---|---|---|---|
-| 500 | $3.59 | $3.17 | $2.98 |
-| 2,500 | $2.54 | $1.78 | $1.44 |
-| 10,000 | $2.34 | $1.52 | $1.15 |
-| 100,000 | $2.28 | $1.44 | $1.07 |
+| 500 | $3.59 | $2.76 | $2.39 |
+| 2,500 | $2.54 | $1.70 | $1.32 |
+| 10,000 | $2.34 | $1.50 | $1.12 |
+| 100,000 | $2.28 | $1.44 | $1.06 |
 
 The table is in dollars per 1,000 requests, with four builder calls for each relearning, as the stream made. Listing 7.4's recorded relearning took one.
 
@@ -140,7 +150,7 @@ The table is in dollars per 1,000 requests, with four builder calls for each rel
 
 A scripted agent is right whenever its function is right, and a scripted builder always writes a function that passes its gate. A real agent adds mistakes of its own, and a real builder is sometimes refused.
 
-The tests keep Chapter 7's rhythm of serving by day and improving by night, so an action that is switched off stays off until the night. A deployment that re-tests as soon as the function has been relearned would have its fast path back within a few dozen requests. That has not been run, and it needs the tier's signal to read a window of recent runs and not every run since its last install.
+The tests keep Chapter 7's rhythm of serving by day and improving by night. A rewrite of the component or a search still waits for the night. Only the re-test moved into the day, and it needs a gate that is already current when the function has been relearned, a few requests after the change. The stream hands it that morning's held-back requests. A deployment has only the labeled requests that arrived since the change, which may be too few to trust for a while.
 
 The load test runs one process on one machine. Several processes on one store are not measured. Neither is the sandbox that starts a new process for every call to a learned function, which cost about 80 ms a call on this Windows machine when a served day was profiled, and would be the first limit under load.
 
@@ -148,14 +158,15 @@ The requests held back each night come from that day's own conditions. The strea
 
 ## 4. Changes to the method before it is frozen
 
-Each change answers something we measured. The scripted tests have made four of the six, as settings that a long deployment turns on. After the other two are settled, everything under `helix/` is frozen at one commit, and nothing there changes until every run in this plan is done.
+Each change answers something we measured. Six of the seven are made, as settings that a long deployment turns on, and each has run on the scripted streams. Everything under `helix/` is then frozen at one commit, and nothing there changes until every run in this plan is done.
 
 1. **Held-back requests come from the day's traffic.** Each day a share of that day's requests is set aside and is never served by the system under test, never shown to a component, and never shown to the builder. One part is that night's gate, one part is what a search may measure on, and six weeks judge a relearned function. In production these would be shadow requests labeled by their verified outcome, and in the simulation they are fresh requests drawn under the day's conditions. *Done in the scripted stream. The paid stream needs the same.*
 2. **Improvement attempts are limited for each gap, not for a lifetime.** The count of attempts and of searches starts again when a program is installed or re-tested successfully. A gap that stays open still stops costing money after its attempts are used. *Done, under `long_running`.*
 3. **The learning budget counts a day in runs, not on the wall clock.** A run that compresses weeks into hours otherwise hits a daily limit that was meant for real days. *Done, with `runs_per_day`.*
 4. **A stale function under a program is found before anyone rewrites the program.** When a re-test fails or an action is switched off, each function the program stands on goes through its own gate first. *Done, under `long_running`.*
-5. **While a function is quarantined, the controller's raised reasoning wins over a component's route.** In listing 7.4 three of Wednesday's six failures happened because a route kept the agent at low or no reasoning during the quarantine. *Open.*
-6. **Optional: a decision program may take several actions.** This would move two-meeting requests off the language model and is the first step toward the goal-solving half of the claim. It is a larger change, and the test can run without it. *Open.*
+5. **While a function is quarantined, the controller's raised reasoning wins over a component's route.** In listing 7.4 three of Wednesday's six failures happened because a route kept the agent at low or no reasoning during the quarantine. *Done, under `long_running`.*
+6. **A switched-off action is tested again as soon as the function under it has been relearned.** Waiting for the night left the fast path off for the rest of every day on which something changed. *Done, with `retest_by_day`.*
+7. **Optional: a decision program may take several actions.** This would move two-meeting requests off the language model and is the first step toward the goal-solving half of the claim. It is a larger change, and the test runs without it. *Left out.*
 
 ## 5. The streams
 
@@ -242,9 +253,9 @@ A desk takes about three hours of run time, because an online stream is served o
 | # | Decision | Recommendation |
 |---|---|---|
 | 1 | The scope in section 1 | State it in the chapter as the conditions the pattern needs: recurring kinds of request, a verdict on outcomes, single actions, and a strong builder |
-| 2 | The method changes in section 4 | Changes 1 to 4 are made and tested without a model. Make change 5, review all of them, then freeze |
+| 2 | The method changes in section 4 | Decided on November 11: changes 1 to 6 are made and tested without a model, and the method is frozen with them |
 | 3 | Programs that take several actions | Leave out of this test, and decide after its results |
 | 4 | Which desks, and in what order | Calendar first under a $40 cap, then review; the second desk and the outside desk after that |
 | 5 | The outside desk's data | Two public sets of requests written by real people, Banking77 (about 13,000 banking queries in 77 categories, CC BY 4.0) and the out-of-scope queries of CLINC150 (CC BY 3.0). Both need a download, which needs the author's permission |
 | 6 | Committing this plan | Commit the criteria before any run, so they cannot move afterward |
-| 7 | Re-testing by day | Let the tier re-test as soon as a function has been relearned, so the fast path is back within a few dozen requests and not the next morning. It needs a signal that reads a window of recent runs, and a scripted run before it is trusted |
+| 7 | Re-testing by day | Decided on November 11: yes. It is change 6 in section 4, and on the scripted stream the fast path was back within 9 requests of each change |

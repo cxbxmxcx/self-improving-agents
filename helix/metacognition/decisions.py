@@ -241,7 +241,10 @@ class ProgramTier:
     # wrongly stops being a gate case once a procedure has been relearned, since its world is gone. And when a
     # program fails its re-test, or one of its actions is switched off, each procedure it stands on is put through
     # its own gate: one that fails is quarantined at once, so it stops serving the agent too, and no builder is
-    # asked to rewrite the program until it has been relearned
+    # asked to rewrite the program until it has been relearned. And while a procedure a request matches is
+    # quarantined, a route cannot take that request below the reasoning the controller raised for it
+    retest_by_day: bool = False  # with `long_running`: when a procedure has been relearned, an action that was
+    # switched off is tested again at once, and not at the next night. The gate's cases have to be current by then
     retry_after: int = 12
     writer_model: str | None = None
     writer_params: dict[str, Any] = field(default_factory=lambda: {"reasoning_effort": "medium"})
@@ -450,6 +453,10 @@ class DecisionLoop:
         if "handoff" in decision or tool is None or self.off(str(action)):
             why = decision.get("handoff") or (f"{action} is switched off" if tool else f"no action {action!r}")
             route = decision.get("route")
+            if route and self.tier.long_running and plan.matched and not plan.offered:
+                # A procedure this request matches is quarantined, and the controller raised the reasoning for
+                # that. A route chosen while the procedure worked does not lower it again.
+                route = most_demanding([route, plan.effort]) or route
             if route:
                 plan.effort, plan.report.effort, plan.memory = route, route, decision.get("memory") or None
             if decision.get("read_only"):
@@ -815,6 +822,12 @@ class DecisionLoop:
         events.append(f"program: re-tested {label}; gate {gate.accepted}/{gate.total} passed, switched back on: "
                       f"{', '.join(key.split(':', 1)[1] for key in off)}")
         return True
+
+    async def relearned(self, name: str, events: list[str]) -> None:
+        """A procedure the program stands on has a new trusted version. Under `retest_by_day` an action that was
+        switched off is tested again now. A re-test asks no builder and uses no attempt."""
+        if self.tier.long_running and self.tier.retest_by_day and not self._repairing():
+            await self._retest(events)
 
     async def check_procedures(self, events: list[str]) -> None:
         """Put each procedure the program stands on through its own gate. One that fails is what broke the

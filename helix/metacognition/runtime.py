@@ -729,6 +729,8 @@ class Metacognition:
         kind = {"refused": "refused", "proposed for approval": "proposed"}.get(outcome[0], "installed")
         await publish(kind=kind, procedure=name, version=outcome[1],
                       detail=f"{mechanism}, gate {gate.accepted}/{gate.total}, ${dollars:.4f}")
+        if kind == "installed" and self.programs is not None:
+            await self.programs.relearned(name, events)
 
     async def _tournament(self, name: str, learn_from: list[Episode], cases: list[str], practice: Practice,
                           model: str, reason: str, events: list[str]) -> None:
@@ -766,6 +768,8 @@ class Metacognition:
         await publish(kind=kind, procedure=name, version=outcome[1],
                       detail=f"{winner.mechanism} (tournament), gate {gate.accepted}/{gate.total}, "
                              f"${choice.dollars:.4f}")
+        if kind == "installed" and self.programs is not None:
+            await self.programs.relearned(name, events)
         if outcome[0] == "refused":  # no candidate learns this procedure well enough
             await self._design(name, problem, model, events)
 
