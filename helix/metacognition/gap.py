@@ -61,6 +61,20 @@ class Attempt:
     seconds: float = 0.0
 
 
+def outcome_of(right: bool, *, program: str | None = None, should_act: bool = True) -> str:
+    """The outcome of a request served online, as a gap counts it.
+
+    `program` is what a decision program did with the request (`MetaReport.program`): "served" when it acted with no
+    language model, "read_only" when it sent the request on with no way to act, and anything else when the language
+    model did the work with its tools.
+    """
+    if program == "served":
+        return "program" if right else "wrong"
+    if program == "read_only":
+        return "lost" if should_act else "read_only"
+    return "llm" if right else "llm_wrong"
+
+
 def gap_of(attempts: Sequence[Attempt], good: Good) -> float:
     """The candidate's distance from good: 0 is good."""
     return sum(good.gap(attempt.outcome) for attempt in attempts) / len(attempts) if attempts else 1.0
@@ -108,4 +122,4 @@ def report(attempts: Sequence[Attempt], good: Good) -> str:
     return "\n".join(lines)
 
 
-__all__ = ["Attempt", "Good", "gap_of", "report"]
+__all__ = ["Attempt", "Good", "gap_of", "outcome_of", "report"]

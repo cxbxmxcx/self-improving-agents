@@ -138,7 +138,7 @@ async def main(args: argparse.Namespace) -> None:
     for regime_name in args.regimes:
         regime = REGIMES[regime_name]
         results: dict[str, dict] = {}
-        for task_class in CLASSES:
+        for task_class in EXPERIENCE:
             episodes = await experience(task_class, regime)
             solved = sum(e.success for e in episodes)
             print(f"\n{regime_name}, {task_class}: {len(episodes)} runs,"
@@ -162,8 +162,8 @@ async def main(args: argparse.Namespace) -> None:
                 print(f"  {name:<24} {row['matched']:>3}/16"
                       f" {row['writer_calls']:>6}"
                       f" {row['dollars']:>8.4f}{note}")
-        means = {n: sum(results[c][n]["matched"] for c in CLASSES)
-                 / len(CLASSES) for n in SEEDS}
+        means = {n: sum(results[c][n]["matched"] for c in EXPERIENCE)
+                 / len(EXPERIENCE) for n in SEEDS}
         best = max(means, key=lambda n: means[n])
         room = means[best] <= HEADROOM
         print(f"  best: {best}, mean {means[best]:.1f}/16;"

@@ -76,12 +76,26 @@ _EPISODE_COLUMNS = ("ord", "run_id", "case_id", "case_data", "request", "content
 _JSON_COLUMNS = ("case_data", "content", "matched", "offered", "called", "scores")
 
 
+_DROPPED = "{}"  # what stands in for an episode that was dropped to bound the store
+_COMPACT_EVERY = 256  # runs between the passes that drop old episodes
+_REPACK_EVERY = 16 * _COMPACT_EVERY  # runs between the passes that give the dropped episodes' space back
+
+
 def _now() -> str:
     return datetime.now(UTC).isoformat()
 
 
 class MetaStore:
-    def __init__(self, path: str | Path | None = None) -> None:
+    """Runs, procedure versions, state and learning attempts, in SQLite.
+
+    `keep` bounds what a long deployment stores: only the latest `keep` runs keep their episode and the data their
+    world is rebuilt from. Older runs keep their number, verdict, reasoning setting, cost and time, so counts and
+    summaries still cover every run. Without it every run is kept whole. A bounded store also repacks itself every
+    few thousand runs (see `repack`), so an old run costs the few hundred bytes it still holds.
+    """
+
+    def __init__(self, path: str | Path | None = None, *, keep: int | None = None) -> None:
+        self.keep = keep
         if path is None:
             self.path = None
             database = ":memory:"
@@ -117,6 +131,8 @@ class MetaStore:
                 conn.executescript(_MIGRATIONS[step])
         conn.execute("INSERT INTO meta VALUES ('schema_version', ?) ON CONFLICT(key) DO UPDATE SET value = "
                      "excluded.value", (str(SCHEMA_VERSION),))
+        # Looking a case up by its id must not scan every run a long deployment has recorded.
+        conn.execute("CREATE INDEX IF NOT EXISTS episodes_case ON episodes (case_id, ord)")
         conn.commit()
 
     @property
@@ -187,12 +203,17 @@ class MetaStore:
         return [{**dict(r), "info": json.loads(r["info"])} for r in rows]
 
     def version(self, name: str, version: int) -> dict[str, Any] | None:
-        found = [v for v in self.versions(name) if v["version"] == version]
-        return found[0] if found else None
+        with self._lock:
+            row = self._conn.execute("SELECT * FROM procedures WHERE name = ? AND version = ?",
+                                     (name, version)).fetchone()
+        return None if row is None else {**dict(row), "info": json.loads(row["info"])}
 
     def trusted(self, name: str) -> dict[str, Any] | None:
-        found = [v for v in self.versions(name) if v["state"] == "trusted"]
-        return found[-1] if found else None
+        # Asked several times for every request, so it reads one row and not every version a long stream has left.
+        with self._lock:
+            row = self._conn.execute("SELECT * FROM procedures WHERE name = ? AND state = 'trusted' "
+                                     "ORDER BY version DESC LIMIT 1", (name,)).fetchone()
+        return None if row is None else {**dict(row), "info": json.loads(row["info"])}
 
     # ------------------------------------------------------------ episodes
 
@@ -203,7 +224,7 @@ class MetaStore:
         # The run's own answer rides beside the book's episode content, for replayed practice.
         content = {**episode.to_content(), **({"answer": answer} if answer is not None else {})}
         with self._immediate() as conn:
-            ord_ = int(conn.execute("SELECT COUNT(*) FROM episodes").fetchone()[0])
+            ord_ = int(conn.execute("SELECT COALESCE(MAX(ord), -1) + 1 FROM episodes").fetchone()[0])
             values = (ord_, run_id, case_id, json.dumps(case_data, default=str), request, json.dumps(content,
                       default=str), None if verdict is None else ("accepted" if verdict.accepted else "rejected"),
                       None if verdict is None else verdict.source, None if verdict is None else verdict.reason,
@@ -212,7 +233,29 @@ class MetaStore:
                       json.dumps({k: round(v, 6) for k, v in (scores or {}).items()}))
             conn.execute(f"INSERT INTO episodes ({', '.join(_EPISODE_COLUMNS)}) VALUES "
                          f"({', '.join('?' for _ in _EPISODE_COLUMNS)})", values)
+            if self.keep is not None and ord_ % _COMPACT_EVERY == 0:
+                conn.execute(f"UPDATE episodes SET content = '{_DROPPED}', case_data = NULL WHERE ord < ? AND "
+                             f"content != '{_DROPPED}'", (ord_ - self.keep,))
+        if self.keep is not None and ord_ and ord_ % _REPACK_EVERY == 0:
+            self.repack()
         return ord_
+
+    def repack(self) -> bool:
+        """Rewrite the database so the space of dropped episodes is given back. True if it ran.
+
+        SQLite frees the pages a dropped episode overflowed into and leaves the row's own page as it was, so an
+        old run goes on holding a few kilobytes it no longer uses. A repack needs the database to itself for a
+        moment. When another process is using it, this pass is skipped and the next one tries again.
+        """
+        with self._lock:
+            self._conn.execute("PRAGMA busy_timeout=200")  # serving must not wait long for a tidy-up
+            try:
+                self._conn.execute("VACUUM")
+            except sqlite3.OperationalError:
+                return False
+            finally:
+                self._conn.execute("PRAGMA busy_timeout=30000")
+        return True
 
     def set_verdict(self, run_id: str, verdict: Any) -> dict[str, Any] | None:
         with self._lock:
@@ -223,9 +266,33 @@ class MetaStore:
             row = self._conn.execute("SELECT * FROM episodes WHERE run_id = ?", (run_id,)).fetchone()
         return None if row is None else self._row(row)
 
-    def count(self) -> int:
+    def size(self) -> int:
+        """Bytes of the database in use now: what a long deployment has to keep."""
         with self._lock:
-            return int(self._conn.execute("SELECT COUNT(*) FROM episodes").fetchone()[0])
+            pages, free, page = (self._conn.execute(f"PRAGMA {name}").fetchone()[0]
+                                 for name in ("page_count", "freelist_count", "page_size"))
+        return int((pages - free) * page)
+
+    def count(self) -> int:
+        """How many runs have been recorded: the number the next run gets."""
+        with self._lock:
+            return int(self._conn.execute("SELECT COALESCE(MAX(ord), -1) + 1 FROM episodes").fetchone()[0])
+
+    def judged(self, since: int = 0) -> list[tuple[str | None, float, float]]:
+        """Each judged run at or after `since`, oldest first, as (reasoning setting, dollars, seconds): what a
+        signal sums, without reading any episode."""
+        with self._lock:
+            rows = self._conn.execute("SELECT effort, dollars, seconds FROM episodes WHERE ord >= ? AND verdict "
+                                      "IS NOT NULL ORDER BY ord", (since,)).fetchall()
+        return [(row[0], row[1] or 0.0, row[2] or 0.0) for row in rows]
+
+    def rejected_cases(self, since: int, effort: str) -> list[str]:
+        """The cases of runs at `effort` that were rejected at or after `since`, oldest first, while the data to
+        rebuild them is still kept."""
+        with self._lock:
+            rows = self._conn.execute("SELECT case_id FROM episodes WHERE ord >= ? AND effort = ? AND verdict = "
+                                      "'rejected' AND case_data IS NOT NULL ORDER BY ord", (since, effort)).fetchall()
+        return [row[0] for row in rows]
 
     def _row(self, row: sqlite3.Row) -> dict[str, Any]:
         data = dict(row)
@@ -256,12 +323,26 @@ class MetaStore:
             row = self._conn.execute("SELECT * FROM episodes WHERE run_id = ?", (run_id,)).fetchone()
         return None if row is None else self._row(row)
 
-    def episodes(self, *, since: int = 0, procedure: str | None = None) -> list[Episode]:
+    def episodes(self, *, since: int = 0, procedure: str | None = None, last: int | None = None) -> list[Episode]:
         """Judged runs at or after `since`, oldest first, as a learner reads them; filtered to the runs that
-        matched `procedure` when given."""
+        matched `procedure` when given, and only the latest `last` of them when given. A run whose episode was
+        dropped to bound the store is left out."""
+        if last is not None:
+            # Read from the newest back and stop at `last`, so the cost does not grow with what came before.
+            matched = () if procedure is None else (f'%"{procedure}"%',)
+            with self._lock:
+                rows = self._conn.execute(
+                    f"SELECT * FROM episodes WHERE ord >= ? AND verdict IS NOT NULL AND content != '{_DROPPED}'"
+                    f"{' AND matched LIKE ?' if matched else ''} ORDER BY ord DESC LIMIT ?",
+                    (since, *matched, last)).fetchall()
+            runs = [self._row(r) for r in reversed(rows)]
+        else:
+            runs = self.runs(since)
         out = []
-        for run in self.runs(since):
+        for run in runs:
             if run["verdict"] is None or (procedure is not None and procedure not in run["matched"]):
+                continue
+            if not run["content"]:
                 continue
             content = {**run["content"], "success": run["verdict"] == "accepted", "reason": run["reason"] or ""}
             out.append(Episode.from_content(content))
@@ -304,11 +385,15 @@ class MetaStore:
                  outcome, self.count(), _now()))
             self._conn.commit()
 
-    def learning(self, name: str | None = None, *, within: timedelta | None = None) -> list[dict[str, Any]]:
-        """Learning attempts, oldest first: all, or one procedure's, or those started within a recent span."""
+    def learning(self, name: str | None = None, *, within: timedelta | None = None,
+                 since_run: int | None = None) -> list[dict[str, Any]]:
+        """Learning attempts, oldest first: all, or one procedure's, or those started within a recent span of
+        time, or at or after run number `since_run`."""
         query, params = "SELECT * FROM learning WHERE 1 = 1", []
         if name is not None:
             query, params = query + " AND name = ?", [*params, name]
+        if since_run is not None:
+            query, params = query + " AND at_ord >= ?", [*params, since_run]
         if within is not None:
             query, params = query + " AND created_at >= ?", [*params, (datetime.now(UTC) - within).isoformat()]
         with self._lock:

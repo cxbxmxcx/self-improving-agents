@@ -43,6 +43,8 @@ import time
 from collections import Counter, OrderedDict
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
+from functools import lru_cache
+from types import CodeType
 from typing import Any
 
 from helix.deciders.base import (
@@ -107,6 +109,13 @@ class UnsafeProgram(ValueError):
 
 def check_program(source: str) -> None:
     """The learning lab's guard, with `decide(request, kit)` as the entry point."""
+    _checked(source)
+
+
+@lru_cache(maxsize=1024)
+def _checked(source: str) -> None:
+    # The trusted program decides every request and is the same text each time, so it is parsed and walked once
+    # and not several times a request. A source the guard refuses raises each time and is never kept.
     try:
         tree = ast.parse(source)
     except SyntaxError as exc:
@@ -308,10 +317,17 @@ async def memory_tier(memories: list[dict[str, Any]]) -> ProceduralMemory | None
     return tier
 
 
+@lru_cache(maxsize=1024)
+def _code(source: str) -> CodeType:
+    return compile(source, "<decision program>", "exec")
+
+
 async def _decided(source: str, request: str, kit: Kit, timeout: float) -> Any:
     check_program(source)
+    # The compiled code is kept, and every request runs it into a namespace of its own. Its top level is
+    # definitions and literals only.
     namespace: dict[str, Any] = {"__builtins__": MECHANISM_BUILTINS}
-    exec(compile(source, "<decision program>", "exec"), namespace)  # top level is definitions and literals only
+    exec(_code(source), namespace)
     return await asyncio.wait_for(namespace[ENTRY](request, kit), timeout)
 
 
@@ -357,6 +373,9 @@ class Desk:
     verdict: Callable[[Any, str], dict[str, Any]]  # (world, reply) -> {"success": bool, "reason": str}
 
 
+LOCAL_SECONDS = 0.001  # what a program's own code is taken to cost in time, on any machine
+
+
 @dataclass
 class Served:
     """One request served by a program: handled or handed off, right or not, and what it cost."""
@@ -387,15 +406,15 @@ async def serve(source: str, task: dict[str, Any], desk: Desk, decider: Decider 
     """
     world = desk.world(task)
     kit = Kit(desk.reads(world), desk.procedures(world), decider)
-    started = time.perf_counter()
     try:
         decision = await run_program(source, task["text"], kit)
     except (UnsafeProgram, MissingAnswer):
         raise
     except Exception as exc:  # noqa: BLE001 - a program's own failure hands the request off
         decision = {"handoff": f"the program failed: {type(exc).__name__}: {exc}"}
-    local = time.perf_counter() - started - kit.waited
-    seconds = round(kit.usage.seconds + max(local, 0.0), 4)
+    # The decision model's time, plus a fixed allowance for the program's own code. A measured wall-clock time would
+    # differ from run to run, and the gap report a builder reads with it, so a recorded search could not be replayed.
+    seconds = round(kit.usage.seconds + LOCAL_SECONDS, 4)
     base = {"case_id": task["id"], "decider_calls": kit.usage.calls, "decider_input_tokens": kit.usage.input_tokens,
             "dollars": kit.usage.dollars, "seconds": seconds, "answers": kit.answers, "served_by": kit.served_by}
     expected_handoff = task.get("expect") == "handoff"

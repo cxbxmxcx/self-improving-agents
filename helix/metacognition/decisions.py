@@ -45,6 +45,8 @@ from helix.trajectory import StepKind, Trajectory
 
 from helix.deciders.base import Decider, MissingAnswer
 from helix.metacognition.decide import RUNG, Desk, Kit, UnsafeProgram, check_program, frozen_change, run_program, serve
+from helix.metacognition.events import emit
+from helix.metacognition.exceptions import Unavailable
 from helix.metacognition.api import SkillAPI
 from helix.metacognition.gap import Attempt, Good, gap_of, report
 from helix.metacognition.ladders import most_demanding
@@ -233,6 +235,13 @@ class ProgramTier:
     bar: float = 0.9
     max_wrong: int = 0
     max_attempts: int = 4
+    long_running: bool = False  # what a deployment that serves for months needs, and a short study does not.
+    # Attempts and searches are counted for each gap and start again when it closes, since counted over the tier's
+    # whole life they would stop improvement for good after `max_attempts` gaps. And a request a program served
+    # wrongly stops being a gate case once a procedure has been relearned, since its world is gone. And when a
+    # program fails its re-test, or one of its actions is switched off, each procedure it stands on is put through
+    # its own gate: one that fails is quarantined at once, so it stops serving the agent too, and no builder is
+    # asked to rewrite the program until it has been relearned
     retry_after: int = 12
     writer_model: str | None = None
     writer_params: dict[str, Any] = field(default_factory=lambda: {"reasoning_effort": "medium"})
@@ -384,7 +393,11 @@ class DecisionLoop:
 
         def read(tool: Any) -> Any:
             def call(**arguments: Any) -> Any:
-                result = tool.fn(ctx, **arguments) if tool.takes_context else tool.fn(**arguments)
+                try:
+                    result = tool.fn(ctx, **arguments) if tool.takes_context else tool.fn(**arguments)
+                except Unavailable:
+                    ctx.unavailable = True  # the program hands off, and the fault is not its own
+                    raise
                 if inspect.isawaitable(result):
                     getattr(result, "close", lambda: None)()
                     raise RuntimeError(f"{tool.name} is async; a decision program reads sync tools only")
@@ -430,6 +443,7 @@ class DecisionLoop:
             decision = {"handoff": f"the program failed: {type(exc).__name__}: {exc}"}
         plan.decider_calls = calls
         if kit.served_by:
+            plan.report.memory = kit.served_by
             plan.report.events.append(f"program: used memory {kit.served_by}")
         action = decision.get("action")
         tool = next((t for t in agent.tools if t.name == action and not getattr(t, "read_only", False)), None)
@@ -473,15 +487,16 @@ class DecisionLoop:
         return RunResult(input=request, new_items=[], raw_responses=[], final_output=reply, last_agent=agent,
                          context_wrapper=ctx, trajectory=trajectory, cost=run_cost(trajectory, self.tier.prices))
 
-    def after_run(self, plan: Any, verdict: Any, events: list[str]) -> None:
-        """Count how the request went, and let a verdict on a program's action reach that action's detector."""
+    def after_run(self, plan: Any, verdict: Any, events: list[str]) -> bool:
+        """Count how the request went, and let a verdict on a program's action reach that action's detector.
+        True when this verdict switched the action off."""
         store = self.meta.store
         outcome = plan.program_outcome or "llm"
         state = store.state(_OUTCOMES)
         state["recent"] = [*state.get("recent", []), outcome][-100:]
         store.put_state(_OUTCOMES, state)
         if outcome != "served" or verdict is None or verdict.source not in self.tier.gating_sources:
-            return
+            return False
         key = f"program:{plan.program_action}"
         cell = store.state(key)
         window, quarantine = self.tier.detector.record(cell.get("window", []), plan.run_id, verdict.accepted,
@@ -491,6 +506,7 @@ class DecisionLoop:
             cell.update(off=True, reason=verdict.reason, window=[])
             events.append(f"program: switched off {plan.program_action} ({verdict.reason})")
         store.put_state(key, cell)
+        return bool(quarantine)
 
     # ------------------------------------------------------------ the signal and the gap
 
@@ -498,10 +514,9 @@ class DecisionLoop:
         """What the store says about this work: the LLM's cost, and how the current program is doing."""
         store, tier = self.meta.store, self.tier
         since = store.state(_LOOP).get("since", 0)
-        runs = [r for r in store.runs(since) if r["verdict"] is not None]
-        agent = [r for r in runs if r["effort"] != RUNG]
-        cost = sum(r["dollars"] or 0.0 for r in agent) / len(agent) if agent else 0.0
-        seconds = sum(r["seconds"] or 0.0 for r in agent) / len(agent) if agent else 0.0
+        agent = [(dollars, seconds) for effort, dollars, seconds in store.judged(since) if effort != RUNG]
+        cost = sum(dollars for dollars, _ in agent) / len(agent) if agent else 0.0
+        seconds = sum(seconds for _, seconds in agent) / len(agent) if agent else 0.0
         recent = store.state(_OUTCOMES).get("recent", [])[-tier.handoff_window:]
         current = self.current()
         off = [name.split(":", 1)[1] for name in self._classes() if store.state(name).get("off")]
@@ -535,10 +550,23 @@ class DecisionLoop:
         store, tier = self.meta.store, self.tier
         state = store.state(_LOOP)
         count = store.count()
-        if state.get("attempts", 0) >= tier.max_attempts or count < state.get("next_attempt", 0):
+        used_up = state.get("attempts", 0) >= tier.max_attempts
+        if count < state.get("next_attempt", 0) or (used_up and not tier.long_running):
             return
+        if tier.long_running and self._repairing():
+            return  # a procedure the program stands on is being relearned, and that repair comes first
         reason = self.gap(self.signal())
         if reason is None:
+            if tier.long_running and (state.get("attempts") or state.get("searches")):
+                self._gap_closed(state)  # it closed by itself, so the next gap starts with its attempts whole
+                store.put_state(_LOOP, state)
+            return
+        if used_up:
+            # Learning has used its attempts on this gap. Testing the current program again asks no builder, so
+            # an action that was switched off can still come back once what broke it has been fixed.
+            state["next_attempt"] = count + tier.retry_after
+            store.put_state(_LOOP, state)
+            await self._retest(events)
             return
         state.update(attempts=state.get("attempts", 0) + 1, next_attempt=count + tier.retry_after)
         store.put_state(_LOOP, state)
@@ -632,7 +660,10 @@ class DecisionLoop:
         """The gate's labeled requests, and every request a program served wrongly since the last install."""
         store = self.meta.store
         since = store.state(_LOOP).get("since", 0)
-        recent = [r["case_id"] for r in store.runs(since) if r["effort"] == RUNG and r["verdict"] == "rejected"]
+        if self.tier.long_running:
+            # A wrong action from before a procedure was last relearned was made in a world that has changed since.
+            since = max([since, *(store.state(name).get("trusted_at", 0) for name in self.meta.procedures)])
+        recent = store.rejected_cases(since, RUNG)
         return [*self.tier.labeled, *[c for c in dict.fromkeys(recent) if c not in self.tier.labeled]]
 
     async def judge(self, source: str, cases: Sequence[str] | None = None) -> Judgment:
@@ -657,7 +688,7 @@ class DecisionLoop:
         return GateResult(judged.accepted, judged.total, passed, judged.failures)
 
     def _problem(self) -> LearningProblem:
-        episodes: list[Episode] = self.meta.store.episodes()[-80:]
+        episodes: list[Episode] = self.meta.store.episodes(last=80)
         return LearningProblem(procedure=DECISION, contract=self.tier.contract, episodes=episodes,
                                practice=self.practice, cases=list(self.tier.labeled), score=self.practice)
 
@@ -673,6 +704,10 @@ class DecisionLoop:
             if version is not None:
                 found.append({"name": name, **version["info"], "body": version["source"]})
         return found
+
+    def memories(self) -> list[dict[str, Any]]:
+        """What the current program stored: each memory's name, description, route, read_only and body."""
+        return self._stored()
 
     def _packed(self, version: dict[str, Any]) -> str:
         return pack_memories(version["source"], self._stored())
@@ -714,7 +749,10 @@ class DecisionLoop:
         return choice.winner
 
     async def _learn(self, problem: LearningProblem, name: str, source: str) -> tuple[Any, Judgment | None]:
-        trial = await self._write(problem, name, source, self._stored())
+        # A component run again gets the labeled requests a search could show it, as it had when it was admitted.
+        # The gate's requests are never among them.
+        tests = self._shared_tests(False) if self.tier.search_cases else []
+        trial = await self._write(problem, name, source, self._stored(), tests)
         return trial, await self.judge(trial.source) if trial.source else None
 
     def _install(self, program: str, mechanism: str, problem: LearningProblem, trial: Any, gate: GateResult,
@@ -730,6 +768,7 @@ class DecisionLoop:
             store.put_state(key, {})
         state = store.state(_LOOP)
         state["since"] = store.count()
+        self._gap_closed(state)
         store.put_state(_LOOP, state)
         store.put_state(_OUTCOMES, {})
         store.log_learning(name=DECISION, mechanism=mechanism, version=version, episodes=len(problem.episodes),
@@ -739,6 +778,11 @@ class DecisionLoop:
                       "passed, installed")
         if memories:
             events.append("program: memories " + ", ".join(self._label(memory) for memory in memories))
+
+    def _gap_closed(self, state: dict[str, Any]) -> None:
+        """A gap that closed takes its attempts with it, when the tier counts them for each gap."""
+        if self.tier.long_running:
+            state.update(attempts=0, searches=0)
 
     @staticmethod
     def _label(memory: dict[str, Any]) -> str:
@@ -756,11 +800,14 @@ class DecisionLoop:
         if not gate.passed:
             events.append(f"program: re-tested {label}; still refused, {judged.accepted}/{judged.total}, "
                           f"{judged.wrong} wrong actions")
+            if self.tier.long_running:
+                await self.check_procedures(events)
             return False
         for key in off:
             store.put_state(key, {})
         state = store.state(_LOOP)
         state["since"] = store.count()
+        self._gap_closed(state)
         store.put_state(_LOOP, state)
         store.put_state(_OUTCOMES, {})
         store.log_learning(name=DECISION, mechanism="retest", version=current["version"], episodes=0, writer_calls=0,
@@ -769,9 +816,36 @@ class DecisionLoop:
                       f"{', '.join(key.split(':', 1)[1] for key in off)}")
         return True
 
+    async def check_procedures(self, events: list[str]) -> None:
+        """Put each procedure the program stands on through its own gate. One that fails is what broke the
+        program, so it is quarantined for its own loop to relearn, and no builder rewrites the program."""
+        store = self.meta.store
+        for name in self.meta.procedures:
+            checked = store.trusted(name)
+            gate = await self.meta.recheck(name)
+            current = store.trusted(name)
+            if gate is None or gate.passed or current is None or current["version"] != checked["version"]:
+                continue  # it holds, or it was quarantined or replaced while the gate ran
+            reason = f"its own gate now passes {gate.accepted}/{gate.total}"
+            self.meta.quarantine(name, reason)
+            events.append(f"detector: quarantined {name}@{current['version']} ({reason})")
+            emit(kind="quarantined", procedure=name, version=current["version"], detail=reason)
+
+    def _repairing(self) -> list[str]:
+        """Procedures that were trusted and are quarantined now, with no version trusted in their place."""
+        store = self.meta.store
+        return [name for name in self.meta.procedures
+                if store.trusted(name) is None and "quarantined_at" in store.state(name)]
+
     async def improve(self, events: list[str]) -> None:
         store, tier = self.meta.store, self.tier
         if await self._retest(events):
+            return
+        if tier.long_running and self._repairing():
+            # The re-test found a procedure at fault. No builder was asked, so the gap keeps this attempt.
+            state = store.state(_LOOP)
+            state["attempts"] = max(0, state.get("attempts", 0) - 1)
+            store.put_state(_LOOP, state)
             return
         problem = self._problem()
         written: list[tuple[str, Any]] = []

@@ -11,9 +11,9 @@ import pytest
 from helix.deciders import Answer, DecisionUsage
 from helix.memory.learning_mechanisms import Contract
 from helix.memory.mechanism_runtime import UnsafeMechanism, check_runnable, pack_memories, unpack_memories
-from helix.metacognition import Controller, Metacognition, procedure
+from helix.metacognition import Controller, Gate, Metacognition, procedure
 from helix.metacognition.decide import KIT_GUIDE, RETURNS, Desk, Kit, frozen_change, run_program
-from helix.metacognition.gap import Attempt, Good, gap_of, report
+from helix.metacognition.gap import Attempt, Good, gap_of, outcome_of, report
 from helix.metacognition.decisions import DECISION, RUNG, ProgramSearch, ProgramTier, ServiceGap
 from helix.signal import Signal
 from helix.search.methods import METHODS
@@ -56,7 +56,17 @@ def order_status(order_id: str) -> dict:
     ...
 
 
+@procedure(api=[read_order])
+def order_weight(order_id: str) -> dict:
+    """Work out what an order weighs.
+
+    Returns: {"grams": int}.
+    """
+    ...
+
+
 STATUS = 'def order_status(api, order_id: str) -> dict:\n    return {"status": "ok"}\n'
+WEIGHT = 'def order_weight(api, order_id: str) -> dict:\n    return {"grams": 100}\n'
 GOOD = '''async def decide(request, kit):
     ids = kit.find("O-[0-9]+", request)
     answers = await kit.ask({"request": request}, {"go": {"type": "noul", "instructions": "Ship it now?"}})
@@ -102,11 +112,12 @@ def tier(*programs: str, **overrides: Any) -> ProgramTier:
                        writer_model="gpt-5.4-mini", **settings)
 
 
-def build(*programs: str, trusted: str | None = None, **overrides: Any) -> tuple[Agent, Metacognition]:
+def build(*programs: str, trusted: str | None = None, procedures: Any = (order_status,),
+          **overrides: Any) -> tuple[Agent, Metacognition]:
     def verify(ctx: RunContextWrapper[World], result: Any) -> dict[str, Any]:
         return ctx.context.check() if ctx.context.task.get("judge", True) else {"success": True, "reason": "agent"}
 
-    meta = Metacognition([order_status], verifier=verify, learning="inline", relearn_after=10**9,
+    meta = Metacognition(list(procedures), verifier=verify, learning="inline", relearn_after=10**9,
                          programs=tier(*programs, **overrides), executor="guarded")
     meta.install("order_status", STATUS)
     if trusted:
@@ -126,6 +137,33 @@ async def run(agent: Agent, item: dict[str, Any]) -> tuple[Any, World]:
     result = await Runner.run(agent, item["text"], context=world,
                               run_config=RunConfig(case_id=item["id"], case_data=item))
     return result, world
+
+
+async def test_the_report_says_what_the_program_did_and_a_gap_counts_it(model):
+    agent, _ = build(trusted=GOOD)
+    with model.active():
+        served, _ = await run(agent, task(1))
+        handed, world = await run(agent, task(2, "Don't ship O-2.", "handoff"))
+    assert served.metacognition.program == "served" and handed.metacognition.program == "handoff"
+    assert handed.metacognition.verdict.accepted and world.shipped == []
+    # The same words a gap is measured in, for a request served online.
+    assert outcome_of(True, program="served") == "program" and outcome_of(False, program="served") == "wrong"
+    assert outcome_of(True, program="read_only", should_act=False) == "read_only"
+    assert outcome_of(True, program="read_only") == "lost"  # nothing could act, so nothing was done
+    assert outcome_of(True, program="handoff") == "llm" and outcome_of(False) == "llm_wrong"
+    assert gap_of([Attempt("c1", "Ship O-1.", True, outcome_of(True, program="served"), 1.0, "accepted"),
+                   Attempt("c2", "Ship O-2.", True, outcome_of(True), 1.0, "accepted")], Good()) == pytest.approx(0.2)
+
+
+async def test_a_run_with_no_decision_tier_reports_no_program(model):
+    meta = Metacognition([order_status], verifier=lambda ctx, result: {"success": True, "reason": "agent"},
+                         learning="inline", relearn_after=10**9, executor="guarded")
+    meta.install("order_status", STATUS)
+    agent = Agent(name="Shop", instructions="Ship orders.", tools=[read_order, ship], model="gpt-5.4-mini",
+                  metacognition=meta)
+    with model.active():
+        result, _ = await run(agent, task(1))
+    assert result.metacognition.program is None and result.metacognition.memory is None
 
 
 async def test_a_trusted_program_serves_the_request_with_no_model(model):
@@ -433,6 +471,95 @@ async def test_real_work_sent_read_only_is_lost_but_is_not_a_wrong_action():
     judged = await meta.programs.judge(everything)
     assert (judged.accepted, judged.wrong, judged.handoffs) == (1, 0, 3)
     assert "nothing could serve it" in judged.failures[0]
+
+
+@pytest.mark.parametrize(("long_running", "left"), [(False, 1), (True, 0)])
+async def test_a_gap_that_closes_takes_its_attempts_with_it_in_a_long_running_tier(model, long_running, left):
+    agent, meta = build(GOOD, long_running=long_running)
+    with model.active():
+        for n in range(1, 4):  # three runs by the model open the gap, and the mechanism's program is installed
+            await run(agent, task(n))
+    assert meta.programs.current() is not None
+    assert meta.store.state("decision:loop").get("attempts", 0) == left
+
+
+@pytest.mark.parametrize(("long_running", "back_on"), [(False, False), (True, True)])
+async def test_a_switched_off_action_can_be_tested_again_after_learning_used_its_attempts(long_running, back_on):
+    """A re-test asks no builder. Blocked by a lifetime of attempts, an action stayed off after its program was
+    right again."""
+    agent, meta = build(trusted=GOOD, long_running=long_running, max_attempts=2)
+    meta.agent = agent
+    meta.store.put_state("decision:loop", {"attempts": 2, "next_attempt": 0})
+    meta.store.put_state("program:ship", {"off": True, "reason": "two wrong actions"})
+    events: list[str] = []
+    await meta.programs.maybe_improve(events)
+    assert (not meta.programs.off("ship")) is back_on
+    assert any("switched back on" in event for event in events) is back_on
+
+
+@pytest.mark.parametrize(("long_running", "kept"), [(False, True), (True, False)])
+async def test_a_wrong_action_from_before_a_procedure_was_relearned_is_not_a_gate_case(model, long_running, kept):
+    """Its world is gone. Kept as a case, it failed every later re-test of a program that was right again."""
+    agent, meta = build(trusted=RECKLESS, long_running=long_running)
+    with model.active():
+        result, _ = await run(agent, task(13))  # the reckless program ships an order that can't ship
+    assert result.metacognition.program == "served" and not result.metacognition.verdict.accepted
+    assert "c13" in meta.programs._cases()
+    meta.install("order_status", STATUS + "# relearned\n")
+    assert ("c13" in meta.programs._cases()) is kept
+
+
+@pytest.mark.parametrize(("long_running", "function_holds", "blamed"),
+                         [(True, False, True), (True, True, False), (False, False, False)])
+async def test_a_failed_retest_checks_the_procedures_before_a_builder_rewrites_the_program(long_running,
+                                                                                          function_holds, blamed):
+    """A program stands on its procedures. Rewritten while one of them was stale, it cost builder calls that could
+    fix nothing, night after night, and the stale procedure went on serving."""
+    agent, meta = build(GOOD, trusted=RECKLESS, long_running=long_running)
+    meta.agent = agent
+
+    async def practice(source: str, case_id: str) -> tuple[float, str, str]:
+        return (1.0 if function_holds else 0.0), "tried", ""
+
+    meta.practice, meta.gate = practice, Gate(cases=["g1", "g2"])
+    meta.store.put_state("program:ship", {"off": True, "reason": "two wrong actions"})
+    events: list[str] = []
+    await meta.programs.maybe_improve(events)
+    assert any("still refused" in event for event in events)  # the reckless program ships what it should not
+    assert (meta.store.trusted("order_status") is None) is blamed
+    assert any("quarantined order_status@1 (its own gate now passes 0/2)" in event for event in events) is blamed
+    assert any(event.startswith("program: m0 wrote") for event in events) is not blamed
+    assert meta.store.state("decision:loop").get("attempts", 0) == (0 if long_running else 1)
+
+
+@pytest.mark.parametrize(("long_running", "waits"), [(True, True), (False, False)])
+async def test_a_long_running_tier_waits_while_a_procedure_it_stands_on_is_relearned(long_running, waits):
+    agent, meta = build(GOOD, trusted=RECKLESS, long_running=long_running, procedures=(order_status, order_weight))
+    meta.agent = agent
+    meta.install("order_weight", WEIGHT)
+    meta.store.put_state("program:ship", {"off": True, "reason": "two wrong actions"})
+    meta.quarantine("order_status", "its own gate now passes 0/2")
+    events: list[str] = []
+    await meta.programs.maybe_improve(events)
+    assert (events == []) is waits
+    meta.install("order_status", STATUS + "# relearned\n")
+    await meta.programs.maybe_improve(events)
+    assert any(event.startswith("program: m0 wrote") for event in events)  # relearned, so it is the program's turn
+
+
+async def test_a_read_only_run_that_fails_says_nothing_about_a_procedure():
+    """Real work a program sent on read-only can't be done, and that isn't the fault of a procedure the agent called."""
+    everything = 'async def decide(request, kit):\n    return {"handoff": "no", "read_only": True}\n'
+    agent, meta = build(trusted=everything)
+    for n in (1, 2, 3):  # two rejections in the last four judged uses would quarantine the procedure
+        tries = ScriptedModel([call("order_status", {"order_id": f"O-{n}"}), text("I can't ship anything from here.")])
+        with tries.active():
+            result, world = await run(agent, task(n))
+        report = result.metacognition
+        assert report.program == "read_only" and not report.verdict.accepted and world.shipped == []
+        assert report.called == ["order_status@1"]
+        assert not any(event.startswith("detector: quarantined") for event in report.events)
+    assert meta.store.trusted("order_status") is not None
 
 
 async def test_read_only_means_nothing_on_an_action():
@@ -776,6 +903,23 @@ async def test_a_variant_can_practice_on_the_requests_a_search_shares(share_all)
     stored = {m["name"]: m["description"] for m in unpack_memories(meta.programs.search_log[-1]["program"])[1]}
     assert "['c201', 'Ship O-201.', True, 0.6]" in stored["ship_it"]
     assert ("['c104', \"Don't ship O-104.\", False, 1.0]" in stored["ship_it"]) == share_all
+
+
+async def test_a_component_run_again_gets_the_requests_a_search_shares_and_never_the_gates():
+    """The first paid search found a component that practices on `lab.tests`. Run again without a search, it had
+    none."""
+    agent, meta = build(mechanisms=[("found", PRACTICES_ON_SHARED)], route_practice=routed_right,
+                        search_cases={"c201": task(201)})
+    meta.agent = agent
+    trial, _ = await meta.programs._learn(meta.programs._problem(), "found", PRACTICES_ON_SHARED)
+    stored = {m["name"]: m["description"] for m in unpack_memories(trial.source)[1]}
+    assert "['c201', 'Ship O-201.', True, 0.6]" in stored["ship_it"]
+    assert "c104" not in stored["ship_it"]  # a gate request
+    agent, meta = build(mechanisms=[("found", PRACTICES_ON_SHARED)], route_practice=routed_right)
+    meta.agent = agent
+    trial, _ = await meta.programs._learn(meta.programs._problem(), "found", PRACTICES_ON_SHARED)
+    stored = {m["name"]: m["description"] for m in unpack_memories(trial.source)[1]}
+    assert stored["ship_it"] == "[]"  # with no search requests there is nothing to share but the gate's, so nothing
 
 
 def test_a_variant_practices_on_what_its_gap_report_shows():

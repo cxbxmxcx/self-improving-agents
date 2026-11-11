@@ -25,6 +25,7 @@ from typing import Any, get_type_hints
 
 from pydantic import BaseModel, create_model
 
+from helix.metacognition.exceptions import Unavailable
 from helix.metacognition.run_context import RunContextWrapper
 
 
@@ -64,6 +65,8 @@ class FunctionTool:
                 result = await result
             return result
         except Exception as exc:
+            if isinstance(exc, Unavailable) and ctx is not None:
+                ctx.unavailable = True
             if self.failure_error_function is None:
                 raise
             handled = self.failure_error_function(ctx, exc)  # type: ignore[arg-type]

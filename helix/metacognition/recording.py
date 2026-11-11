@@ -210,6 +210,48 @@ class Recording:
                    for row in self.live_rows)
 
 
+class BudgetSpent(BaseException):
+    """New spending reached the cap. A BaseException, so no learner's `except Exception` swallows it."""
+
+
+class Spend:
+    """One cap, in dollars of new model calls, across several recordings."""
+
+    def __init__(self, limit: float, prices: dict[str, tuple[float, ...]] | None = None) -> None:
+        if prices is None:
+            from helix.metacognition.pricing import PRICES as prices
+        self.limit = limit
+        self.prices = prices
+        self.recordings: list[Recording] = []
+
+    @property
+    def total(self) -> float:
+        return sum(recording.spent(self.prices) for recording in self.recordings)
+
+    def largest(self, model: str | None, effort: str | None) -> float:
+        """The most one new call at this model and effort has cost: what the next one might."""
+        from helix.signals.cost import call_dollars
+
+        rows = [row for recording in self.recordings for row in recording.live_rows
+                if (row.get("model"), row.get("effort")) == (model, effort)]
+        return max((call_dollars(model or "", row.get("usage") or {}, self.prices) or 0.0 for row in rows), default=0.0)
+
+
+class CappedRecording(Recording):
+    """A recording that stops before a new call, across every recording under the same cap, could pass the budget."""
+
+    def __init__(self, path: str | Path, *, mode: str = "replay", spend: Spend, distinct_repeats: bool = False) -> None:
+        super().__init__(path, mode=mode, distinct_repeats=distinct_repeats)
+        self.spend = spend
+        spend.recordings.append(self)
+
+    async def __call__(self, **kwargs: Any) -> SimpleNamespace:
+        spent = self.spend.total
+        if spent + self.spend.largest(kwargs.get("model"), kwargs.get("reasoning_effort")) > self.spend.limit:
+            raise BudgetSpent(f"${spent:.2f} of new calls, and the next could pass the ${self.spend.limit:.2f} budget")
+        return await super().__call__(**kwargs)
+
+
 @contextmanager
 def served_seconds() -> Iterator[list[float]]:
     """Collect, in order, the recorded seconds of the calls made in this context."""

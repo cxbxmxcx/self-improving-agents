@@ -1,0 +1,270 @@
+{
+ "single": {
+  "dev": {
+   "casual": [
+    "Hey, could you set up a {minutes}-minute {topic} with {who} sometime {days}, {limit}? Thanks!",
+    "When you get a sec, please book {who} and me for a {minutes} min {topic} on {days}, {limit}."
+   ],
+   "shorthand": [
+    "{topic} w/ {first_names} - {minutes} min, {short_days}, {limit}. book it",
+    "need {minutes} minutes for {topic}, {first_names}, {short_days}, {limit} - go ahead and schedule"
+   ],
+   "distractor": [
+    "Can you grab a {minutes}-minute slot for the {topic} with {who} on {days}? {limit}, please - and definitely not {other_day}, that day is blocked for me.",
+    "Please put a {minutes} min {topic} on the calendar with {who} sometime {days}, {limit}. {other_day} won't work at all, so steer clear of it."
+   ],
+   "buried": [
+    "The vendor contract finally came back from legal this morning. Before I forget, please book a {minutes}-minute {topic} with {who} somewhere {days}, {limit}. The draft slides are already in the shared folder. I'll circulate notes once the review wraps.",
+    "Quick update from my side - the audit went better than expected. While I have you, schedule {minutes} minutes with {who} for a {topic} on {days}, {limit}. Expense reports are due at the end of the month, so nudge the team. Nothing else pressing right now."
+   ]
+  },
+  "search": {
+   "casual": [
+    "Morning! Would you mind lining up a {topic} for {minutes} minutes with {who}? Any slot {days} works, {limit}.",
+    "I'd love to get {who} together for a {topic} - {minutes} minutes should do it, any point {days}, {limit}. Can you make that happen today?"
+   ],
+   "shorthand": [
+    "book: {topic}, {first_names}, {minutes} min, {short_days}, {limit}",
+    "{first_names} + me, {minutes}-minute {topic}, {short_days}, {limit} - set it up pls"
+   ],
+   "distractor": [
+    "Could you find {minutes} minutes for a {topic} with {who} sometime {days}, {limit}? Whatever you do, keep it off {other_day} - I'm out that day.",
+    "We need to lock down the {topic} with {who}. {minutes} minutes somewhere {days} would be great, {limit}, but {other_day} is a hard no."
+   ],
+   "buried": [
+    "Thanks for sorting the travel receipts yesterday. The new office layout still needs sign-off, by the way. In the middle of all this, I need you to book {minutes} minutes with {who} for a {topic} sometime {days}, {limit}. Also, the printer on our floor is acting up again.",
+    "The client visit got pushed to next quarter, which frees things up a bit. Facilities also wants desk preferences in by the end of the week. In amongst all that, could you lock in a {minutes}-minute {topic} with {who} on {days}, {limit}? I'll circulate an agenda once it's confirmed."
+   ]
+  },
+  "gate": {
+   "casual": [
+    "Hiya - fancy setting up {minutes} minutes with {who} for a {topic}? Anytime {days} suits, {limit}.",
+    "Please get a {topic} on the books with {who}: {minutes} minutes, at any time {days}, {limit}. Appreciate it!"
+   ],
+   "shorthand": [
+    "sched {topic} {first_names} {minutes} min {short_days} {limit} thx",
+    "pls book {first_names} for {topic}, {minutes} minutes, {short_days}, {limit}"
+   ],
+   "distractor": [
+    "Go ahead and reserve a {minutes}-minute {topic} with {who} during {days}, {limit} - just make sure it doesn't land on {other_day}, since the floor is closed then.",
+    "We should meet about the {topic}. Book {who} and me for {minutes} minutes {days}, {limit}; avoid {other_day} entirely, I'm travelling."
+   ],
+   "buried": [
+    "I finished the quarterly summary last night and shared it with the leads. One thing I need from you: arrange a {minutes}-minute {topic} with {who} at some point {days}, {limit}. The catering invoice still looks wrong, so flag it to finance. Otherwise things are calm here.",
+    "Our onboarding doc badly needs a refresh - I started marking it up. Meanwhile, can you get {who} and me booked for {minutes} minutes on a {topic} sometime {days}, {limit}? The intern showcase is coming together nicely too. More soon."
+   ]
+  },
+  "held": {
+   "casual": [
+    "Hello! Could I get a {minutes}-minute {topic} arranged with {who}? I'm free right across {days}, {limit} - go ahead and put it in.",
+    "Do me a favour and fix up a {topic} with {who} for {minutes} minutes whenever works {days}, {limit}."
+   ],
+   "shorthand": [
+    "{minutes} min {topic} - {first_names} - {short_days} - {limit} - lock it in",
+    "set {topic} w {first_names}, {minutes} minutes, {short_days}, {limit}"
+   ],
+   "distractor": [
+    "Time to get the {topic} scheduled: {minutes} minutes with {who}, anywhere {days} is fine, {limit}. Not {other_day} though - that whole day is spoken for.",
+    "Would you slot in {minutes} minutes for a {topic} with {who} across {days}, {limit}? Please keep well away from {other_day}; the team offsite eats that day."
+   ],
+   "buried": [
+    "Heads up that the budget spreadsheet moved to the new drive. Separately, please arrange a {topic} with {who} - {minutes} minutes, some time {days}, {limit}. HR also asked for updated emergency contacts. Nothing else urgent from me.",
+    "The press release draft is with comms now, fingers crossed. While that's in flight, book me {minutes} minutes with {who} for a {topic} during {days}, {limit}. I still owe you feedback on the newsletter, coming shortly. Thanks for keeping everything moving."
+   ]
+  }
+ },
+ "double": {
+  "dev": [
+   "Please book two separate {minutes}-minute sessions for the {topic} with {who} - the meetings go on different days within {days}, {limit}, and everyone attends both.",
+   "I need a pair of {topic} meetings set up, {minutes} minutes apiece, with {who} present at both - put them on two different days out of {days}, {limit}."
+  ],
+  "search": [
+   "Can you schedule the {topic} twice this week? Two meetings of {minutes} minutes, {who} joining both times, each on a different day from {days}, {limit}.",
+   "We're running the {topic} as two rounds: book {minutes} minutes per round with {who} in every session, on two distinct days chosen from {days}, {limit}."
+  ],
+  "gate": [
+   "Set up a double header for the {topic}: a {minutes}-minute meeting twice over, {who} at both, and they can't share a day - pick two different days within {days}, {limit}.",
+   "Please arrange two sittings of the {topic}, {minutes} minutes each, with {who} attending both, spread over separate days in {days}, {limit}."
+  ],
+  "held": [
+   "Book the {topic} two times - {minutes} minutes a session, {who} in the room for both - making sure the two land on different days among {days}, {limit}.",
+   "We want two runs of the {topic} this week, never on the same day: {minutes} minutes per run, {who} at every one, days drawn from {days}, {limit}."
+  ]
+ },
+ "limit": {
+  "dev": {
+   "earliest": [
+    "starting no earlier than {time}",
+    "kicking off at {time} or later"
+   ],
+   "latest_end": [
+    "ending no later than {time}",
+    "done by {time} sharp"
+   ]
+  },
+  "search": {
+   "earliest": [
+    "beginning at or after {time}",
+    "with the earliest possible start at {time}"
+   ],
+   "latest_end": [
+    "finished before {time}",
+    "winding up by {time} at the latest"
+   ]
+  },
+  "gate": {
+   "earliest": [
+    "not starting until {time} at the earliest",
+    "commencing at {time} or any point after"
+   ],
+   "latest_end": [
+    "concluding no later than {time}",
+    "over and done before {time}"
+   ]
+  },
+  "held": {
+   "earliest": [
+    "getting underway at {time} or afterwards",
+    "with a start no sooner than {time}"
+   ],
+   "latest_end": [
+    "wrapped up by {time}",
+    "with everyone out by {time}"
+   ]
+  }
+ },
+ "near_miss": {
+  "dev": [
+   "Is {first} free at all on {day}, or is that whole week a write-off?",
+   "Did the {topic} ever get onto the calendar, or is it still floating?",
+   "Hold off on scheduling anything with {who} until I've heard back from legal.",
+   "Please cancel the {topic} we had with {first} - it's no longer needed.",
+   "Could you list a few possible slots for a {topic} with {who}? Don't book any of them yet.",
+   "No need to arrange the {topic} after all - {first} already sorted it."
+  ],
+  "search": [
+   "What does {first}'s calendar look like on {day}?",
+   "Are {who} around this week, just in theory? Not asking you to book anything.",
+   "Has anyone already set up the {topic}, or should I assume it never happened?",
+   "Move the {topic} with {first} to a later slot - the current one clashes with my dentist.",
+   "Can you draft an invite for a {topic} with {who} but leave it unsent for now?",
+   "Let's not schedule the {topic} until the budget numbers land - sit tight.",
+   "The {topic} is handled; {first} booked it from their end yesterday.",
+   "Sometime next month we should do a {topic} with {who}, but there's no rush at all.",
+   "How long should we allow for a {topic} - would {minutes} minutes with {who} even be enough?",
+   "Scrap the session with {who}; the project it was for just got shelved."
+  ],
+  "gate": [
+   "Would {day} morning work for {first}, do you know, or is it packed?",
+   "Remind me - did we ever confirm the {topic}, or did it fall through the cracks?",
+   "Show me everything sitting on {first}'s schedule for {day}.",
+   "Please push the existing {topic} with {who} back a week; the material isn't ready.",
+   "Don't put anything in the diary with {who} just yet - I'm waiting on a headcount decision.",
+   "Give me a shortlist of times that could suit a {topic} with {first}, purely to compare - no invites.",
+   "You can stand down on the {topic}; {who} arranged it among themselves.",
+   "At some point down the road I'd like a proper {topic} with {who}, once the dust settles.",
+   "If {first} asks, the {topic} is cancelled - take it off the calendar.",
+   "Would {minutes} min be too short for the {topic}, in your opinion?"
+  ],
+  "held": [
+   "Any idea whether {who} have gaps on {day}? Just curious at this stage.",
+   "Was a {topic} already sitting in my diary before all this, or am I imagining it?",
+   "Pull up whatever {first} has booked for {day} and read it out to me.",
+   "The {topic} with {who} needs shifting to another week - please rearrange the one that exists.",
+   "Pause on booking the {topic}; I'll give you the green light once the contract signs.",
+   "Sketch out some candidate windows for a {topic} with {first}, but send nothing.",
+   "Good news: the {topic} is already squared away, so nothing for you to do there.",
+   "Let's revisit a {topic} with {who} after the holidays rather than this week.",
+   "Kill the invite for the {topic} - {first} can't make it and we're abandoning the idea.",
+   "Is an hour overkill for the {topic}, or should we trim it to {minutes} minutes when the time comes?"
+  ]
+ },
+ "out_of_scope": {
+  "dev": [
+   "What's {first}'s phone extension again?",
+   "Could you print the agenda pack before {day}?",
+   "Order more coffee pods for the kitchen, we're nearly out.",
+   "Where do I file an expense claim for the taxi from the airport?"
+  ],
+  "test": [
+   "Can you reset my badge access? The door reader keeps rejecting it.",
+   "Send {first} the link to the brand guidelines when you get a chance.",
+   "What time does the office close on {day}?",
+   "My laptop fan sounds like a jet engine - can you raise a ticket with IT?"
+  ]
+ },
+ "same_time": {
+  "dev": {
+   "casual": [
+    "Hey, could you set up a {minutes}-minute {topic} with {who}? I need it on {each_day}, same start time on each of those days, {limit}.",
+    "Can you grab calendar space for a {topic} with {who}? Make it {minutes} minutes, repeated on {each_day} at an identical hour every time, {limit}."
+   ],
+   "shorthand": [
+    "{topic} w/ {first_names}, {minutes} min, {short_each_day}, same slot each day, {limit}",
+    "need {minutes}m {topic} - {first_names} - {short_each_day} - identical start all days - {limit}"
+   ],
+   "distractor": [
+    "Please book a {minutes}-minute {topic} with {who} on {each_day}, keeping the start time in lockstep across those days, {limit}. Skip {other_day} entirely, that one is blocked for releases.",
+    "Set up the {topic} with {who} for {minutes} minutes on {each_day}, same wall-clock start on every listed day, {limit} - and whatever you do, do not put anything on {other_day}."
+   ],
+   "buried": [
+    "The build pipeline finally went green after that flaky test got quarantined. While I think of it, book a {minutes}-minute {topic} with {who} on {each_day}, starting at one matching time on each of those days, {limit}. Code review backlog is still ugly, so I will be heads down otherwise. Ping me if the merge queue stalls again.",
+    "Retro notes are in the wiki if anyone asks. Separately, I need a {topic} with {who}, {minutes} minutes long, booked on {each_day} with the start lining up across all the days, {limit}. The staging environment is getting wiped tonight. Deploys are frozen until the morning."
+   ]
+  },
+  "search": {
+   "casual": [
+    "Hi there - would you line up a {minutes} minute {topic} for me with {who}? It should land on {each_day}, kicking off at the very same hour on each day, {limit}.",
+    "I want a recurring-style {topic} with {who} this week: {minutes} minutes, on {each_day}, with one shared start time covering every day, {limit}."
+   ],
+   "shorthand": [
+    "{minutes}min {topic}, {first_names}, {short_each_day}, one start time across the lot, {limit}",
+    "pls sched {topic} w {first_names} on {short_each_day}, {minutes} min, same hour each occurrence, {limit}"
+   ],
+   "distractor": [
+    "Could you arrange a {minutes} minute {topic} with {who} across {each_day}, at a single common start time for all of them, {limit}? Please leave {other_day} untouched - I am traveling then.",
+    "Line up the {topic} with {who}: {minutes} minutes, placed on {each_day} at a start that stays the same from one day to the next, {limit}. Not {other_day} though, that day is off the table."
+   ],
+   "buried": [
+    "The campaign dashboard refreshed overnight and the funnel numbers look healthier. In the middle of all this, please schedule a {minutes} minute {topic} with {who} on {each_day}, each session opening at the same point on the clock, {limit}. I still owe the agency a keyword brief. Reporting can wait until the figures settle.",
+    "Vendor renewal paperwork landed in my inbox this morning, joy. Anyway - get a {topic} on the books with {who}, {minutes} minutes, running on {each_day} with an unchanged time slot on every one of those days, {limit}. The quarterly readout deck also needs a refresh. I will tackle the attribution question after that."
+   ]
+  },
+  "gate": {
+   "casual": [
+    "Good morning. Kindly reserve a {topic} of {minutes} minutes with {who}, to take place on {each_day}, commencing at a uniform time on every day named, {limit}.",
+    "When you have a moment, please arrange {minutes} minutes with {who} for a {topic}. The appointment should recur on {each_day}, always beginning at the same moment of the day, {limit}."
+   ],
+   "shorthand": [
+    "req: {topic}, {minutes} mins, {first_names}, {short_each_day}, uniform start throughout, {limit}",
+    "{first_names} / {topic} / {minutes} mins / {short_each_day} / aligned start on all, {limit}"
+   ],
+   "distractor": [
+    "I should be grateful if you would schedule a {topic} of {minutes} minutes with {who} on {each_day}, commencing at one and the same time on every day involved, {limit}. Do note that {other_day} must remain clear.",
+    "I would like a {topic} with {who} placed on {each_day}, {minutes} minutes in length, keeping a consistent start across all those days, {limit}. Under no circumstances should it fall on {other_day}."
+   ],
+   "buried": [
+    "The board materials were couriered out this morning as requested. Additionally, please reserve a {minutes}-minute {topic} with {who} on {each_day}, aligned to a single consistent start time on each occasion, {limit}. The travel itinerary for next month still awaits sign-off. I shall review the expense reports this afternoon.",
+    "The steering committee notes have been filed away. On another matter, kindly book {who} for a {topic} lasting {minutes} minutes, set for {each_day} and always opening at one unvarying time, {limit}. The caterers have confirmed for the reception. Correspondence with the auditors can resume afterwards."
+   ]
+  },
+  "held": {
+   "casual": [
+    "Hey - I need you to lock in a {topic} with {who}. Give it {minutes} minutes, put it on {each_day}, and make sure it begins at the exact same time on every day it runs, {limit}.",
+    "Do me a favor and get a {topic} with {who} onto my calendar for {minutes} minutes on {each_day} - the start does not move from day to day, {limit}."
+   ],
+   "shorthand": [
+    "lock {topic} {first_names} {short_each_day} x{minutes} min, no drift in start time, {limit}",
+    "{topic} - {minutes} min - {first_names} - {short_each_day} - start stays put every day - {limit}"
+   ],
+   "distractor": [
+    "Lock down a {minutes}-minute {topic} with {who} on {each_day}, keeping the start fixed for each day on the list, {limit}. Steer well clear of {other_day}; that one belongs to the client offsite.",
+    "I want {who} in a {topic} for {minutes} minutes on {each_day}, fixed to one unchanging start time across the set, {limit}. {other_day} is a hard no, so keep it empty."
+   ],
+   "buried": [
+    "Pipeline review ran long and the forecast still looks soft. While you are at it, lock a {topic} with {who} - {minutes} minutes, on {each_day}, the start held constant for the full run of days, {limit}. Two of the regional leads still owe me their numbers. I fly out for the customer summit right after.",
+    "The pricing deck went over well with the exec team yesterday. Quick ask buried in here: get me a {topic} with {who} for {minutes} minutes on {each_day}, holding one fixed start time that holds for the whole set of days, {limit}. Legal still has not returned the redlines. Chase them if nothing lands by end of day."
+   ]
+  }
+ }
+}

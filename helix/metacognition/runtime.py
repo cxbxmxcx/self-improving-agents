@@ -34,6 +34,7 @@ import uuid
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime, timedelta
+from functools import wraps
 from typing import Any
 
 from helix.memory.base import MemoryContext, Scope, ScopeKey
@@ -88,6 +89,9 @@ class MetaReport:
     order: int | None = None
     events: list[str] = field(default_factory=list)
     called: list[str] = field(default_factory=list)  # "name@version": the offered procedures the run used
+    program: str | None = None  # what a decision program did with the request: "served", "routed", "read_only" or
+    # "handoff"; None when no program had the first try
+    memory: str | None = None  # the stored memory the program's router chose, if it chose one
 
     def __str__(self) -> str:
         verdict = "pending" if self.verdict is None else ("accepted" if self.verdict.accepted else "rejected")
@@ -224,6 +228,7 @@ class Metacognition:
         relevance: float = 0.0,
         attribution: str = "called",
         relearn_after: int = 4,
+        experience_limit: int | None = None,
         learning: str = "background",
         budget: LearningBudget | None = None,
         approval: str | None = None,
@@ -274,6 +279,9 @@ class Metacognition:
         self.router = router or (Router.from_dict(saved) if saved else Router(k=recall_k, default=relevance))
         self.recall_k = self.router.k
         self.relearn_after = relearn_after
+        # The most runs a learner is handed. Without a limit an attempt that comes late gets every run since the
+        # quarantine, and a learner that writes a candidate for each run costs more the longer it waited.
+        self.experience_limit = experience_limit
         self.learning = learning
         self.approval = approval or ("auto" if verifier is not None and not isinstance(verifier, Judge) else "human")
         self.gating_sources = tuple(gating_sources)
@@ -306,6 +314,19 @@ class Metacognition:
 
     def quarantine(self, name: str, reason: str = "by hand") -> None:
         quarantine_procedure(self.store, name, reason, relearn_after=self.relearn_after)
+
+    async def recheck(self, name: str) -> GateResult | None:
+        """Put the trusted version of `name` through its own gate again, and say how it did.
+
+        A recheck costs what the gate's practice costs, which is nothing when that practice is a function. None
+        when there is nothing to check: no trusted version, or a gate that holds no cases of its own. The result
+        says something about today only if the gate's cases are kept current.
+        """
+        current = self.store.trusted(name)
+        cases = list(self.gate.cases or [])
+        if current is None or not cases or (self.practice is None and self.gate.practice is None):
+            return None
+        return await self.gate.check(current["source"], self._practice_for(name, self.gate.practice), cases)
 
     def _trust(self, name: str, version: int) -> int:
         return trust_version(self.store, name, version)
@@ -350,14 +371,33 @@ class Metacognition:
             tools.update({tool.name: tool for tool in proc.api})
         return list(tools.values())
 
-    def _procedure_tool(self, entry: Any, api: SkillAPI) -> Any:
+    def _procedure_tool(self, entry: Any, api: SkillAPI, *, candidate: bool = False) -> Any:
         """The tool for one recalled version: guarded in-process, or in a child process for model-written
-        code under "auto" (and for everything under "subprocess")."""
+        code under "auto" (and for everything under "subprocess").
+
+        A trusted version answers only while it is still the trusted one. A request can be in flight when its
+        procedure is quarantined, and its call then gets an error to work around, not a stale answer. A
+        `candidate` is a version being tried in practice, which nothing has trusted yet.
+        """
         name, body = entry.content["skill_name"], entry.content["body"]
         by_person = entry.metadata.get("created_by") == HUMAN
         if self.executor == "subprocess" or (self.executor == "auto" and not by_person):
-            return sandboxed_tool(name, entry.content.get("description", ""), body, api, timeout=self.skill_timeout)
-        return tools_from_entries([entry], bind={"api": api}, timeout=self.skill_timeout)[0]
+            tool = sandboxed_tool(name, entry.content.get("description", ""), body, api, timeout=self.skill_timeout)
+        else:
+            tool = tools_from_entries([entry], bind={"api": api}, timeout=self.skill_timeout)[0]
+        if candidate:
+            return tool
+        version, run = int(entry.metadata.get("version", 0)), tool.fn
+
+        @wraps(run)  # it reads as the tool it guards: its name, and where the code runs
+        async def while_trusted(**arguments: Any) -> Any:
+            current = self.store.trusted(name)
+            if current is None or current["version"] != version:
+                return {"error": f"{name} was withdrawn while this request was being served. "
+                                 "Work the answer out with the other tools."}
+            return await run(**arguments)
+
+        return replace(tool, fn=while_trusted)
 
     def _controller(self) -> Controller:
         """The controller, with the floors measured into the store joining its own (its own win)."""
@@ -391,7 +431,7 @@ class Metacognition:
         if tier is not None:
             entries = await recall_skills(tier, request, memory_context, self.recall_k)
             api = SkillAPI(self._api_tools(), ctx, asyncio.get_running_loop(), executor=config.tool_executor)
-            plan.tools = [self._procedure_tool(entry, api) for entry in entries
+            plan.tools = [self._procedure_tool(entry, api, candidate=mode == "practice") for entry in entries
                           if entry.content.get("body_kind") == "python"]
             plan.tier = tier
             plan.offered = [(e.content["skill_name"], int(e.metadata.get("version", 0))) for e in entries]
@@ -428,6 +468,7 @@ class Metacognition:
                                           verdict.reason if verdict else "awaiting a verdict")
         called = called_procedures(trajectory, plan.offered)
         report.called = [f"{name}@{version}" for name, version in called]
+        report.program = plan.program_outcome
         cost = getattr(result, "cost", None)
         usage = getattr(result, "usage", None)
         report.order = self.store.record(
@@ -441,12 +482,18 @@ class Metacognition:
         report.verdict = verdict
         await publish(kind="run", run_id=plan.run_id, effort=plan.effort, offered=list(report.offered),
                       detail="pending" if verdict is None else ("accepted" if verdict.accepted else "rejected"))
-        if verdict is not None and verdict.source in self.gating_sources:
+        # A run a decision program sent on read-only had no way to act, and a run in which a tool could not reach
+        # its service failed for that reason. Neither verdict says anything about a procedure.
+        blameless = plan.read_only or getattr(ctx, "unavailable", False)
+        if verdict is not None and verdict.source in self.gating_sources and not blameless:
             self._observe(called if self.attribution == "called" else plan.offered, verdict, report.events,
                           plan.run_id)
         await self._maybe_learn(report.events)
         if self.programs is not None:
-            self.programs.after_run(plan, verdict, report.events)
+            if self.programs.after_run(plan, verdict, report.events) and self.programs.tier.long_running:
+                # What made the program act wrongly may be a procedure it stands on. Checked now, a stale one
+                # stops serving the agent as well, before the agent's own wrong answers have to show it.
+                await self.programs.check_procedures(report.events)
             await self.programs.maybe_improve(report.events)
 
     async def feedback(self, run_id: str, accepted: bool, reason: str = "", *, source: str = "human"
@@ -508,14 +555,19 @@ class Metacognition:
 
     def _experience(self, name: str) -> list[Episode] | None:
         """The judged runs since quarantine to learn from, or None while none of them was accepted."""
-        episodes = self.store.episodes(since=self.store.state(name).get("quarantined_at", 0), procedure=name)
+        episodes = self.store.episodes(since=self.store.state(name).get("quarantined_at", 0), procedure=name,
+                                       last=self.experience_limit)
         return episodes if any(e.success for e in episodes) else None
 
     async def _over_budget(self, name: str, events: list[str]) -> bool:
         """Log and report a skipped attempt when the budget refuses one."""
         if self.budget is None:
             return False
-        refusal = self.budget.refusal(self.store.learning(name, within=timedelta(days=1)))
+        if self.budget.runs_per_day is None:
+            recent = self.store.learning(name, within=timedelta(days=1))
+        else:  # the stream's own clock: a day is that many recorded runs
+            recent = self.store.learning(name, since_run=self.store.count() - self.budget.runs_per_day)
+        refusal = self.budget.refusal(recent)
         if refusal is None:
             return False
         self.store.log_learning(name=name, mechanism=self.learner_for(name).name, version=None, episodes=0,

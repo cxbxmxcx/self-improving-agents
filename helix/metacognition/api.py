@@ -17,6 +17,7 @@ import asyncio
 import inspect
 from typing import Any
 
+from helix.metacognition.exceptions import Unavailable
 from helix.metacognition.run_context import RunContextWrapper
 from helix.metacognition.tool import FunctionTool
 
@@ -50,10 +51,14 @@ class SkillAPI:
             arguments = {**dict(zip(names, args, strict=False)), **kwargs}
             if (self._executor is not None or inspect.iscoroutinefunction(tool.fn)) and self._on_loop_thread():
                 raise RuntimeError(_ON_LOOP)
-            if self._executor is not None:
-                result = self._executor(tool, self._ctx, arguments)
-            else:
-                result = tool.fn(self._ctx, **arguments) if tool.takes_context else tool.fn(**arguments)
+            try:
+                if self._executor is not None:
+                    result = self._executor(tool, self._ctx, arguments)
+                else:
+                    result = tool.fn(self._ctx, **arguments) if tool.takes_context else tool.fn(**arguments)
+            except Unavailable:
+                self._ctx.unavailable = True  # the procedure fails here, and the fault is not its own
+                raise
             if not inspect.isawaitable(result):
                 return result
             if self._on_loop_thread():

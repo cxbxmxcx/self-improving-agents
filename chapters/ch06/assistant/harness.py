@@ -5,7 +5,8 @@ Tool construction and context injection retrieve skills separately through
 the same helper with matching inputs against fixed memory. The effort setting
 reaches every model call through a PRE_MODEL hook, leaving the loop unchanged.
 
-The bootstrapped memory is a hand-built function that computes valid starts.
+The first class's bootstrapped memory is the function found by context search,
+with a hand-written implementation retained as an optional comparator.
 Learned functions use the same name and description for behavioral comparison.
 Agent sweeps then test whether those functions support successful execution
 at the selected effort setting.

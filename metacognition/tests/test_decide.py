@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 
 import pytest
 from helix.deciders import MissingAnswer, ReplayDecider
-from helix.metacognition.decide import Desk, Kit, UnsafeProgram, check_program, run_program, serve
+from helix.metacognition.decide import LOCAL_SECONDS, Desk, Kit, UnsafeProgram, check_program, run_program, serve
 
 from examples.decisions import learn, study
 
@@ -53,6 +54,24 @@ async def test_a_failing_program_hands_the_request_off_and_a_handoff_is_not_judg
     served = await serve('async def decide(request, kit):\n    return {"action": "act", "arguments": {"a": 1}}',
                          {"id": "c2", "text": "x"}, desk, None)
     assert (served.handled, served.right, acted) == (True, True, [{"a": 1}])
+
+
+async def test_what_a_served_request_cost_in_time_never_depends_on_the_clock():
+    """A gap report quotes these seconds to the builder. With wall-clock time in them, a loaded machine changed a
+    recorded search's question, and the search was paid for twice."""
+
+    async def slow(**arguments):
+        await asyncio.sleep(0.05)  # a procedure that takes real time, as one run in a child process does
+        return {"ok": True}
+
+    desk = Desk(world=lambda task: {}, reads=lambda world: {}, procedures=lambda world: {"look": slow},
+                actions={"act": lambda world, **arguments: None},
+                verdict=lambda world, reply: {"success": True, "reason": "fine"})
+    program = ('async def decide(request, kit):\n    await kit.procedure("look")\n'
+               '    return {"action": "act", "arguments": {}}')
+    first = await serve(program, {"id": "c1", "text": "x"}, desk, None)
+    second = await serve(program, {"id": "c1", "text": "x"}, desk, None)
+    assert first.handled and first.seconds == second.seconds == LOCAL_SECONDS
 
 
 async def test_jev_replays_from_its_recording_and_refuses_an_unrecorded_call(tmp_path):

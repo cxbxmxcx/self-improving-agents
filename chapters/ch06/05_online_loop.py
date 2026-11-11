@@ -1,8 +1,8 @@
 """Run the metacognition loop online while the user's conditions change.
 
 The assistant starts with the memory the kept learning mechanism wrote in
-listing 6.3, trusted by the gate, and a controller that reads its setting
-from listing 6.2's floors. It serves first-class requests, then requests
+listing 6.3, trusted from its offline measurements, and a controller that
+reads its setting from listing 6.2's floors. It serves first-class requests, then requests
 after Dana rewords her note to ask for half an hour. The detector watches
 the runs that used memory and quarantines the memory when they fail.
 
@@ -153,7 +153,9 @@ async def main(args: argparse.Namespace) -> None:
                 learned = await learner.learn(
                     episodes, act, writer, CONTRACT
                 )
-                result = await gate.check(learned.source, act, gate.cases)
+                result = await gate.check(
+                    learned.source, act, gate.cases
+                )
                 log_learning(log, kept, episodes, learned, writer, result)
                 if result.passed:
                     memory = await install(learned.source, kept)

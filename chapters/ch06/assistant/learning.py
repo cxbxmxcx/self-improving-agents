@@ -47,6 +47,10 @@ def _book_each_day(env: SchedulingEnvironment, task: dict[str, Any], starts: Any
     """First class: the earliest start on as many listed days as the request asks for."""
     if not isinstance(starts, dict):
         return "a mapping of day to starts"
+    if any(not isinstance(day, str) or not isinstance(values, list)
+           or any(not isinstance(value, str) for value in values)
+           for day, values in starts.items()):
+        return "a mapping of day to lists of time strings"
     booked = 0
     for day in task["truth"]["days"]:
         found = starts.get(day) or []
@@ -60,6 +64,8 @@ def _book_same_time(env: SchedulingEnvironment, task: dict[str, Any], starts: An
     """Second class: the earliest common start, on every listed day."""
     if not isinstance(starts, list):
         return "a list of starts"
+    if any(not isinstance(value, str) for value in starts):
+        return "a list of time strings"
     if starts:
         for day in task["truth"]["days"]:
             env.book_time("Meeting", day, str(starts[0]), task["truth"]["minutes"], task["truth"]["attendees"])

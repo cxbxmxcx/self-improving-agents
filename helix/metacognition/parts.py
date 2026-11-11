@@ -186,8 +186,8 @@ class Controller:
     def from_sweeps(cls, path: str | Path, *, memory: str, no_memory: str, bar: float = ADEQUATE) -> Controller:
         """Build the table from a saved list of effort sweeps, naming the arm that measured each memory state.
 
-        Each arm gets the cheapest setting that clears the bar. An arm that never clears it gets the setting
-        with the best record, since spending less would only fail more often.
+        Each arm gets the lowest tested effort that clears the bar. An arm that never clears it gets the setting
+        with the best recorded success rate. A tie in that fallback favors the higher effort.
         """
         sweeps = {d["arm"]: EffortSweep.from_dict(d) for d in json.loads(Path(path).read_text(encoding="utf-8"))}
 
@@ -245,23 +245,27 @@ class Detector:
 
 @dataclass
 class LearningBudget:
-    """What learning may spend on one procedure in any 24 hours: attempts, dollars, or both.
+    """What learning may spend on one procedure in a day: attempts, dollars, or both.
 
-    It is checked before an attempt starts, so one attempt can carry the spend past the
-    dollar limit; the next one then waits. A skipped attempt is logged with the reason.
+    A day is 24 hours on the wall clock, unless `runs_per_day` says how many recorded runs make one. A stream that
+    serves weeks of requests in hours needs that, or a daily limit meant for real days stops learning for good.
+    The budget is checked before an attempt starts, so one attempt can carry the spend past the dollar limit; the
+    next one then waits. A skipped attempt is logged with the reason.
     """
 
     attempts_per_day: int | None = None
     dollars_per_day: float | None = None
+    runs_per_day: int | None = None
 
     def refusal(self, recent: list[dict[str, Any]]) -> str | None:
-        """Why a new attempt may not start, given the attempts of the last 24 hours, or None."""
+        """Why a new attempt may not start, given the attempts of the last day, or None."""
+        day = "24 hours" if self.runs_per_day is None else f"{self.runs_per_day} runs"
         spent = [a for a in recent if not str(a.get("outcome", "")).startswith("skipped")]
         if self.attempts_per_day is not None and len(spent) >= self.attempts_per_day:
-            return f"{len(spent)} attempts in the last 24 hours, the budget's limit"
+            return f"{len(spent)} attempts in the last {day}, the budget's limit"
         dollars = sum(a.get("dollars") or 0.0 for a in spent)
         if self.dollars_per_day is not None and dollars >= self.dollars_per_day:
-            return f"${dollars:.4f} spent in the last 24 hours of a ${self.dollars_per_day:.2f} budget"
+            return f"${dollars:.4f} spent in the last {day} of a ${self.dollars_per_day:.2f} budget"
         return None
 
 

@@ -36,3 +36,4 @@ class RunContextWrapper(Generic[TContext]):
 
     context: TContext
     usage: Usage = field(default_factory=Usage)
+    unavailable: bool = False  # a tool raised Unavailable during this run: what it depends on could not be reached

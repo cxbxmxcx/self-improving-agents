@@ -4,8 +4,8 @@ The online loop needs the world to move under a memory that was right.
 These tasks are the first class's, with one difference: Dana Park, the
 external client, rewords her note to "Please leave half an hour between any
 meeting with me and my other meetings" and the checker enforces 30 minutes.
-A reasoning agent reads the new note as easily as the old one. A remembered
-function that looks for "15 minutes" finds no number and applies no buffer.
+A reasoning agent can interpret the new wording, while a remembered function
+that expects a numeric minute count finds no number and applies no buffer.
 
 A task is kept only when Dana is invited, a solution exists, few starts
 work, and reading her note as no buffer at all gives a wrong first answer,

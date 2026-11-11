@@ -190,7 +190,7 @@ async def main(args: argparse.Namespace) -> None:
             print(
                 "Test tasks, scored once:"
                 f" {test.metadata['matched']}/{test.metadata['cases']}"
-                " match the bootstrapped memory"
+                " match the class reference"
             )
             results["test_matched"] = test.metadata["matched"]
 

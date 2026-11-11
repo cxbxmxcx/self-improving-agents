@@ -21,18 +21,16 @@ agent runs in; this layer only keeps learned code out of the agent's process.
 from __future__ import annotations
 
 import asyncio
-import inspect
 import json
 import subprocess
 import sys
 import threading
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any, get_type_hints
+from typing import Any
 
-from helix.memory.code_skills import SAFE_BUILTINS, compile_skill
+from helix.memory.code_skills import SAFE_BUILTINS, args_model
 from helix.tools import Tool
-from pydantic import create_model
 
 CHILD = Path(__file__).with_name("sandbox_child.py")
 STARTUP_ALLOWANCE = 10.0
@@ -93,15 +91,7 @@ def sandboxed_tool(name: str, description: str, source: str, api: Any, *, timeou
     already refused imports and code that runs on load, so compiling defines
     the function without running its body.
     """
-    fn = compile_skill(source, name)
-    hints = get_type_hints(fn)
-    fields: dict[str, Any] = {}
-    for param, spec in inspect.signature(fn).parameters.items():
-        if param == "api":
-            continue
-        default = ... if spec.default is inspect.Parameter.empty else spec.default
-        fields[param] = (hints.get(param, Any), default)
-    args_model = create_model(f"{name}_Args", **fields)
+    model = args_model(source, name, ("api",))
     api_names = sorted(dir(api))
 
     def api_call(tool: str, args: list, kwargs: dict) -> Any:
@@ -110,4 +100,4 @@ def sandboxed_tool(name: str, description: str, source: str, api: Any, *, timeou
     async def call(**kwargs: Any) -> Any:
         return await asyncio.to_thread(run_sandboxed, name, source, kwargs, api_call, api_names, timeout)
 
-    return Tool(name=name, description=description, args_model=args_model, fn=call)
+    return Tool(name=name, description=description, args_model=model, fn=call)

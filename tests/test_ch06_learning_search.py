@@ -198,6 +198,32 @@ def test_act_reports_a_crash_as_a_crash_not_as_the_users_rejection():
     assert refused.startswith("booking its earliest start was rejected by the user")
 
 
+@pytest.mark.parametrize("task_id,name,starts", [
+    ("S001", "find_shared_starts", "{day: 1 for day in days}"),
+    ("S001", "find_shared_starts", "{day: '09:00' for day in days}"),
+    ("T301", "find_common_starts", "[1]"),
+])
+def test_act_rejects_malformed_starts_without_crashing_or_treating_them_as_a_booking(task_id, name, starts):
+    source = (f"def {name}(api, attendees: list[str], days: list[str], minutes: int,\n"
+              "                  earliest: str = '', latest_end: str = '') -> dict:\n"
+              f"    return {{'starts': {starts}}}\n")
+    reward, reason, _ = asyncio.run(act(source, task_id))
+    assert reward == 0.0
+    assert reason.startswith("the function returned")
+
+
+def test_the_online_gate_rejects_a_malformed_function_without_aborting_the_attempt():
+    from chapters.ch06.assistant.generator_drift import task_set as drift_tasks
+    from helix.metacognition import Gate
+
+    malformed = ("def find_shared_starts(api, attendees: list[str], days: list[str], minutes: int,\n"
+                 "                       earliest: str = '', latest_end: str = '') -> dict:\n"
+                 "    return {'starts': {day: 1 for day in days}}\n")
+    gate = Gate(cases=[task["id"] for task in drift_tasks("gate")])
+    result = asyncio.run(gate.check(malformed, act, gate.cases))
+    assert (result.accepted, result.total, result.passed) == (0, 6, False)
+
+
 def test_the_contract_lists_the_builtins_a_learned_function_may_use():
     from helix.memory.code_skills import SAFE_BUILTINS
     from helix.memory.learning_mechanisms import contract_text

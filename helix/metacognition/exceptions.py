@@ -9,6 +9,14 @@ class AgentsException(Exception):
     """Base class for errors metacog raises during a run."""
 
 
+class Unavailable(Exception):
+    """A tool could not reach what it depends on, and raises this to say so.
+
+    A run in which that happened says nothing about learned code, so the harness does not hold its verdict against
+    a procedure. Raise it for an outage or a timeout, and never for arguments the tool cannot use.
+    """
+
+
 class UserError(AgentsException):
     """The SDK was used in a way it does not support."""
 
