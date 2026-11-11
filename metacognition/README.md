@@ -11,6 +11,7 @@ uses the repository's `helix/` as its agent loop and replays chapter 6's recordi
 - From design to drift, step by step, on the expense example: [GUIDE.md](GUIDE.md)
 - Design and milestones: [HARNESS_PLAN.md](HARNESS_PLAN.md)
 - Architecture and phase 2 (deployment, then example domains): [ARCHITECTURE.md](ARCHITECTURE.md)
+- The loop at scale, with scripted models, and the plan for a paid test: [SCALE_TEST.md](SCALE_TEST.md)
 - The research it builds on: chapter 6's study, [`chapters/ch06`](../chapters/ch06/README.md)
 
 Status: phase 1 (milestones M0 to M5) is built and tested. The study's experiments E1, E2, E3, and E5 replay
@@ -291,5 +292,6 @@ examples/expenses/    the second task class (D1): world, agent, app, study, reco
 examples/refunds/     D2's returns desk: world, agent, study with reviewers, a judge and replayed practice
 examples/invoices/    D3's invoice intake: two procedures, three clients, routing, discover, and scopes
 examples/learning/    A5 live: learning problems from the domains, learner tournaments, and a design search
+examples/scale/       the loop at scale with scripted models: a stream of 100,000 requests, and a load test
 tests/                unit tests, and parity tests that replay the study's experiments
 ```
