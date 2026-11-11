@@ -65,6 +65,8 @@ def test_a_week_marked_sensitive_is_booked_wrongly_by_every_stale_reading_of_the
             assert not desk_stream._first_answer_is_right(request, guessed, right)
     texts = [request["text"] for day in stream.days for request in stream.served(day)]
     assert len(set(texts)) == len(texts)  # no two requests share their words, so none is served from another's reply
+    outside = [request["text"] for day in stream.days for request in stream.served(day) if request["asked"] == "out"]
+    assert outside and not any("remind" in text.lower() for text in outside)  # an ambiguous label is left out
 
 
 async def test_a_soak_serves_the_short_stream_with_all_three_assistants_and_measures_the_criteria(

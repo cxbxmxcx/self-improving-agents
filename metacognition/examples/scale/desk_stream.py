@@ -374,6 +374,10 @@ class Stream:
         bank = self.banks[group]
         key = BOOKING.get(kind) or ("near_miss" if kind == "near" else "out_of_scope")
         templates, filled = bank[key], fields(base, bank)
+        if key == "out_of_scope":
+            # A reminder is something a calendar assistant may reasonably put on the calendar. The brief gave one as
+            # an example of work outside the job, so each group wrote one, and those seven are left out.
+            templates = [template for template in templates if "remind" not in template.lower()]
         for step in range(len(templates)):  # the next template if these words have been used already
             text = templates[(turn + step) % len(templates)].format(**filled)
             if text not in self._texts:
