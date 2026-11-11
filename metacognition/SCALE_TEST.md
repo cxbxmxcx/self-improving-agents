@@ -195,7 +195,25 @@ The stream is built by `examples/scale/desk_stream.py`, and these are its partic
 |---|---|---|
 | Calendar assistant | The book's example, with the most evidence so far | Built, and soaked with scripted models |
 | Invoices or billing | A desk that already passed at small scale, with a different shape of work | Built; needs a generator for thousands of tasks |
-| A desk we did not write | Requests written by real people, with labels we did not choose | Not built; needs two public datasets, see section 10 |
+| A desk we did not write | Requests written by real people, with labels we did not choose | Built as a bank's support inbox, and soaked with scripted models; see below |
+
+### The desk we did not write
+
+`examples/inbox/` is a bank's support inbox. Its messages were written by real people and labeled by the datasets' own annotators: Banking77's 13,083 customer queries in 77 topics (CC BY 4.0), and from CLINC150 (CC BY 3.0) the 1,200 queries outside every intent it covers and the queries of four banking intents that mean exactly one of Banking77's topics. Both were downloaded on November 11 with the author's permission and are kept outside git.
+
+The assistant reads a message, decides its topic, and files one ticket for the team the bank's routing policy names, urgent or not, or no ticket when the help pages answer that topic or the message is not about the bank at all. The checker judges the team and the urgency against the policy in force, and not the topic named on the ticket, since two topics can share a team. The routing policy is ours. The function the loop learns, `route_ticket(topic, customer_id)`, applies it, and every assistant starts with the same one, learned from forty messages before the stream.
+
+| Day | Change on the inbox | What it tests |
+|---|---|---|
+| 5 | The policy moves disputed payments to a new Disputes team, which keeps them for premium customers too | A rule changes under a learned function |
+| 8 | Queries from CLINC150's writers start arriving, a tenth of traffic | The way people word requests shifts |
+| 11 | The policy service does not answer for one message in ten | A dependency misbehaves |
+| 14 | Messages about top-ups start arriving, about a seventh of traffic | A new kind of work |
+| 17 | The policy narrows premium care to the metal plan | The same rule changes a second time |
+
+A tenth of the messages are out of scope, and about one in eight are answered from the help pages, so about a fifth need no ticket. Banking77's training split supplies the stream, and its test split what is held back each day and the final exam. Once the policy has changed, a third of the messages that need a ticket are chosen from the ones the change decides, and with those it decides by itself, about half are.
+
+The soak found two faults before any paid call. The decision tier marks a message that needs no action with the word `handoff`, and the inbox had used its own word, so every correct read-only answer counted as lost. And the search repeats measured the agent's floor with recorded runs, which put the held-out messages into the first search's experience; they are now measured frozen, on a held-out set of their own.
 
 ## 6. Arms and measures
 
@@ -275,6 +293,6 @@ The parts run one after another and alone on the machine: about three hours for 
 | 2 | The method changes in section 4 | Decided on November 11: changes 1 to 8 are made and tested without a model, and the method is frozen with them |
 | 3 | Programs that take several actions | Leave out of this test, and decide after its results |
 | 4 | Which desks, and in what order | Calendar first under a $40 cap, then review; the second desk and the outside desk after that |
-| 5 | The outside desk's data | Two public sets of requests written by real people, Banking77 (about 13,000 banking queries in 77 categories, CC BY 4.0) and the out-of-scope queries of CLINC150 (CC BY 3.0). Both need a download, which needs the author's permission |
+| 5 | The outside desk's data | Decided on November 11: downloaded. The inbox is built and soaked, and its paid run waits for its own cap |
 | 6 | Committing this plan | Commit the criteria before any run, so they cannot move afterward |
 | 7 | Re-testing by day | Decided on November 11: yes. It is change 6 in section 4, and on the scripted stream the fast path was back within 9 requests of each change |
