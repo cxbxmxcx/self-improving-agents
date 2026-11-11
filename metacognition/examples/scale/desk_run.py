@@ -85,13 +85,13 @@ def file_spend(folder: Path) -> dict[str, dict[str, float]]:
 class Transports:
     """The language models and the decision model of one part: scripted for a soak, else recordings under a cap."""
 
-    def __init__(self, args: argparse.Namespace, part: str) -> None:
+    def __init__(self, args: argparse.Namespace, part: str, scripted: tuple[Any, Any] | None = None) -> None:
         self.args, self.part, self.folder = args, part, args.recorded / part
         self.scripted = bool(args.soak)
         self.spend: Spend | None = None
-        if self.scripted:
-            self._models = Models(careless=0.2, struggles=0.3, stale=0.15)
-            self._jev = Jev(misread=0.01, misroute=0.02)
+        if self.scripted:  # another desk passes its own scripted models
+            self._models, self._jev = scripted or (Models(careless=0.2, struggles=0.3, stale=0.15),
+                                                   Jev(misread=0.01, misroute=0.02))
             return
         if args.record:
             from dotenv import load_dotenv
@@ -167,7 +167,7 @@ def _row(arm: str, phase: str, task: dict[str, Any], *, right: bool, outcome: st
     events = [event for event in (report.events if report is not None else [])
               if not event.startswith(ROUTINE) or "failed" in event]
     return {"arm": arm, "phase": phase, "day": task.get("day"), "seq": task.get("seq"), "id": task["id"],
-            "asked": task["asked"], "group": task["group"], "sensitive": bool(task.get("sensitive")),
+            "asked": task["asked"], "group": task.get("group", ""), "sensitive": bool(task.get("sensitive")),
             "outage": bool(task.get("outage")), "right": right, "outcome": outcome,
             "effort": getattr(report, "effort", None), "memory": getattr(report, "memory", None),
             "dollars": float(getattr(cost, "dollars", 0.0) or 0.0),
@@ -176,9 +176,10 @@ def _row(arm: str, phase: str, task: dict[str, Any], *, right: bool, outcome: st
             "booked": len(getattr(world, "booked", []) or []), "events": events, "failed": failed}
 
 
-async def serve_one(arm: str, phase: str, agent: Any, task: dict[str, Any]) -> dict[str, Any]:
+async def serve_one(arm: str, phase: str, agent: Any, task: dict[str, Any], world_for: Any = World
+                    ) -> dict[str, Any]:
     """One request served online: the loop records it, judges it, and may quarantine, relearn or switch off."""
-    world = World(task)
+    world = world_for(task)
     config = RunConfig(max_tool_calls=24, case_id=task["id"], case_data=task)
     try:
         result = await Runner.run(agent, task["text"], context=world, max_turns=16, run_config=config)
@@ -191,12 +192,12 @@ async def serve_one(arm: str, phase: str, agent: Any, task: dict[str, Any]) -> d
 
 
 async def serve_frozen(arm: str, agent: Any, meta: Any, tasks: list[dict[str, Any]], effort: str,
-                       at_once: int = 6) -> list[dict[str, Any]]:
+                       at_once: int = 6, world_for: Any = World) -> list[dict[str, Any]]:
     """Requests served with nothing recorded and nothing learned, at one reasoning level."""
     slots = asyncio.Semaphore(at_once)
 
     async def one(task: dict[str, Any]) -> dict[str, Any]:
-        world = World(task)
+        world = world_for(task)
         config = RunConfig(metacognition_mode="frozen", effort=effort, max_tool_calls=24, case_id=task["id"],
                            case_data=task)
         async with slots:

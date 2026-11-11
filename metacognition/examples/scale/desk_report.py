@@ -182,7 +182,10 @@ def report(folder: Path) -> dict[str, Any]:
         out["payback_against_loop"] = payback(full, theirs["dollars_per_request"] + loop_costs["learning"]
                                               / max(1, loop_costs["requests_whole_stream"]))
     # ---- after every change
-    from examples.scale.desk_stream import plan
+    if full["settings"].get("desk") == "inbox":
+        from examples.inbox.stream import plan
+    else:
+        from examples.scale.desk_stream import plan
 
     for day in plan(full["settings"]["days"]):
         if day.change:
