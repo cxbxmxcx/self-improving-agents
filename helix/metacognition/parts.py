@@ -284,9 +284,11 @@ class GateResult:
 class Gate:
     """Admit a version only when it clears the bar on cases it never learned from.
 
-    `cases` are case ids to practice on. Or set `holdout`: the last `holdout`
-    accepted runs since the procedure went untrusted are held back from the
-    learner and become the cases, so relearning waits until there are enough.
+    `cases` are case ids to practice on, or a mapping from each procedure's
+    name to its own case ids when a deployment has several procedures. Or set
+    `holdout`: the last `holdout` accepted runs since the procedure went
+    untrusted are held back from the learner and become the cases, so
+    relearning waits until there are enough.
 
     `practice` is how the gate tries a candidate on its cases, when that differs
     from how the learner practices: the learner can replay recorded runs while
@@ -294,11 +296,17 @@ class Gate:
     the same forms as Metacognition's `practice` and defaults to it.
     """
 
-    cases: list[str] | None = None
+    cases: list[str] | dict[str, list[str]] | None = None
     holdout: int = 0
     bar: float = ADEQUATE
     min_cases: int = 1
     practice: Any = None
+
+    def for_procedure(self, name: str) -> list[str]:
+        """The cases that judge `name`: its own when the gate holds cases by procedure, else the gate's."""
+        if isinstance(self.cases, dict):
+            return list(self.cases.get(name) or [])
+        return list(self.cases or [])
 
     async def check(self, source: str, practice: Practice, cases: list[str]) -> GateResult:
         if len(cases) < self.min_cases:

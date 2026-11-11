@@ -195,7 +195,127 @@ async def test_a_trusted_function_can_be_put_through_its_own_gate_again():
     assert await meta.recheck("order_status") is None  # and nothing is trusted now
 
 
+# ------------------------------------------------------------ a deployment with several procedures
+
+@procedure(api=[read_order])
+def order_weight(order_id: str) -> dict:
+    """Work out what an order weighs.
+
+    Returns: {"grams": int}.
+    """
+    ...
+
+
+async def test_a_gate_can_hold_cases_for_each_procedure_and_a_running_loop_can_take_on_a_new_one():
+    tried: list[tuple[str, str]] = []
+
+    async def practice(source: str, case_id: str) -> tuple[float, str, str]:
+        tried.append((source.split("(")[0].removeprefix("def "), case_id))
+        return 1.0, "tried", ""
+
+    meta = Metacognition([order_status], verifier=lambda ctx, result: True, learning="inline", practice=practice)
+    meta.install("order_status", STATUS)
+    meta.add_procedure(order_weight)  # a new kind of work arrives after the deployment has started
+    assert meta.store.trusted("order_weight") is None and "order_weight" in meta._descriptions
+    meta.install("order_weight", 'def order_weight(api, order_id: str) -> dict:\n    return {"grams": 100}\n')
+    meta.gate = Gate(cases={"order_status": ["s1", "s2"], "order_weight": ["w1"]})
+    assert (await meta.recheck("order_status")).total == 2 and (await meta.recheck("order_weight")).total == 1
+    assert tried == [("order_status", "s1"), ("order_status", "s2"), ("order_weight", "w1")]
+    assert Gate(cases=["a", "b"]).for_procedure("anything") == ["a", "b"]  # one list judges every procedure
+    assert Gate(cases={"order_status": ["s1"]}).for_procedure("order_weight") == []
+
+
+class Chooser:
+    """A decision model that answers which procedure a request needs, from one word in the request."""
+
+    name = "chooser"
+
+    def __init__(self) -> None:
+        self.asked: list[dict[str, Any]] = []
+
+    async def ask_with_usage(self, state: Any, questions: dict[str, Any]) -> tuple[dict[str, Any], Any]:
+        from helix.deciders import Answer, DecisionUsage
+
+        self.asked.append({"state": state, "options": list(questions["procedure"].criteria)})
+        chosen = "order_weight" if "weigh" in state["request"] else "order_status"
+        return {"procedure": Answer("choice", chosen, 0.9)}, DecisionUsage(calls=1, input_tokens=80, dollars=0.00004,
+                                                                         seconds=0.2)
+
+
+async def test_a_decision_model_can_pick_the_procedure_a_request_needs():
+    """Two kinds of request can read alike word for word. Matched by their words, a request went to the wrong
+    procedure about one time in five, and a procedure learned from runs that were not its own."""
+    chooser = Chooser()
+    meta = Metacognition([order_status], verifier=lambda ctx, result: True, learning="inline", recall_k=1,
+                         route_with=chooser, executor="guarded")
+    meta.install("order_status", STATUS)
+    agent = Agent(name="Shop", instructions="Ship orders.", tools=[read_order, ship], model="gpt-5.4-mini",
+                  metacognition=meta)
+
+    async def offered(request: str) -> tuple[list[str], float]:
+        with ScriptedModel([text("Done.")]).active():
+            result = await Runner.run(agent, request, context=Shop(), run_config=RunConfig(case_id=request))
+        return result.metacognition.matched, result.cost.dollars
+
+    assert (await offered("What does O-1 weigh?"))[0] == ["order_status"] and chooser.asked == []  # one procedure
+    meta.add_procedure(order_weight)
+    meta.install("order_weight", 'def order_weight(api, order_id: str) -> dict:\n    return {"grams": 100}\n')
+    weighed, cost = await offered("What does O-2 weigh?")
+    assert weighed == ["order_weight"] and (await offered("Where is O-3?"))[0] == ["order_status"]
+    assert chooser.asked[0]["options"] == ["order_status", "order_weight"]
+    assert cost >= 0.00004  # and the judgment is charged to the run that needed it
+
+
+@pytest.mark.parametrize(("confirm", "still_passes", "kept"),
+                         [(True, True, True), (True, False, False), (False, True, False)])
+async def test_a_procedure_that_still_passes_its_own_gate_is_not_quarantined(confirm, still_passes, kept):
+    """Two rejected runs in four uses quarantine a procedure, and relearning costs builder calls. The runs can be
+    rejected for the agent's own mistake, and over thousands of requests that happens."""
+    async def practice(source: str, case_id: str) -> tuple[float, str, str]:
+        return (1.0 if still_passes else 0.0), "tried", ""
+
+    meta = Metacognition([order_status], verifier=lambda ctx, result: {"success": False, "reason": "not shipped"},
+                         learning="inline", relearn_after=10**9, executor="guarded", practice=practice,
+                         gate=Gate(cases=["g1", "g2"]), confirm_quarantine=confirm)
+    meta.install("order_status", STATUS)
+    agent = Agent(name="Shop", instructions="Ship orders.", tools=[read_order, ship], model="gpt-5.4-mini",
+                  metacognition=meta)
+    events: list[str] = []
+    for n in range(2):
+        with ScriptedModel([call("order_status", {"order_id": f"O-{n}"}), text("I could not ship it.")]).active():
+            result = await Runner.run(agent, f"Ship O-{n}.", context=Shop(), run_config=RunConfig(case_id=f"c{n}"))
+        events += result.metacognition.events
+    assert (meta.store.trusted("order_status") is not None) is kept
+    assert any("still passes its own gate 2/2, so it stays trusted" in event for event in events) is (
+        confirm and still_passes)
+    assert any(event.startswith("detector: quarantined order_status@1") for event in events) is not kept
+    if kept:  # and the two rejections are not counted a second time
+        assert meta.store.state("order_status")["window"] == []
+
+
 # ------------------------------------------------------------ a learner asked late
+
+@pytest.mark.parametrize("limit", [None, 6])
+def test_a_learner_can_be_handed_only_runs_whose_verdict_says_something_about_its_procedure(limit):
+    """A near miss is right when nothing is done. As experience it cost a builder call for a candidate written from
+    a run in which the function was never needed."""
+    def source(n: int) -> str:
+        return "intent" if n % 3 == 0 else "verifier"
+
+    for selective, expected in ((False, 12), (True, 8)):
+        meta = Metacognition([order_status], verifier=lambda ctx, result: True, learning="inline",
+                             gating_sources=("verifier",), experience_limit=limit,
+                             learn_from_gating_runs=selective)
+        meta.install("order_status", STATUS)
+        meta.quarantine("order_status")
+        for n in range(12):
+            record(meta.store, n, matched=("order_status",))
+            meta.store.set_verdict(f"r{n}", Verdict(True, "ok", source(n)))
+        experience = meta._experience("order_status")
+        assert len(experience) == min(expected, limit or expected)
+        if selective:
+            assert all(int(e.task_id[1:]) % 3 != 0 for e in experience)
+
 
 def test_a_learner_is_handed_only_the_latest_runs_when_its_experience_is_limited():
     for limit, expected in ((None, 30), (8, 8)):

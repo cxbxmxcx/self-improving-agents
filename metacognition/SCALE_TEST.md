@@ -158,15 +158,17 @@ The requests held back each night come from that day's own conditions. The strea
 
 ## 4. Changes to the method before it is frozen
 
-Each change answers something we measured. Six of the seven are made, as settings that a long deployment turns on, and each has run on the scripted streams. Everything under `helix/` is then frozen at one commit, and nothing there changes until every run in this plan is done.
+Each change answers something we measured. All but the last are made, as settings that a long deployment turns on, and each has run with scripted models. Everything under `helix/` is frozen at the commit that holds this section, and nothing there changes until every run in this plan is done.
 
-1. **Held-back requests come from the day's traffic.** Each day a share of that day's requests is set aside and is never served by the system under test, never shown to a component, and never shown to the builder. One part is that night's gate, one part is what a search may measure on, and six weeks judge a relearned function. In production these would be shadow requests labeled by their verified outcome, and in the simulation they are fresh requests drawn under the day's conditions. *Done in the scripted stream. The paid stream needs the same.*
+1. **Held-back requests come from the day's traffic.** Each day a share of that day's requests is set aside and is never served by the system under test, never shown to a component, and never shown to the builder. One part is that night's gate, one part is what a search may measure on, and a few weeks judge a relearned function. In production these would be shadow requests labeled by their verified outcome, and in the simulation they are fresh requests drawn under the day's conditions. *Done in both streams.*
 2. **Improvement attempts are limited for each gap, not for a lifetime.** The count of attempts and of searches starts again when a program is installed or re-tested successfully. A gap that stays open still stops costing money after its attempts are used. *Done, under `long_running`.*
 3. **The learning budget counts a day in runs, not on the wall clock.** A run that compresses weeks into hours otherwise hits a daily limit that was meant for real days. *Done, with `runs_per_day`.*
 4. **A stale function under a program is found before anyone rewrites the program.** When a re-test fails or an action is switched off, each function the program stands on goes through its own gate first. *Done, under `long_running`.*
 5. **While a function is quarantined, the controller's raised reasoning wins over a component's route.** In listing 7.4 three of Wednesday's six failures happened because a route kept the agent at low or no reasoning during the quarantine. *Done, under `long_running`.*
 6. **A switched-off action is tested again as soon as the function under it has been relearned.** Waiting for the night left the fast path off for the rest of every day on which something changed. *Done, with `retest_by_day`.*
-7. **Optional: a decision program may take several actions.** This would move two-meeting requests off the language model and is the first step toward the goal-solving half of the claim. It is a larger change, and the test runs without it. *Left out.*
+7. **A function is put through its own gate before the detector may quarantine it, and a learner is handed only the runs that say something about its function.** Two rejected runs in four uses quarantine a function, and the runs can be rejected for the agent's own mistake. Over thousands of requests that would start paid relearnings of a function with nothing wrong with it. A near miss is right when nothing is done, and as experience it cost a builder call for a candidate written from a run that never needed the function. *Done, with `confirm_quarantine` and `learn_from_gating_runs`.*
+8. **A decision model picks the function a request needs once an assistant has more than one.** Matched by their words, requests for the two kinds of booking went to the wrong function between one time in eight and one time in three, across seven writers. *Done, with `route_with`; a gate can hold cases for each function, and a running assistant can be given a new function to learn.*
+9. **Optional: a decision program may take several actions.** This would move two-meeting requests off the language model and is the first step toward the goal-solving half of the claim. It is a larger change, and the test runs without it. *Left out.*
 
 ## 5. The streams
 
@@ -174,39 +176,53 @@ Each desk gets one stream of 4,000 requests, served as 20 days of 200 with a nig
 
 | Day | Change on the calendar desk | What it tests |
 |---|---|---|
-| 5 | Dana rewords her note, and the checker enforces 30 minutes | A rule changes under a learned function |
-| 8 | Two new groups of writers start sending requests | The way people word requests shifts |
-| 11 | The calendar read tool fails on one call in ten, for one day | A dependency misbehaves |
+| 5 | Dana rewords her note to ask for half an hour, and the checker enforces 30 minutes | A rule changes under a learned function |
+| 8 | Two more groups of writers start sending requests | The way people word requests shifts |
+| 11 | The calendar cannot be read for one request in ten, for one day | A dependency misbehaves |
 | 14 | Requests for the same meeting at the same time on several days arrive, 15% of traffic | A new kind of work |
-| 17 | Dana changes her note again, to 45 minutes | The same rule changes a second time |
+| 17 | Dana changes her note again, to three quarters of an hour, and the checker enforces 45 minutes | The same rule changes a second time |
 
-The mix is 50% requests for one meeting, 12% for two meetings, 30% near misses and 8% out of scope, before the new kind of work arrives. Separate writers produce new wording banks from a brief that describes only the assistant's job: six groups of about 40 templates each, with two groups held until day 8. A seventh group is used only for a final exam of 200 requests that nothing sees before the last night.
+The stream is built by `examples/scale/desk_stream.py`, and these are its particulars.
+
+- **Mix.** Half the requests ask for one meeting, 12% for two, 30% are near misses and 8% are out of scope. From day 14 the new kind takes 15% and the rest keep their proportions.
+- **Weeks.** Every request has a week of its own, drawn as Chapter 6 draws its weeks, and words no other request has, so no reply recorded for one request can answer another. The exception is out-of-scope requests: several of their templates name nobody, so about one request in forty repeats an earlier out-of-scope request word for word and gets the reply that one got. Once a note has changed, every other request for a booking sits on a week the change decides: Dana is invited, and each reading of her note that a function written before the change would make books a start the checker rejects.
+- **Words.** Seven separate writers each wrote a group of 40 request templates from a description of the assistant's job and of the placeholders. None saw the method or any result. Four groups send requests from day 1, two more from day 8, and the seventh words a final exam of 200 requests that nothing sees before the last night. The templates are in `examples/scale/banks_calendar.json` exactly as returned.
+- **Held back.** Each day two sets of 16 requests under that day's conditions are never served: one is the gate, the other is what a search may measure on. Twelve weeks, and six of the new kind from day 14, judge a relearned function.
+- **The new kind of work.** On day 14 the team declares what the new work needs, as a second function's contract with no code. The loop has to learn that function from the agent's own accepted runs, and until it does the agent serves those requests with raised reasoning.
+- **The second change of note.** It is worded in words, not digits, so that a function relearned for "half an hour" is stale again. A function that had learned to read any wording would pass it, and that would be a result too.
 
 | Desk | Why it is in the test | Status |
 |---|---|---|
-| Calendar assistant | The book's example, with the most evidence so far | Built; needs the stream, the banks, and a 45-minute note |
+| Calendar assistant | The book's example, with the most evidence so far | Built, and soaked with scripted models |
 | Invoices or billing | A desk that already passed at small scale, with a different shape of work | Built; needs a generator for thousands of tasks |
 | A desk we did not write | Requests written by real people, with labels we did not choose | Not built; needs two public datasets, see section 10 |
 
 ## 6. Arms and measures
 
-Three arms serve requests from the same stream. The agent alone at high reasoning, with no learned function, is what a team deploys first, and it is measured on 150 requests spread across the stream. The agent with Chapter 6's loop serves every fifth request online, 800 in all, and the full system serves all 4,000 online.
+Three assistants serve requests from the same stream (`examples/scale/desk_run.py`). The agent alone at high reasoning, with no learned function, is what a team deploys first, and it serves every 25th request with nothing learned, 160 in all. The agent with Chapter 6's loop serves every fifth request online, 800 in all. The full system serves all 4,000 online, with a night after each day. All three have the settings of section 4 that apply to them, so the full system differs from the loop by its decision tier and nothing else.
 
 | Measure | How it is taken |
 |---|---|
-| Cost per request | From each call's recorded token usage, in total and split into serving, learning and search |
+| Common requests | The requests two assistants both served: 800 with the loop, 160 with the agent alone |
+| Serving cost | What a request's own model and decision-model calls cost, from each call's recorded token usage |
+| Learning cost | Everything else the assistant's recordings hold: every builder call, and the agent's runs at night |
+| Cost of the whole stream | An assistant that served a share of the stream is scaled to all of it: its serving cost times 5 or 25, plus its learning cost once, since learning follows changes and not volume |
 | Response time | Recorded model and decision-model time; mean, median and 95th percentile |
 | Share right | The desk's checker on every request, with a 95% interval |
-| Wrong actions | Counted separately for decision programs and for the agent |
-| Recovery | Requests from each change until the share right over 40 requests is back within 3 points of its earlier level |
-| Repeat consistency | 200 requests served three times each, counting those with the same verdict all three times |
+| Wrong actions | Requests answered wrongly by booking something, counted separately for decision programs |
+| Recovery | Requests from each change until the share right over 40 requests is back within 3 points of its level over the 200 requests before the change |
+| Repeat consistency | After the last night the full system and the loop take the final exam three times, each from new recordings, with nothing learned, quarantined or switched off in between. The measure is the number of the 200 requests with the same verdict in all three servings, so it counts only what the models answer differently |
 | Payback | The request at which the full system's cumulative cost falls below each baseline's and stays there |
 
-Search repeats are separate from the stream. Five independent searches start from the same seed on each desk, with different random seeds and labels, and each admitted component serves the desk's 52 held-out requests.
+Search repeats are separate from the stream. Five independent searches start from the same component on Chapter 7's own requests, each with the day of experience the chapter recorded and none of the builder's recorded replies, so every search asks the builder afresh. Each admitted component serves that chapter's 52 held-out requests.
+
+`examples/scale/desk_report.py` computes every measure and criterion, the same way for a scripted soak and for the paid run.
+
+The whole stream was soaked first with scripted models that misbehave: an agent that acts on one near miss in five and books one day of three of the new kind of work when it has no function for it, a decision model that misreads one near miss in a hundred and sends one request in fifty to the wrong function, and a builder that writes one function in seven for the note before the one in force. All four parts ran to the end with no fault in the driver. The soak's numbers say nothing about the claim, since scripted models take no time and cost what they are scripted to.
 
 ## 7. Pass criteria
 
-Each criterion is measured on one desk and reported as measured. The comparison in criteria 1 to 5 is with the agent that has Chapter 6's loop, on the 800 requests both arms served. None of these numbers changes after the first run.
+Each criterion is measured on one desk and reported as measured. The comparison in criteria 1 to 5 is with the agent that has Chapter 6's loop, on the 800 requests both arms served, except that criterion 2 compares the cost of the whole stream and the first half of criterion 5 counts every request a program served. Criterion 9 compares the whole stream's cost, and the share right on the 160 requests all three served. None of these numbers changes after the first run.
 
 | # | Criterion | Pass if |
 |---|---|---|
@@ -229,31 +245,32 @@ Criterion 2 is the one most at risk, and that is deliberate. On the calendar des
 1. One run per desk. There are no reruns because a result is poor, and a run the cap stops counts as what it reached.
 2. A crash from a bug in a desk or a driver is fixed and the run starts over, and the report says so.
 3. Separate writers who see neither the method nor any result write all request text.
-4. A scripted soak of the whole stream, with an agent and a builder that misbehave, runs before any paid call. Each paid run is pre-flighted in replay mode and runs alone on the machine.
+4. A scripted soak of the whole stream, with an agent and a builder that misbehave, runs before any paid call. Each paid run is pre-flighted in replay mode and runs alone on the machine. The parts run one at a time in this order, each under its own cap and each replayed with no key before the next starts: the live check, the agent alone, the loop, the full system, and the search repeats, whose cap is what remains of the desk's $40.
 5. Nobody tunes against the stream or the final exam. A defect in a world, such as an impossible task, may be fixed before the paid run and nothing else.
 6. Recordings of about 30 MB per desk are kept compressed outside git, and the results and the figures' data are committed.
 
 ## 9. Cost and run time
 
-The estimates use what the Chapter 7 recordings measured: about $0.0022 and 2.8 seconds for a request the agent serves, $0.00015 and 0.3 seconds for one a program serves, $1.40 to $2.40 for a search, and $0.17 to $1.20 for relearning a function. My estimate for the GEPA run was low by half, so these are ranges and each desk has a hard cap.
+The estimates use what the Chapter 7 recordings measured: about $0.0022 and 2.8 seconds for a request the agent serves, $0.00015 and 0.3 seconds for one a program serves, $1.40 to $2.40 for a search, and $0.17 to $1.20 for relearning a function. My estimate for the GEPA run was low by half, so these are ranges and each part has a hard cap. A recording stops before a call that could pass its part's cap, and a part the cap stops counts as what it reached.
 
-| Part, per desk | Estimate |
-|---|---|
-| Full system, 4,000 requests with nights | $8 to $15 |
-| Agent with Chapter 6's loop, 800 requests | $3 to $6 |
-| Agent alone at high reasoning, 150 requests | $3 |
-| Repeat consistency, 200 requests three times, two arms | $2 |
-| Five search repeats | $8 to $13 |
-| Total, with a cap of $40 | $24 to $39 |
+| Part, calendar desk | Estimate | Cap |
+|---|---|---|
+| Full system: 4,000 requests with nights, the exam and two repeats | $10 to $17 | $18.50 |
+| Agent with Chapter 6's loop: 800 requests, the exam and two repeats | $5 to $6 | $6.50 |
+| Agent alone at high reasoning: 160 requests | $1 | $2.00 |
+| Five search repeats | $7 to $12 | What remains of $40, about $11 |
+| A live check of the wiring before the runs | under $0.50 | $0.50 |
+| The decision model's calls, which the caps do not stop | about $0.60 | |
+| Total | $24 to $37 | $40 |
 
-A desk takes about three hours of run time, because an online stream is served one request at a time and a real model takes seconds to answer. Building the streams, the banks and the soak costs nothing in model calls. The desk we did not write needs more building than the other two.
+The parts run one after another and alone on the machine: about three hours for the full system, a little over an hour for the loop, and under an hour for the rest. Building the streams, the banks and the soak costs nothing in model calls. The desk we did not write needs more building than the other two.
 
 ## 10. Decisions for the author
 
 | # | Decision | Recommendation |
 |---|---|---|
 | 1 | The scope in section 1 | State it in the chapter as the conditions the pattern needs: recurring kinds of request, a verdict on outcomes, single actions, and a strong builder |
-| 2 | The method changes in section 4 | Decided on November 11: changes 1 to 6 are made and tested without a model, and the method is frozen with them |
+| 2 | The method changes in section 4 | Decided on November 11: changes 1 to 8 are made and tested without a model, and the method is frozen with them |
 | 3 | Programs that take several actions | Leave out of this test, and decide after its results |
 | 4 | Which desks, and in what order | Calendar first under a $40 cap, then review; the second desk and the outside desk after that |
 | 5 | The outside desk's data | Two public sets of requests written by real people, Banking77 (about 13,000 banking queries in 77 categories, CC BY 4.0) and the out-of-scope queries of CLINC150 (CC BY 3.0). Both need a download, which needs the author's permission |

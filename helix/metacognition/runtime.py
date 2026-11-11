@@ -229,6 +229,9 @@ class Metacognition:
         attribution: str = "called",
         relearn_after: int = 4,
         experience_limit: int | None = None,
+        route_with: Any = None,
+        confirm_quarantine: bool = False,
+        learn_from_gating_runs: bool = False,
         learning: str = "background",
         budget: LearningBudget | None = None,
         approval: str | None = None,
@@ -282,6 +285,16 @@ class Metacognition:
         # The most runs a learner is handed. Without a limit an attempt that comes late gets every run since the
         # quarantine, and a learner that writes a candidate for each run costs more the longer it waited.
         self.experience_limit = experience_limit
+        # A decision model that picks the procedure a request needs, once there is more than one. Requests of two
+        # kinds can read alike word for word, and a request sent to the wrong procedure teaches it the wrong thing.
+        self.route_with = route_with
+        # Before the detector quarantines a procedure, put it through its own gate. Rejected runs can come from the
+        # agent's own mistake or from a request of a new kind, and a procedure that still passes is not stale.
+        self.confirm_quarantine = confirm_quarantine
+        # Hand a learner only the runs whose verdict could count for or against its procedure. A run that was right
+        # because the request asked for nothing to be done says nothing about a function, and a learner that writes
+        # a candidate for each accepted run would pay a builder call for it.
+        self.learn_from_gating_runs = learn_from_gating_runs
         self.learning = learning
         self.approval = approval or ("auto" if verifier is not None and not isinstance(verifier, Judge) else "human")
         self.gating_sources = tuple(gating_sources)
@@ -298,6 +311,14 @@ class Metacognition:
                 self.store.add_version(name, proc.reference, state="trusted", created_by="human")
 
     # ------------------------------------------------------------ managing procedures
+
+    def add_procedure(self, procedure: Procedure) -> None:
+        """Take on a new kind of work after the deployment has started. The procedure joins those a request can
+        match, untrusted until a version is installed or learned."""
+        self.procedures[procedure.name] = procedure
+        self._descriptions[procedure.name] = procedure.description
+        if procedure.reference is not None and not self.store.versions(procedure.name):
+            self.store.add_version(procedure.name, procedure.reference, state="trusted", created_by="human")
 
     def install(self, name: str, source: str, *, created_by: str = "human") -> int:
         """Trust `source` as the procedure's live version now (a person's promotion)."""
@@ -323,7 +344,7 @@ class Metacognition:
         says something about today only if the gate's cases are kept current.
         """
         current = self.store.trusted(name)
-        cases = list(self.gate.cases or [])
+        cases = self.gate.for_procedure(name)
         if current is None or not cases or (self.practice is None and self.gate.practice is None):
             return None
         return await self.gate.check(current["source"], self._practice_for(name, self.gate.practice), cases)
@@ -364,6 +385,18 @@ class Metacognition:
             entries = [(name, v["version"], v["source"], v["created_by"]) for name, v in trusted]
             self._tiers[key] = await self._tier_for(entries)
         return self._tiers[key]
+
+    async def _judged_match(self, request: str, matched: list[str]) -> tuple[list[str], dict[str, Any]]:
+        """The one procedure a decision model says `request` needs, and what asking cost. An answer that names no
+        procedure leaves the lexical match as it was."""
+        from helix.deciders.base import Choice, ask_measured
+
+        question = Choice("Which of these does `request` need?", dict(self._descriptions))
+        answers, usage = await ask_measured(self.route_with, {"request": request}, {"procedure": question})
+        chosen = str(answers["procedure"].value)
+        call = {"dollars": usage.dollars, "seconds": usage.seconds, "input_tokens": usage.input_tokens,
+                "hook": "route"}
+        return ([chosen] if chosen in self.procedures else matched[:1]), call
 
     def _api_tools(self) -> list[Any]:
         tools: dict[str, Any] = {}
@@ -421,8 +454,13 @@ class Metacognition:
         model = model or config.model or getattr(agent, "model", None) or DEFAULT_MODEL
         case_id = config.case_id or "case-" + hashlib.sha1(request.encode("utf-8")).hexdigest()[:12]
         matched, scores = self.router.match(request, self._descriptions)
+        judged = None
+        if self.route_with is not None and len(self.procedures) > 1 and mode != "practice":
+            matched, judged = await self._judged_match(request, matched)
         plan = RunPlan(f"run_{uuid.uuid4().hex}", mode, case_id, config.case_data, request, matched=matched,
                        skill_k=self.router.k, model=model, scores=scores)
+        if judged is not None:
+            plan.decider_calls.append(judged)  # the judgment is part of what this run cost
         if mode == "practice":
             name, source = config.practice_candidate
             tier = await self._tier_for([(name, 0, source, "candidate")])
@@ -486,8 +524,9 @@ class Metacognition:
         # its service failed for that reason. Neither verdict says anything about a procedure.
         blameless = plan.read_only or getattr(ctx, "unavailable", False)
         if verdict is not None and verdict.source in self.gating_sources and not blameless:
-            self._observe(called if self.attribution == "called" else plan.offered, verdict, report.events,
-                          plan.run_id)
+            suspects = self._observe(called if self.attribution == "called" else plan.offered, verdict,
+                                     report.events, plan.run_id)
+            await self._confirm(suspects, verdict, report.events)
         await self._maybe_learn(report.events)
         if self.programs is not None:
             if self.programs.after_run(plan, verdict, report.events) and self.programs.tier.long_running:
@@ -508,13 +547,17 @@ class Metacognition:
         if source in self.gating_sources:
             # A run recorded before metacog kept `called` has only `offered` to go on.
             blamed = run["offered"] if self.attribution == "offered" or run["called"] is None else run["called"]
-            self._observe([(item.split("@")[0], int(item.split("@")[1])) for item in blamed], verdict, events,
-                          run_id)
+            suspects = self._observe([(item.split("@")[0], int(item.split("@")[1])) for item in blamed], verdict,
+                                     events, run_id)
+            await self._confirm(suspects, verdict, events)
         await self._maybe_learn(events)
         return events
 
     def _observe(self, offered: list[tuple[str, int]], verdict: Verdict, events: list[str],
-                 run_id: str | None = None) -> None:
+                 run_id: str | None = None) -> list[tuple[str, int]]:
+        """Count a verdict against each procedure it is about, and quarantine one whose window fills. With
+        `confirm_quarantine` such a procedure is returned and not quarantined, for its own gate to decide."""
+        suspects = []
         for name, version in offered:
             current = self.store.trusted(name)
             if current is None or current["version"] != version:
@@ -527,15 +570,41 @@ class Metacognition:
             if run_id is not None and run_id not in counted:
                 counted = [*counted, run_id][-COUNTED:]
             state.update(window=window, recent=[entry[1] for entry in window], counted=counted)
-            if quarantine:
-                self.store.set_state(name, version, "quarantined")
-                count = self.store.count()
-                state.update(recent=[], window=[], counted=[], quarantined_at=count,
-                             next_attempt=count + self.relearn_after, reason=verdict.reason)
-                if current.get("created_by") not in (None, "human") and "trusted_at" in state:
-                    state["lasted"] = count - state["trusted_at"]  # runs a learned version served
-                events.append(f"detector: quarantined {name}@{version} ({verdict.reason})")
-                emit(kind="quarantined", procedure=name, version=version, detail=verdict.reason)
+            if quarantine and self.confirm_quarantine:
+                suspects.append((name, version))
+            elif quarantine:
+                self._withdraw(name, current, state, verdict.reason, events)
+            self.store.put_state(name, state)
+        return suspects
+
+    def _withdraw(self, name: str, current: dict[str, Any], state: dict[str, Any], reason: str,
+                  events: list[str]) -> None:
+        """Quarantine the trusted version of `name` and set its relearning. The caller stores `state`."""
+        version = current["version"]
+        self.store.set_state(name, version, "quarantined")
+        count = self.store.count()
+        state.update(recent=[], window=[], counted=[], quarantined_at=count,
+                     next_attempt=count + self.relearn_after, reason=reason)
+        if current.get("created_by") not in (None, "human") and "trusted_at" in state:
+            state["lasted"] = count - state["trusted_at"]  # runs a learned version served
+        events.append(f"detector: quarantined {name}@{version} ({reason})")
+        emit(kind="quarantined", procedure=name, version=version, detail=reason)
+
+    async def _confirm(self, suspects: list[tuple[str, int]], verdict: Verdict, events: list[str]) -> None:
+        """Put each procedure the detector would quarantine through its own gate. One that fails, or that has no
+        gate cases to be checked on, is quarantined. One that passes stays trusted and its window starts again."""
+        for name, version in suspects:
+            gate = await self.recheck(name)
+            current = self.store.trusted(name)
+            if current is None or current["version"] != version:
+                continue  # quarantined or replaced while its gate ran
+            state = self.store.state(name)
+            if gate is not None and gate.passed:
+                state.update(recent=[], window=[], counted=[])
+                events.append(f"detector: {name}@{version} was rejected often enough to quarantine and still "
+                              f"passes its own gate {gate.accepted}/{gate.total}, so it stays trusted")
+            else:
+                self._withdraw(name, current, state, verdict.reason, events)
             self.store.put_state(name, state)
 
     def _due(self, name: str, count: int) -> bool:
@@ -556,7 +625,8 @@ class Metacognition:
     def _experience(self, name: str) -> list[Episode] | None:
         """The judged runs since quarantine to learn from, or None while none of them was accepted."""
         episodes = self.store.episodes(since=self.store.state(name).get("quarantined_at", 0), procedure=name,
-                                       last=self.experience_limit)
+                                       last=self.experience_limit,
+                                       sources=self.gating_sources if self.learn_from_gating_runs else None)
         return episodes if any(e.success for e in episodes) else None
 
     async def _over_budget(self, name: str, events: list[str]) -> bool:
@@ -681,7 +751,7 @@ class Metacognition:
 
     async def _learn(self, name: str, episodes: list[Episode], events: list[str]) -> None:
         proc = self.procedures[name]
-        learn_from, cases = episodes, list(self.gate.cases or [])
+        learn_from, cases = episodes, self.gate.for_procedure(name)
         if not cases and self.gate.holdout:
             accepted = [e for e in episodes if e.success]
             if len(accepted) <= self.gate.holdout:

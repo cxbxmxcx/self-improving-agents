@@ -1,0 +1,463 @@
+{
+ "about": {
+  "what": "Request templates for the calendar desk's production-scale stream. Each group was written by a separate writer who saw only a description of the assistant's job and of the placeholders, and neither the method under test nor any result. The words are kept exactly as each writer returned them.",
+  "written": "2026-11-11",
+  "writers": {
+   "g1": "A busy executive who dictates short, direct messages",
+   "g2": "An office manager who writes polite, complete sentences",
+   "g3": "A software engineer who writes terse shorthand",
+   "g4": "A chatty colleague who buries the request in context and small talk",
+   "g5": "A new team member who writes formally and over-explains",
+   "g6": "Someone typing fast on a phone between meetings",
+   "exam": "A project coordinator who forwards requests on behalf of other people"
+  }
+ },
+ "g1": {
+  "single": [
+   "Book {minutes} minutes with {who} this week for the {topic} — {days}, {limit}.",
+   "Need a {minutes}-minute {topic} with {first_names} this week. {short_days} only, {limit}.",
+   "Get {who} on my calendar this week: {topic}, {minutes} min, {days}, {limit}.",
+   "Set up the {topic} this week — {minutes} minutes, {first_names}, somewhere {short_days}, {limit}.",
+   "{topic} with {who}. This week, {days}, {minutes} minutes, {limit}. Book it.",
+   "Find {minutes} minutes this week for a {topic} with {first_names} — {short_days} works, {limit}.",
+   "Put a {minutes}-minute {topic} on the books this week with {who}, any slot {days}, {limit}.",
+   "This week I need {first_names} for the {topic}. {minutes} minutes, {days}, {limit}.",
+   "Lock in the {topic} with {who} this week: {short_days}, {minutes} min, {limit}.",
+   "Grab {minutes} minutes {days} this week with {first_names} to cover the {topic}, {limit}.",
+   "Schedule {who} for a {topic} this week. Keep it to {minutes} minutes, {short_days}, {limit}.",
+   "One {topic} this week with {first_names}, {minutes} minutes long, anywhere {days}, {limit}."
+  ],
+  "double": [
+   "Book two separate {topic} sessions this week with {who} — both {minutes} minutes, on two different days {days}, everyone in both, {limit}.",
+   "I need the {topic} twice this week: two {minutes}-minute meetings with {first_names}, on different days within {short_days}, all of them at both, {limit}.",
+   "Set up two {minutes}-minute {topic} meetings this week, {who} in each, on two different days {days}, {limit}.",
+   "Two meetings, not one: {topic} with {first_names}, {minutes} minutes apiece, two separate days {short_days} this week, full group both times, {limit}.",
+   "Get {who} together twice this week for the {topic} — {minutes} minutes each time, two different days {days}, {limit}.",
+   "Put two {topic} sessions on the calendar this week: each {minutes} min, each with {first_names}, on different days within {short_days}, {limit}."
+  ],
+  "same_time": [
+   "Book the {topic} with {who} on {each_day} this week — {minutes} minutes each, identical start time every day, {limit}.",
+   "Same slot each day: a {minutes}-minute {topic} with {first_names} on {short_each_day} this week, starting at the same time on all of them, {limit}.",
+   "I want a standing {topic} this week — {minutes} minutes with {who} on {each_day}, same start time each day, {limit}.",
+   "Put {first_names} on my calendar {short_each_day} this week for the {topic}: {minutes} min a session, all kicking off at one and the same time, {limit}.",
+   "Repeat the {topic} on {each_day} this week with {who}, {minutes} minutes per day, every one starting at the same time, {limit}.",
+   "Schedule the {topic} with {first_names} for {minutes} minutes on {short_each_day} this week; the start time must match on every listed day, {limit}."
+  ],
+  "near_miss": [
+   "Do I already have a {topic} with {who} on the books this week?",
+   "Cancel the {topic} with {first_names} — we don't need it anymore.",
+   "Move my {topic} with {who} from {day} to {other_day}.",
+   "Just tell me when {first_names} are free {days} — don't book anything yet.",
+   "Draft the invite for a {topic} with {who}, but do not send it; I'll review first.",
+   "Hold off on the {topic} with {first_names} until I hear back from {first}.",
+   "What did we decide in the {topic} with {who} last week?",
+   "Is {first} actually confirmed for the {topic} on {day}?",
+   "Remind me how long the {topic} with {first_names} is set to run — {minutes} minutes or longer?",
+   "If {first} asks about the {topic}, tell them nothing is settled yet and leave it at that."
+  ],
+  "out_of_scope": [
+   "Order lunch for the team — sandwiches, nothing fancy.",
+   "Summarize the Q3 board deck and send me the highlights.",
+   "File my expense report from the Denver trip.",
+   "Book me a flight to Chicago and a hotel near the client's office.",
+   "Remind {first} that the deliverable is due Friday.",
+   "Pull the latest sales numbers from {who} and get them onto one page for me."
+  ],
+  "limit": {
+   "earliest": [
+    "nothing starting before {time}",
+    "no start before {time}",
+    "kick off at {time} or later"
+   ],
+   "latest_end": [
+    "wrapped up by {time}",
+    "done and out by {time}",
+    "over no later than {time}"
+   ]
+  }
+ },
+ "g2": {
+  "single": [
+   "Good morning. Could you please book a {minutes}-minute {topic} this week with {who}, some time between {days}, {limit}? Thank you kindly.",
+   "I would be grateful if you could arrange a {topic} for Maya and {first_names} this week; it should run {minutes} minutes and fall on {short_days}, {limit}.",
+   "Please find a slot this week, {days}, for a {minutes}-minute {topic} with {who}, {limit}. Much appreciated.",
+   "When you have a moment, kindly set up a {topic} with {first_names} at some point this week. It needs to be {minutes} minutes long, within {days}, and {limit}.",
+   "Would you be so kind as to put a {minutes} min {topic} on the calendar this week with {who}? Any day {short_days} works, {limit}.",
+   "A small request for this week: a {topic} of {minutes} minutes with {first_names}, to be held {days}, {limit}. Thank you in advance.",
+   "I should like to have a {topic} booked this week, please. The attendees are {who}, the length is {minutes} minutes, and the window is {days}, {limit}.",
+   "Might I trouble you to schedule, this week, a {minutes}-minute {topic} bringing together {first_names}? {days} would suit, {limit}.",
+   "Kindly reserve {minutes} minutes this week for a {topic} with {who}; please keep it to {short_days}, {limit}.",
+   "If at all possible this week, please book the {topic} with {first_names} — {minutes} minutes, on {days}, {limit}.",
+   "We need a {topic} on the books this week: {minutes} minutes with {who}, held {short_days}, {limit}. Thank you so much.",
+   "Please could you pencil in — and then confirm — a {minutes}-minute {topic} this week with {first_names}, on {days}, {limit}?"
+  ],
+  "double": [
+   "Please book two separate {topic} meetings this week, each {minutes} minutes long and each with {who} in attendance, on two different days within {days}, {limit}.",
+   "I would like two {minutes}-minute sessions of the {topic} this week with {first_names}; kindly place them on two distinct days, {short_days}, {limit}, and do make sure everyone is present at both.",
+   "Could you arrange a pair of meetings this week for the {topic}? Both should last {minutes} minutes, both should include {who}, and they must fall on two different days between {days}, {limit}.",
+   "Two bookings this week, please: the {topic} with {first_names}, {minutes} minutes apiece, one on each of two different days within {days}, {limit}. Everyone named should attend both meetings.",
+   "Kindly schedule the {topic} twice this week — two meetings of {minutes} minutes each, on two separate days {short_days}, {limit} — with {who} present at both of them.",
+   "Would you please set up two meetings this week for the {topic}, each running {minutes} minutes with the full group of {first_names}, on two different days in the {days} window, {limit}?"
+  ],
+  "same_time": [
+   "Please book the {topic} with {who} on each of {each_day} this week — one {minutes}-minute meeting per day, all of them starting at the very same time, {limit}.",
+   "I need a standing slot this week: a {minutes}-minute {topic} with {first_names} on {each_day}, with an identical start time on every one of those days, {limit}.",
+   "Kindly schedule the {topic} for {minutes} minutes with {who} on {short_each_day} this week, {limit}; the start time must be the same on each listed day, please.",
+   "Would you set up one {minutes}-minute {topic} with {first_names} on each of {each_day} this week, please, so that every session begins at exactly the same time, {limit}?",
+   "This week we need the {topic} held on {short_each_day} — a separate {minutes}-minute booking per day with {who}, each one starting at the same time as the others, {limit}.",
+   "Please arrange for {first_names} to meet Maya for a {minutes}-minute {topic} on {each_day} this week, {limit}, keeping the start time identical across all of those days."
+  ],
+  "near_miss": [
+   "Could you tell me whether a {topic} with {who} is already on Maya's calendar this week? I only wish to check — please do not book anything.",
+   "Please cancel the {topic} that is currently scheduled with {first_names} on {day}; no replacement is needed.",
+   "Would you kindly move the existing {topic} with {who} from {day} to {other_day}? I mean the booking that is already in place, not a new one.",
+   "Before we commit to anything, could you simply tell me when {first_names} are free during {days}? Please hold off on booking for now.",
+   "Might you draft an invitation for a {topic} with {who}, for my review only? Please do not send it or place anything on the calendar.",
+   "Kindly hold off on the {topic} with {first_names} for the time being; I will write again once the agenda has been settled.",
+   "What was decided at the {topic} with {who} on {day}? I missed the notes and would be grateful for a brief account of the outcome.",
+   "Has {first} accepted the invitation to the {topic} yet? I am only asking about the response, nothing more.",
+   "Please take the {topic} with {first_names} off the books entirely — it has been called off, and nothing should be put in its place.",
+   "If the {topic} with {who} were ever to move to {other_day}, would that cause any conflicts? This is purely hypothetical; please change nothing."
+  ],
+  "out_of_scope": [
+   "Could you please order lunch for the team on Friday? {first} has asked for the vegetarian option, and sandwiches would do nicely for the rest of us.",
+   "Would you be able to summarize the attached quarterly report into a single page that I can circulate to {who}?",
+   "I need to file an expense report for last month's office supplies; could you prepare the form for me, please?",
+   "Kindly look into return flights to Toronto for the end of the month, and let me know which fares seem most reasonable.",
+   "Please remind me on Thursday afternoon that the budget deliverable for {first} is due; a simple nudge will do.",
+   "Could you draft a thank-you note to {who} for their help on the audit? I will sign and send it myself."
+  ],
+  "limit": {
+   "earliest": [
+    "starting no earlier than {time}",
+    "with a start no sooner than {time}, if you please",
+    "beginning at {time} at the very earliest"
+   ],
+   "latest_end": [
+    "finished and fully wrapped up by {time}",
+    "concluded no later than {time}",
+    "with everything over by {time} at the latest"
+   ]
+  }
+ },
+ "g3": {
+  "single": [
+   "need {minutes} min {topic} w/ {first_names} this wk, {short_days}, {limit}",
+   "book {topic} this week pls — {minutes} minutes, attendees: {who}, window {days}, {limit}",
+   "{topic} w/ {who} — {minutes} min slot sometime {short_days} this week, {limit}",
+   "can u grab {minutes}-minute slot for {topic}? ppl: {first_names}. this wk only, {days}, {limit}",
+   "sched req: {topic} / {minutes} min / {who} / {short_days} this week / constraint: {limit}",
+   "this week pls: {minutes} min {topic}, invite {first_names}, any day {days}, {limit}",
+   "put {topic} on cal — {minutes} min w/ {who}, {short_days} this wk works, {limit}",
+   "need slot this wk for {topic} ({minutes} min). w/ {first_names}. days ok: {days}. {limit}",
+   "pls find {minutes} min for {topic} + {first_names} this week — {short_days} only, {limit}",
+   "{minutes}-minute {topic} w/ {who}, this wk, {days} preferred, {limit} — book it",
+   "set up {topic} this week: {minutes} min, me + {first_names}, {short_days}, {limit}",
+   "one mtg this wk pls — {topic}, {minutes} minutes, w/ {who}, somewhere {days}, {limit}"
+  ],
+  "double": [
+   "need 2 separate mtgs this wk for {topic} — each {minutes} min, each w/ all of {first_names}, on 2 diff days within {short_days}, {limit}",
+   "book {topic} twice this week: two mtgs on different days ({days}), everyone — {who} — in both, {minutes} min each, {limit}",
+   "2x {topic} this wk pls. both {minutes} minutes, both w/ full group {first_names}, must land on two different days in {short_days}, {limit}",
+   "split {topic} into two sessions this week — each {minutes} min, each incl all of {who}, two distinct days inside {days}, {limit}",
+   "req: two {topic} mtgs this wk, days must differ, window {short_days}, {minutes} min each, whole crew {first_names} at both, {limit}",
+   "this week: book {topic} as 2 mtgs on 2 separate days ({days}), {minutes} minutes apiece, everyone ({who}) attends both, {limit}"
+  ],
+  "same_time": [
+   "{topic} this wk: {minutes} min w/ {first_names} on {short_each_day}, same start time every day, {limit}",
+   "book {topic} on each of {each_day} this week — {minutes} minutes, {who}, identical start time on all days, {limit}",
+   "recurring-style req: {topic}, {minutes} min, group = {first_names}, days = {short_each_day}, start must match across all of them, {limit}, this wk",
+   "this week pls: {topic} w/ {who} on {each_day}, one booking per day, all kicking off at the same time, {minutes} min each, {limit}",
+   "set {topic} standup-style: {short_each_day} this wk, same slot each day, {minutes} minutes, w/ {first_names}, {limit}",
+   "need {topic} on {each_day} (this week), {minutes} min per day, {who} every time, keep start time identical day to day, {limit}"
+  ],
+  "near_miss": [
+   "do we already have {topic} w/ {first_names} on cal this wk? just checking, don't book anything",
+   "cancel the {topic} mtg w/ {who} pls",
+   "move existing {topic} w/ {first_names} to {other_day} — no new mtg, just shift it",
+   "who's free {days} out of {who}? availability only, don't book",
+   "draft invite text for {minutes} min {topic} w/ {first_names} — don't send, just want wording",
+   "hold off on booking {topic} w/ {who} — {first} might be out, will confirm later",
+   "what did we decide re {topic} w/ {first_names} last wk? any notes?",
+   "is {first} double-booked on {day}? curious, no action needed",
+   "fyi {topic} w/ {who} got sorted offline — nothing to schedule",
+   "remind me — what time is the {topic} mtg w/ {first_names} on {day}?"
+  ],
+  "out_of_scope": [
+   "order lunch for team pls — sandwiches, 6 ppl incl {first}",
+   "summarize the Q3 roadmap doc + send me bullets",
+   "file expense report for last wk's conf — receipts in my drive",
+   "book flight YYZ→SFO next month, aisle seat pls",
+   "remind {who} the API spec deliverable is due Fri",
+   "pull latest prod error logs + tell me top 3 issues"
+  ],
+  "limit": {
+   "earliest": [
+    "nothing before {time}",
+    "starting {time} or later",
+    "no earlier than {time} start"
+   ],
+   "latest_end": [
+    "wrapped by {time}",
+    "must end by {time}",
+    "done + out by {time}"
+   ]
+  }
+ },
+ "g4": {
+  "single": [
+   "Hey, hope your Monday wasn't too brutal! I've been drowning in the quarterly stuff, and it hit me that we still owe everyone a proper {topic}. Could you grab {minutes} minutes for me with {who} somewhere {days} this week, {limit}? You're a lifesaver.",
+   "So the offsite planning is finally done, thank goodness, and now I can actually think straight again. Anyway, the real reason I'm writing: sometime this week, {days} if possible, I need a {minutes}-minute {topic} on the books with {first_names}, {limit}. Coffee's on me if you pull it off.",
+   "You would not believe the week I'm having already. Between the vendor calls and the roadmap chaos, the {topic} nearly slipped my mind entirely — so please set up {minutes} minutes this week with {who}, any day {short_days}, {limit}. Thanks a million!",
+   "Quick one, I promise, though you know me. The leadership folks were asking about the {topic} again at standup this morning, which means I can't put it off any longer. Would you find a slot this week, {days}, for {minutes} min with {first_names}, {limit}?",
+   "Morning! The kids had a snow day yesterday so I'm catching up on everything at once, forgive the rambling. Top of the pile is the {topic} — can you book {who} and me for {minutes} minutes somewhere in the {short_days} window this week, {limit}? That'd take a real weight off.",
+   "I just got off a two-hour call that could have been an email, honestly. While it's fresh: we agreed we need a {topic} before the end of this week, so please schedule {minutes} minutes with {first_names} on one of {days}, {limit}. Appreciate you as always.",
+   "Remember that thread from last month that went forty replies deep? It's back, and the only way out is an actual conversation. Set up a {minutes}-minute {topic} this week with {who} — {days} works on my end, {limit} — and I'll owe you one.",
+   "Hope the conference was fun — saw your photos! I'm back at my desk and the {topic} is the first fire to put out, so could you get {minutes} minutes with {first_names} onto this week's calendar, sometime {short_days}, {limit}? No rush beyond, you know, this week.",
+   "The budget review ate my whole morning, and somewhere in there finance reminded me we haven't done the {topic} yet. This week's the deadline, apparently. Please find {minutes} minutes for me and {who} on {days}, {limit} — whatever slot works for all of us.",
+   "You know how I said things would calm down after launch? They did not. Still, the {topic} can't wait any longer, so grab {minutes} min this week with {first_names}, anywhere {days} suits everyone, {limit}. Thanks for keeping me sane.",
+   "Long story short, the client moved everything up and now the {topic} is suddenly urgent. I was going to handle it myself but you're so much better at this — book {who} and me for {minutes} minutes this week, {short_days}, {limit}. Lunch is on me Friday.",
+   "I ran into {first} by the coffee machine and we both agreed we've been putting this off for far too long. So, the actual ask: a {minutes}-minute {topic} this week with {who}, on {days}, {limit}. Fingers crossed everyone's calendars cooperate."
+  ],
+  "double": [
+   "Hey! Still recovering from that all-hands, but onward. The {topic} is too big for one sitting this time, so I need two separate meetings this week — {minutes} minutes each, both with {who} and everyone attending both, on two different days within {days}, {limit}. You're the best.",
+   "I know, I know, I always say it's my last ask of the week. The {topic} has grown a second head, basically, so please book two meetings this week with {first_names} — each one {minutes} minutes, each with the whole group present, and make sure they land on two different days in the {short_days} range, {limit}.",
+   "Funny how these things snowball, isn't it? What started as a quick sync is now a proper {topic}, and we decided we need two sessions this week to do it justice: {minutes} minutes apiece, {who} in both of them, on two different days somewhere {days}, {limit}. Thanks a ton!",
+   "Morning — hope the commute wasn't awful with all the roadworks. The steering group wants the {topic} split across two meetings this week rather than one marathon, so set up two {minutes}-minute slots with {first_names}, everyone present at both, on separate days within {days}, {limit}.",
+   "So my manager had Opinions about cramming everything into one call, and honestly she's right. Please put two {topic} meetings on this week's calendar — {minutes} min each, both including {who}, held on two different days inside the {short_days} window, {limit}. I'll bring snacks to both.",
+   "You'd laugh if you saw my to-do list right now. Near the top: the {topic}, which needs a part one and a part two this week — two meetings of {minutes} minutes, {first_names} at each of them, on different days within {days}, {limit}. Whatever combination works, I trust you."
+  ],
+  "same_time": [
+   "Hi hi! I've been reading about habit stacking and apparently consistency is everything, so here's my plan. Book the {topic} with {who} on {each_day} this week — {minutes} minutes each time, one booking per day, and crucially the same start time on every one of those days, {limit}.",
+   "The team swore they'd actually show up if the {topic} stopped jumping around the calendar, and fair enough. So for this week, please schedule it with {first_names} on {short_each_day} — {minutes} min per session, starting at the identical time each of those days, {limit}.",
+   "Bit of backstory: the daily check-ins fell apart last quarter because nobody could remember when they were. Let's not repeat that — set up the {topic} with {who} for {each_day} this week, {minutes} minutes a pop, same start time on all the listed days, {limit}.",
+   "Hope you had a lovely weekend! Mine was mostly spreadsheets, which is how I realized the {topic} needs a steady rhythm. Could you book it with {first_names} this week on {short_each_day}, {minutes} minutes each day, every session kicking off at the exact same time, {limit}?",
+   "You know how I get about routine — don't judge me. For this week I want the {topic} locked in with {who} on {each_day}, one {minutes}-minute meeting per day, and the start time has to match across all of those days, {limit}. Same slot every day, no exceptions.",
+   "Quick confession: I double-booked myself twice last week because our {topic} kept moving around. New plan — schedule it with {first_names} on {each_day} this week, {minutes} min per meeting, all of them beginning at one and the same start time, {limit}. Bless you in advance."
+  ],
+  "near_miss": [
+   "Sorry to bug you, I've completely lost track of my own calendar this week. Do I already have a {topic} with {who} on the books for {day}, or did that never actually get scheduled? Just checking — don't set anything up, I only need to know.",
+   "Ugh, the client pushed everything again, and the {topic} is collateral damage. Please cancel the meeting with {first_names} — we'll figure out a new plan later, nothing to rebook for now.",
+   "So {first} caught me in the hallway and apparently the whole team is swamped {days}. Could you move our existing {topic} with {who} to {other_day} instead? Same crew, just the new day — no new meetings beyond that move.",
+   "I'm still in planning mode, haven't committed to anything yet. Before I do, can you just tell me when {first_names} are actually free this week for a possible {minutes}-minute {topic}? Only the availability, please — don't book a thing until I say so.",
+   "My drafting skills desert me after lunch, you know this. Would you write up an invitation for a {topic} with {who} — agenda blurb and all — but keep it as a draft? Do not send it or put anything on calendars yet.",
+   "Change of plans from upstairs, naturally. Whatever we were cooking up for the {topic} with {first_names}, hold off entirely for now — don't schedule anything this week, and I'll flag you when it's back on.",
+   "I had to duck out of the {topic} early on {day} for a dentist thing, of all days. Can you tell me what {who} decided in that meeting, or point me to any notes? That's all I need — no follow-up meeting for now.",
+   "Been meaning to ask since Monday and kept forgetting. How long is the {topic} with {first_names} supposed to run — was it {minutes} minutes or longer? I'm just budgeting my day, nothing needs changing or adding.",
+   "Honestly, my memory is shot this quarter. Did {first} ever accept the invite for the {topic}, and who else from {who} has responded? Just a status check — please don't create or touch any meetings.",
+   "Between us, the whole project might get shelved next sprint, so I'm not committing to anything. Out of curiosity only: if we ever did run the {topic} with {who}, would {other_day} generally be a bad day for that group? Purely hypothetical — please don't put anything on the calendar."
+  ],
+  "out_of_scope": [
+   "I'm running between calls all day and completely forgot to eat, classic me. Could you order lunch for the team — something with a vegetarian option for {first}? Sandwiches from the usual place would be perfect.",
+   "The quarterly report landed in my inbox at 11pm, because of course it did. Can you read through it and give me a one-page summary of the key numbers? I need the gist before I talk to anyone.",
+   "So the Denver trip receipts have been sitting in my bag for two weeks, don't tell finance. Would you put together my expense report from them — flights, hotel, the taxi ones too? I'll sign whatever you need.",
+   "I just agreed to speak at the partner summit next month, which means travel, ugh. Could you look into flights and a hotel near the venue for me? Something refundable, knowing how these things go.",
+   "You know how I always promise {who} a deliverable and then blank on it completely. Set me a reminder to send them the draft spec by Friday afternoon, would you? Just a nudge, that's all I need.",
+   "My printer declared war on me this morning and I lost. Could you file a ticket with IT about it, and maybe chase them if they're slow? The thing won't even power on now."
+  ],
+  "limit": {
+   "earliest": [
+    "starting no earlier than {time}, since my mornings are spoken for",
+    "and please don't have it kick off before {time}",
+    "with a start time of {time} at the absolute earliest"
+   ],
+   "latest_end": [
+    "wrapped up by {time} at the latest",
+    "so long as we're completely done before {time}",
+    "and it has to be finished by {time}, no exceptions"
+   ]
+  }
+ },
+ "g5": {
+  "single": [
+   "Good morning. I am writing to request a meeting booking on behalf of Maya. The purpose of the meeting is a {topic}. The requirements are as follows: (1) a duration of {minutes} minutes; (2) attendance by {who}; (3) a day this week within {days}; (4) {limit}. Thank you very much for your assistance.",
+   "Hello, and apologies for the formality, as I am new to the team. Could you please schedule a {minutes}-minute {topic} this week with {first_names}? To be precise about the constraints: the meeting must fall within {days}, and it should be {limit}. With thanks.",
+   "Dear assistant, I would like to arrange one meeting for Maya this week. Topic: {topic}. Length: {minutes} minutes. Participants: {who}. Acceptable days: {short_days}. Timing constraint: {limit}. I appreciate your help with this.",
+   "To whom it may concern: please book a {topic} for Maya this week. Allow me to spell out the details so nothing is ambiguous. First, it should last {minutes} minutes. Second, it must include {who}. Third, it must take place {days}. Fourth, it must be {limit}. Kind regards.",
+   "Hello. The purpose of this message is to request a single booking this week. Maya needs a {minutes} min {topic} with {first_names}. The meeting may only occur {short_days}, and it must be {limit}. Please confirm once it is on the calendar. Many thanks.",
+   "Good afternoon. I hope this message finds you well. Maya has asked me to arrange a {topic} with {who} at some point this week. For clarity, the constraints are these: the session should run {minutes} minutes; the day must fall within {days}; and the start must satisfy the following condition — {limit}. Thank you kindly.",
+   "Dear calendar assistant, I am writing with one scheduling request for the current week. Specifically: a {minutes}-minute {topic} involving {first_names}, to be held {days}, {limit}. I trust this is sufficiently clear, but do let me know otherwise. Best regards.",
+   "Hello there. Request: one meeting this week. Details, itemized for your convenience — Topic: {topic}. Duration: {minutes} minutes. Required attendees: {who}. Permitted days: {short_days}. Time restriction: {limit}. Thank you for handling this.",
+   "Good day. May I ask you to find a slot this week for a {topic}? Everyone named here must attend: {who}. The meeting is to be {minutes} minutes long. It can only happen {days}. Additionally, it must be {limit}. I am grateful for your help.",
+   "Hello. As I am still learning the team's processes, please forgive the long message. Maya requires a {minutes}-minute {topic} this week with {first_names}. Two constraints apply: first, the meeting must land on {short_days}; second, it must be {limit}. With sincere thanks.",
+   "Dear assistant, the purpose of this note is a booking request for this week. Kindly reserve {minutes} minutes for a {topic}. Attendance is required from {who}. Scheduling window: {days}. One further stipulation: the meeting should be {limit}. Much appreciated.",
+   "Good morning. One meeting, this week, please. To avoid any misunderstanding I will list the particulars: (a) subject — {topic}; (b) length — {minutes} minutes; (c) colleagues — {first_names}; (d) allowable days — {short_days}; (e) timing — {limit}. Respectfully yours."
+  ],
+  "double": [
+   "Hello. The purpose of this message is to request two separate bookings this week. Both meetings concern the {topic}. Each should last {minutes} minutes, each must include {who}, and the two must be placed on two different days within {days}. Both must be {limit}. Thank you very much.",
+   "Dear assistant, Maya requires two meetings this week, not one, and I would like to be explicit about that. Details: (1) topic — {topic}; (2) duration — {minutes} minutes for each of the two sessions; (3) attendees — {first_names} must be present at both; (4) days — two distinct days within {short_days}; (5) timing — each session must be {limit}. Kind regards.",
+   "Good morning. Please schedule a pair of {topic} sessions this week with {who}. To restate the constraints plainly: there are two meetings; they fall on different days inside {days}; every one of the named colleagues attends both; each runs {minutes} minutes; and each is {limit}. With appreciation.",
+   "Hello, and thank you in advance. This request covers two meetings for this week. Both are for the {topic}, both are {minutes} minutes long, and both require the full group — {first_names} — in attendance. Please place them on two separate days within {short_days}, each {limit}. Yours sincerely.",
+   "To the calendar assistant: kindly book the {topic} twice this week. I will enumerate the requirements so there is no ambiguity. One: two bookings on two different days, both within {days}. Two: {who} must attend each booking. Three: each booking is {minutes} minutes. Four: each must be {limit}. Many thanks.",
+   "Good afternoon. Maya has asked for two rounds of the {topic} this week with {first_names}. Please note carefully that these are two separate meetings on two different days, both within {short_days}; that the entire group attends each one; that each lasts {minutes} minutes; and that each is {limit}. Thank you for your diligence."
+  ],
+  "same_time": [
+   "Hello. The purpose of this note is a repeated booking for this week. Please book the {topic} with {who} on each of {each_day}, one booking per day. Every booking must start at the same time of day, last {minutes} minutes, and be {limit}. Thank you kindly.",
+   "Dear assistant, Maya would like a standing {topic} this week with {first_names}. To be precise: (1) one {minutes}-minute meeting on each of {short_each_day}; (2) the start time must be identical on every one of those days; (3) each meeting must be {limit}. With gratitude.",
+   "Good morning. Kindly arrange the {topic} on {each_day} this week — that is, a separate booking for each listed day. I must stress one requirement in particular: all of the bookings begin at exactly the same time. Each session runs {minutes} minutes with {who}, and each is {limit}. Respectfully.",
+   "Hello there. This is a request for a repeated meeting this week. The {topic} should occur on {short_each_day}, once per day, always starting at one and the same time on every day listed. Duration: {minutes} minutes. Attendees: {first_names}. Constraint: {limit}. Thank you for your careful attention.",
+   "To whom it may concern: please create identical bookings this week for the {topic} with {who}. The particulars are as follows — a booking on each of {each_day}; a shared start time common to all of those days; a length of {minutes} minutes per booking; and each one {limit}. Much obliged.",
+   "Good day. I am writing to set up the {topic} as a same-time series this week. Specifically, {first_names} should meet for {minutes} minutes on {short_each_day}, and the meeting must begin at the same time on each of those days, {limit}. Please proceed accordingly. Sincerely."
+  ],
+  "near_miss": [
+   "Hello. Before I request anything, I would like to verify one fact: does a {topic} with {who} already appear on Maya's calendar this week? Please do not book anything — I only need confirmation. Thank you.",
+   "Dear assistant, the purpose of this message is a cancellation. The {topic} with {first_names} on {day} is no longer needed, so kindly remove it from the calendar. No replacement should be scheduled. With thanks.",
+   "Good morning. I am writing about the existing {topic} with {who}. Maya would prefer it moved to {other_day}. To be clear, this is a request to relocate the current meeting, not to create an additional one. Kind regards.",
+   "Hello. May I trouble you for information only? Please tell me when {first_names} are free {days}, but do not reserve anything on anyone's calendar. I simply need the availability for my own planning. Many thanks.",
+   "Dear assistant, could you please draft the wording of an invitation for a {minutes}-minute {topic} with {who}? I emphasize: a draft only. Nothing should be sent and nothing should be booked until Maya has reviewed the text. Sincerely.",
+   "Good afternoon. Regarding the proposed {topic} with {first_names}: please hold off entirely. Maya has not yet decided whether the meeting should happen, so I ask that nothing be placed on the calendar for now. Thank you for your patience.",
+   "Hello. I was absent yesterday, so forgive the question. What was decided at the {topic} with {who} on {day}? I am only asking for a summary of the outcome; no calendar action is required. Best regards.",
+   "Dear assistant, a quick factual question: at what time does the {topic} with {first} begin on {day}? I merely wish to note it down correctly. Please make no changes to the calendar. Much appreciated.",
+   "Good morning. The purpose of this note is simply to inform you that {first} can no longer attend the {topic} on {day}. I am not asking you to rebook or reschedule anything at this stage; Maya will decide how to proceed. Thank you.",
+   "Hello. For my records, could you list every meeting Maya already has with {who} this week, including the {topic} if it exists? This is purely an information request — please do not add, move or cancel anything. With thanks."
+  ],
+  "out_of_scope": [
+   "Hello. The purpose of this message is a lunch order. Could you please arrange sandwiches for Maya and {who} for today? I realize this may be an unusual request, but I was told to ask you. Thank you kindly.",
+   "Dear assistant, I would be grateful if you could summarize the quarterly project document into three bullet points for Maya. No other action is needed on your part. Sincerely.",
+   "Good morning. Kindly prepare Maya's expense report for last month's conference. The receipts are in the shared folder. I appreciate your help with this administrative matter.",
+   "Hello there. Maya requires a flight and a hotel for next month's client visit. Please research reasonable options and send me a short list for her consideration. With thanks.",
+   "Good afternoon. Please remind {first} that the quarterly deliverable is due on Friday. To be clear, this concerns the document itself and nothing more. Best regards.",
+   "Dear assistant, could you order a replacement laptop charger for Maya's office? The current one has failed, and she would like a new one promptly. Thank you for your attention to this matter."
+  ],
+  "limit": {
+   "earliest": [
+    "starting no earlier than {time}",
+    "beginning at {time} at the earliest",
+    "commencing no sooner than {time}"
+   ],
+   "latest_end": [
+    "concluding no later than {time}",
+    "fully finished by {time}",
+    "wrapped up by {time} at the latest"
+   ]
+  }
+ },
+ "g6": {
+  "single": [
+   "hey can u set up a {minutes} min {topic} with {who} sometime {days} this week, {limit} pls",
+   "need {topic} this week. {minutes} minutes. {first_names}. {short_days} works, {limit} thx",
+   "pls book {first_names} and me for a {minutes}-minute {topic} this week, any day {days}, {limit}",
+   "this week {short_days} pls grab {minutes} min with {who} for {topic}, {limit}",
+   "ok so {topic} w {first_names}, {minutes} min, somewhere {days} this week {limit} thx",
+   "can we get a {topic} on the books this week? {minutes} minutes, {who}, {short_days} only, {limit}",
+   "{minutes} min {topic} with {first_names} pls, this week, {days}, {limit}",
+   "find me a slot this week for {topic} w {who} - {minutes} minutes, {short_days}, {limit}",
+   "book pls: {topic}, {minutes} min, people are {first_names}, days are {days} this week, {limit}",
+   "need to sit down w {who} for {minutes} minutes re {topic} this week. {short_days} if poss, {limit}",
+   "sometime {days} this week pls put a {minutes}-minute {topic} on with {first_names}, {limit}",
+   "any chance u can squeeze a {topic} in this week? {minutes} min, w {who}, {short_days}, {limit} pls thx"
+  ],
+  "double": [
+   "need two separate {topic} meetings this week w {first_names}, each {minutes} min, everyone in both, on two different days {days}, {limit}",
+   "pls book {who} twice this week for {topic} - {minutes} minutes each time, two different days within {short_days}, all of them at both, {limit}",
+   "two meetings pls: same {topic}, same group {first_names}, {minutes} min each, on different days this week {days}, everyone attends both, {limit}",
+   "this week i need {topic} x2 with {who}. each one {minutes} minutes, each with the whole group, two separate days {short_days}, {limit} thx",
+   "set up a pair of {minutes}-minute {topic} meetings w {first_names} this week, not on the same day, somewhere {days}, full group at both, {limit}",
+   "book two {topic} slots this week pls, {minutes} min apiece, whole group {who} in each, on two diff days in {short_days}, {limit}"
+  ],
+  "same_time": [
+   "pls book {topic} w {first_names} on {each_day} this week, {minutes} min each day, same start time every day, {limit}",
+   "this week i want {topic} on {short_each_day}, each one {minutes} minutes w {who}, all kicking off at the identical time, {limit}",
+   "repeat booking pls - {topic} with {first_names}, {minutes} min, on {each_day} this week, starting at the exact same time on each of those days, {limit}",
+   "{minutes}-minute {topic} w {who} on {short_each_day} this week pls, one per day, same start time across all of them, {limit}",
+   "need recurring {topic} w {first_names} this week on {each_day}, {minutes} min a pop, has to start at the same time every listed day, {limit}",
+   "can u put {minutes} min on each of {short_each_day} this week for {topic} with {who}, all at one and the same start time, {limit} thx"
+  ],
+  "near_miss": [
+   "do i already have a {topic} w {first_names} this week? just checking, dont book anything",
+   "pls cancel the {topic} with {who} on {day}",
+   "can u move the {topic} w {first_names} from {day} to {other_day}",
+   "whos actually free {days} for a possible {topic} w {who}? just want the options, no booking yet",
+   "draft an invite for a {minutes} min {topic} with {first_names} but dont send it, i wanna look first",
+   "hold off on the {topic} w {who} for now, {first} might be out, dont put anything on the calendar",
+   "what did we decide about the {topic} w {first_names}? i lost the thread",
+   "is {first} double booked on {day}? worried about the {topic}",
+   "remind me how long the {topic} with {who} usually runs - {minutes} min right?",
+   "if the {topic} happens itd prob be {days} w {first_names} but thats not a request, just thinking out loud"
+  ],
+  "out_of_scope": [
+   "can u order lunch for me and {first}, something w no peanuts pls",
+   "summarize the q3 strategy doc for me, {first} keeps asking about it",
+   "pls file my expense report from the offsite, receipts are in my email thx",
+   "need a flight to denver for the conference next month, can u sort that",
+   "set a reminder for me friday to send {who} the deliverable",
+   "can u fix the printer settings on my laptop, keeps jamming the pdf exports thx"
+  ],
+  "limit": {
+   "earliest": [
+    "starting no earlier than {time}",
+    "nothing before {time} pls, start {time} at the earliest",
+    "kickoff {time} or later"
+   ],
+   "latest_end": [
+    "wrapped up by {time}",
+    "has to be done and over before {time}",
+    "must end by {time} latest"
+   ]
+  }
+ },
+ "exam": {
+  "single": [
+   "Per Leo's request, could you place a {minutes}-minute {topic} with {who} on Maya's calendar this week? He indicated {days} works, {limit}.",
+   "Following up on the thread from Monday: the client has asked that we convene the {topic} this week — {minutes} minutes with {first_names}, any day {days}, {limit}.",
+   "I've been asked to coordinate the {topic} for this week. Please book {minutes} minutes with {who}, {short_days}, {limit}, and confirm once it's on the calendar.",
+   "On behalf of the steering group, kindly schedule the {topic} ({minutes} min) with {first_names} this week. The window is {days}; note the constraint: {limit}.",
+   "Quick action item from today's standup: get a {minutes}-minute {topic} on the books this week with {who}. {short_days} is the approved window, {limit}.",
+   "The project office has signed off on holding the {topic} this week, so please arrange {minutes} minutes with {first_names} sometime {days}, {limit}.",
+   "As discussed in the weekly sync, I'm forwarding the request to book the {topic} — {minutes} minutes, attendees {who}, this week within {short_days}, {limit}.",
+   "Per the client's email, the {topic} needs to be locked in before this week is out: {minutes} minutes with {first_names}, {days}, {limit}.",
+   "Circling back as promised: please calendar the {topic} for Maya and {first_names} this week — {minutes} minutes, {short_days}, {limit}.",
+   "Administrative note from my side: the {topic} still needs a slot this week. Kindly book {minutes} minutes with {who} within {days}, {limit}.",
+   "The sponsor's office has requested that the {topic} take place this week. Please find {minutes} minutes that works for {who}, {short_days}, {limit}.",
+   "To close out my action items: the {topic} is to be booked this week, {minutes} minutes, with {first_names}, on one of {days}, {limit}."
+  ],
+  "double": [
+   "Per the delivery plan, we need two separate {topic} sessions this week — {minutes} minutes each, both with the full group ({who}), on two different days within {days}, {limit} in both cases.",
+   "Leo asked me to arrange a pair of {minutes}-minute {topic} meetings this week: the same attendees each time ({first_names}, all present at both), on two distinct days inside {short_days}, {limit}.",
+   "Following the review board's decision, please book the {topic} twice this week — two meetings on two different days within {days}, each {minutes} minutes and each including {who}, {limit} for both.",
+   "Action from the client call: two {topic} check-ins this week, {minutes} minutes apiece, everyone ({first_names}) in attendance at both, scheduled on separate days within {short_days}, and {limit} each time.",
+   "For the record and per process, the {topic} is to run as two sessions this week: each {minutes} minutes, each with {who} in full, held on two different days in the {days} window, {limit}.",
+   "I'm consolidating requests from the thread: kindly put two {minutes}-minute {topic} meetings on the calendar this week, with {first_names} attending both, on two separate days within {days}, both {limit}."
+  ],
+  "same_time": [
+   "Per the programme office, the {topic} is to run as a series this week: one {minutes}-minute session on each of {each_day}, all starting at the identical time, with {who} attending every session, {limit}.",
+   "Standing-cadence request from Leo: book the {topic} with {first_names} on {short_each_day} this week — {minutes} minutes per day, the same start time on every listed day, {limit}.",
+   "Following up on the governance note: we need a recurring {topic} this week, one {minutes}-minute booking per day on {each_day}, each beginning at the same time of day, attendees {who}, {limit}.",
+   "To keep the cadence consistent, please schedule the {topic} for {first_names} this week on {short_each_day}: {minutes} minutes each day, and the start time must be identical across all of those days, {limit}.",
+   "The client has asked for uniformity here — a {minutes}-minute {topic} with {who} on each of {each_day} this week, kicked off at one and the same start time every day, {limit}.",
+   "Per the agreed operating rhythm: book {first_names} for the {topic} this week, one session per day on {each_day}, {minutes} minutes apiece, identical start time throughout, {limit}."
+  ],
+  "near_miss": [
+   "Before I chase anyone: does Maya already have a {topic} with {who} on the books for {day}? I just need confirmation, not a new booking.",
+   "Per {first}'s note, the {topic} is off — please cancel the meeting with {first_names} and do not rebook anything for now.",
+   "The client has asked whether the existing {topic} with {who} could move to {other_day} instead — please shift that one; nothing new is needed.",
+   "For my planning sheet only: could you tell me who out of {first_names} is free on {days}? Do not book anything yet — I am simply gathering availability.",
+   "Could you draft the invitation text for the {topic} with {who} so I can route it for approval? Please do not send or schedule anything until I come back to you.",
+   "Hold off on the {topic} for now — {first} wants to revisit the attendee list before we commit {minutes} minutes of everyone's time. No action on the calendar, please.",
+   "Following up on last week's {topic}: what was actually decided with {first_names}? I need the outcome for the minutes, not another meeting.",
+   "Quick records check: how long was the {topic} with {who} on {day} — did it run the full {minutes} minutes? I am just updating the tracker.",
+   "Per the thread, {first} may be out on {day}; before anything else, can you confirm whether the {topic} with {first_names} is still showing on the calendar? No changes yet.",
+   "The steering group is still debating whether the {topic} should happen at all, so please take no scheduling action regarding {who} until I send written confirmation."
+  ],
+  "out_of_scope": [
+   "Per {first}'s request, could you order lunch for the project room on Thursday — sandwiches for six, one vegetarian? I will forward the cost code separately.",
+   "I have been asked to circulate a one-page summary of the requirements document that {who} drafted; could you prepare that summary for me?",
+   "Administrative item: Maya's expense report for last month's site visit still needs to be filed — the receipts are in the shared folder. Could you handle the submission?",
+   "The client expects {first} in Toronto for the kickoff; please look into flights and a hotel for two nights and send me the options for sign-off.",
+   "Could you set a reminder for Maya to send the signed statement of work to {who} before Friday's deadline? The deliverable cannot slip.",
+   "Following up per the comms plan: please draft the quarterly status newsletter for distribution to the stakeholder list, with contributions credited to {who}."
+  ],
+  "limit": {
+   "earliest": [
+    "starting no earlier than {time}",
+    "with a start time of {time} at the earliest",
+    "commencing at {time} or later, per the attendees' stated preference"
+   ],
+   "latest_end": [
+    "fully wrapped up by {time}",
+    "concluding no later than {time}",
+    "with everything finished by {time}, as the client requires"
+   ]
+  }
+ }
+}

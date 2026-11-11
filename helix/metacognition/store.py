@@ -23,7 +23,7 @@ import json
 import sqlite3
 import threading
 import time
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -323,24 +323,28 @@ class MetaStore:
             row = self._conn.execute("SELECT * FROM episodes WHERE run_id = ?", (run_id,)).fetchone()
         return None if row is None else self._row(row)
 
-    def episodes(self, *, since: int = 0, procedure: str | None = None, last: int | None = None) -> list[Episode]:
+    def episodes(self, *, since: int = 0, procedure: str | None = None, last: int | None = None,
+                 sources: Sequence[str] | None = None) -> list[Episode]:
         """Judged runs at or after `since`, oldest first, as a learner reads them; filtered to the runs that
-        matched `procedure` when given, and only the latest `last` of them when given. A run whose episode was
-        dropped to bound the store is left out."""
+        matched `procedure` when given, to verdicts from `sources` when given, and only the latest `last` of them
+        when given. A run whose episode was dropped to bound the store is left out."""
         if last is not None:
             # Read from the newest back and stop at `last`, so the cost does not grow with what came before.
             matched = () if procedure is None else (f'%"{procedure}"%',)
+            judged_by = "" if sources is None else f" AND verdict_source IN ({', '.join('?' for _ in sources)})"
             with self._lock:
                 rows = self._conn.execute(
                     f"SELECT * FROM episodes WHERE ord >= ? AND verdict IS NOT NULL AND content != '{_DROPPED}'"
-                    f"{' AND matched LIKE ?' if matched else ''} ORDER BY ord DESC LIMIT ?",
-                    (since, *matched, last)).fetchall()
+                    f"{' AND matched LIKE ?' if matched else ''}{judged_by} ORDER BY ord DESC LIMIT ?",
+                    (since, *matched, *(sources or ()), last)).fetchall()
             runs = [self._row(r) for r in reversed(rows)]
         else:
             runs = self.runs(since)
         out = []
         for run in runs:
             if run["verdict"] is None or (procedure is not None and procedure not in run["matched"]):
+                continue
+            if sources is not None and run["verdict_source"] not in sources:
                 continue
             if not run["content"]:
                 continue
