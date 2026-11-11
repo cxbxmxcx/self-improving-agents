@@ -255,13 +255,15 @@ The estimates use what the Chapter 7 recordings measured: about $0.0022 and 2.8 
 
 | Part, calendar desk | Estimate | Cap |
 |---|---|---|
-| Full system: 4,000 requests with nights, the exam and two repeats | $10 to $17 | $18.50 |
-| Agent with Chapter 6's loop: 800 requests, the exam and two repeats | $5 to $6 | $6.50 |
-| Agent alone at high reasoning: 160 requests | $1 | $2.00 |
-| Five search repeats | $7 to $12 | What remains of $40, about $11 |
+| Full system: 4,000 requests with nights, the exam and two repeats | $10 to $17 | $19.00 |
+| Agent with Chapter 6's loop: 800 requests, the exam and two repeats | $5 to $8 | $8.00 |
+| Agent alone at high reasoning: 160 requests | $3.10 | $3.40 |
+| Five search repeats | $7 to $12 | What remains of $40 |
 | A live check of the wiring before the runs | under $0.50 | $0.50 |
 | The decision model's calls, which the caps do not stop | about $0.60 | |
-| Total | $24 to $37 | $40 |
+| Total | $25 to $40 | $40 |
+
+The caps were re-split once, after the live check and while the agent alone was recording, and before either part that learns had started. The agent alone cost about $0.019 a request, almost four times my estimate, and its first cap of $2 stopped it after 104 of its 160 requests, so its cap became $3.40 and it was run again from its recording, which served the first 104 again at no cost. It cost that much because the estimate took the chapter's measurement of the agent at high reasoning with its learned function, and alone it reads every calendar itself. At the same time the learning budget of the loop and of the full system gained a limit of $1.50 per function in a day of the stream, beside its three attempts, so a learner that keeps failing stops costing money until the next day.
 
 The parts run one after another and alone on the machine: about three hours for the full system, a little over an hour for the loop, and under an hour for the rest. Building the streams, the banks and the soak costs nothing in model calls. The desk we did not write needs more building than the other two.
 

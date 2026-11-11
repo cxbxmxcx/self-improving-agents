@@ -127,7 +127,10 @@ def build(arm: str, stream: desk_stream.Stream, jev: Any, args: argparse.Namespa
     first = stream.days[0]
     settings: dict[str, Any] = {
         "store": MetaStore(keep=2000), "practice": stream.practice, "gate": stream.function_gate(first),
-        "budget": LearningBudget(attempts_per_day=3, runs_per_day=max(8, stream.per_day // EVERY[arm])),
+        # Three attempts and $1.50 of learning per function in a day of the stream, so a learner that keeps failing
+        # stops costing money until the next day.
+        "budget": LearningBudget(attempts_per_day=3, dollars_per_day=1.5,
+                                 runs_per_day=max(8, stream.per_day // EVERY[arm])),
         "experience_limit": 8, "learn_from_gating_runs": True, "recall_k": 1, "route_with": jev,
         "confirm_quarantine": True,
         "executor": "guarded" if args.soak else "auto"}
