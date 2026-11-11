@@ -1,0 +1,62 @@
+{
+ "stopped": "",
+ "routing": {
+  "right": 72,
+  "requests": 72,
+  "by_kind": {
+   "find_common_starts -> find_common_starts": 36,
+   "find_shared_starts -> find_shared_starts": 36
+  },
+  "missed": []
+ },
+ "served": [
+  {
+   "asked": "one",
+   "right": true,
+   "outcome": "llm",
+   "effort": "none",
+   "dollars": 0.00218325,
+   "seconds": 7.5196000000000005,
+   "failed": ""
+  },
+  {
+   "asked": "two",
+   "right": false,
+   "outcome": "llm_wrong",
+   "effort": "none",
+   "dollars": 0.00538305,
+   "seconds": 6.167999999999999,
+   "failed": ""
+  },
+  {
+   "asked": "near",
+   "right": false,
+   "outcome": "llm_wrong",
+   "effort": "none",
+   "dollars": 0.00340125,
+   "seconds": 4.2539,
+   "failed": ""
+  },
+  {
+   "asked": "out",
+   "right": false,
+   "outcome": "llm_wrong",
+   "effort": "none",
+   "dollars": 0.0024720000000000002,
+   "seconds": 2.6941,
+   "failed": ""
+  }
+ ],
+ "spent": {
+  "by_model": {
+   "decision model": {
+    "calls": 72,
+    "dollars": 0.0015723960000000002
+   },
+   "gpt-5.4-mini": {
+    "calls": 16,
+    "dollars": 0.013439550000000001
+   }
+  }
+ }
+}

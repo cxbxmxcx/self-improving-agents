@@ -1,0 +1,6896 @@
+[
+ {
+  "id": "T114008~d14-8",
+  "day": 14,
+  "right": true,
+  "sensitive": true,
+  "agent_days": null,
+  "offered": "-",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v2_canonical": true,
+  "v2_names": false
+ },
+ {
+  "id": "T114016~d14-16",
+  "day": 14,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "tuesday",
+   "thursday"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "16:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T114020~d14-20",
+  "day": 14,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "tuesday",
+   "thursday"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "13:30",
+   "13:45"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T114024~d14-24",
+  "day": 14,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "monday",
+   "wednesday"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "14:00"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30"
+  ]
+ },
+ {
+  "id": "T114028~d14-28",
+  "day": 14,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "tuesday",
+   "thursday"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "09:00",
+   "09:15",
+   "11:15",
+   "11:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": true,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "09:00",
+   "09:15",
+   "09:30",
+   "09:45",
+   "10:00",
+   "10:15",
+   "10:30",
+   "10:45",
+   "11:00",
+   "11:15",
+   "11:30"
+  ]
+ },
+ {
+  "id": "T114029~d14-29",
+  "day": 14,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "monday",
+   "wednesday"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "16:15",
+   "16:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "12:30",
+   "12:45",
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T114040~d14-40",
+  "day": 14,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "tuesday",
+   "thursday"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "13:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T114042~d14-42",
+  "day": 14,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "mon",
+   "wed"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "16:15",
+   "16:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T114048~d14-48",
+  "day": 14,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "monday",
+   "wednesday"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "13:30",
+   "13:45"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00"
+  ]
+ },
+ {
+  "id": "T114049~d14-49",
+  "day": 14,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "mon",
+   "wed"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "14:15",
+   "14:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "14:15",
+   "14:30"
+  ]
+ },
+ {
+  "id": "T114054~d14-54",
+  "day": 14,
+  "right": false,
+  "sensitive": false,
+  "agent_days": [
+   "mon",
+   "wed"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "16:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "16:30"
+  ]
+ },
+ {
+  "id": "T114059~d14-59",
+  "day": 14,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "wed",
+   "fri"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "16:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "16:30"
+  ]
+ },
+ {
+  "id": "T114060~d14-60",
+  "day": 14,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "tuesday",
+   "thursday"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "16:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T114081~d14-81",
+  "day": 14,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "wed",
+   "fri"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "10:00",
+   "10:15",
+   "10:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "10:00",
+   "10:15",
+   "10:30"
+  ]
+ },
+ {
+  "id": "T114088~d14-88",
+  "day": 14,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "tue",
+   "thu"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "16:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "16:30"
+  ]
+ },
+ {
+  "id": "T114091~d14-91",
+  "day": 14,
+  "right": false,
+  "sensitive": true,
+  "agent_days": [
+   "monday",
+   "wednesday",
+   "friday"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "16:15",
+   "16:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "12:30",
+   "12:45",
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T114095~d14-95",
+  "day": 14,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "mon",
+   "wed"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "12:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "12:30"
+  ]
+ },
+ {
+  "id": "T114099~d14-99",
+  "day": 14,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "tuesday",
+   "thursday"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "12:00"
+  ],
+  "v2_canonical": true,
+  "v2_names": true,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "12:00",
+   "12:15",
+   "12:30"
+  ]
+ },
+ {
+  "id": "T114101~d14-101",
+  "day": 14,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "wednesday",
+   "friday"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "10:15"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "09:00",
+   "09:15",
+   "09:30",
+   "09:45",
+   "10:00",
+   "10:15",
+   "10:30",
+   "10:45",
+   "11:00",
+   "11:15",
+   "11:30"
+  ]
+ },
+ {
+  "id": "T114118~d14-118",
+  "day": 14,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "wed",
+   "fri"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "16:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "16:30"
+  ]
+ },
+ {
+  "id": "T114122~d14-122",
+  "day": 14,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "mon",
+   "wed"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "16:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "16:30"
+  ]
+ },
+ {
+  "id": "T114125~d14-125",
+  "day": 14,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "tuesday",
+   "thursday"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "16:15",
+   "16:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "12:30",
+   "12:45",
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T114134~d14-134",
+  "day": 14,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "mon",
+   "wed"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "16:15"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "16:15"
+  ]
+ },
+ {
+  "id": "T114156~d14-156",
+  "day": 14,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "wednesday",
+   "friday"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "09:30",
+   "09:45"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "09:00",
+   "09:15",
+   "09:30",
+   "09:45",
+   "10:00",
+   "10:15",
+   "10:30",
+   "10:45",
+   "11:00",
+   "11:15",
+   "11:30"
+  ]
+ },
+ {
+  "id": "T114158~d14-158",
+  "day": 14,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "mon",
+   "wed"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "14:30",
+   "14:45"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "14:30",
+   "14:45"
+  ]
+ },
+ {
+  "id": "T114161~d14-161",
+  "day": 14,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "monday",
+   "wednesday"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "13:00"
+  ],
+  "v2_canonical": true,
+  "v2_names": true,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30"
+  ]
+ },
+ {
+  "id": "T114179~d14-179",
+  "day": 14,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "tue",
+   "thu"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "16:15"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "16:15"
+  ]
+ },
+ {
+  "id": "T114184~d14-184",
+  "day": 14,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "monday",
+   "wednesday"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "14:45"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T114187~d14-187",
+  "day": 14,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "wednesday",
+   "friday"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "15:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30"
+  ]
+ },
+ {
+  "id": "T114192~d14-192",
+  "day": 14,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "tuesday",
+   "thursday"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "14:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T115000~d15-0",
+  "day": 15,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "mon",
+   "wed"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "16:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "16:30"
+  ]
+ },
+ {
+  "id": "T115006~d15-6",
+  "day": 15,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "wednesday",
+   "friday"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "16:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T115020~d15-20",
+  "day": 15,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "wed",
+   "fri"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "16:00",
+   "16:15"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "16:00",
+   "16:15"
+  ]
+ },
+ {
+  "id": "T115028~d15-28",
+  "day": 15,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "mon",
+   "wed"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "15:00",
+   "15:15"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "15:00",
+   "15:15"
+  ]
+ },
+ {
+  "id": "T115032~d15-32",
+  "day": 15,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "wed",
+   "fri"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "14:15"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "14:15"
+  ]
+ },
+ {
+  "id": "T115043~d15-43",
+  "day": 15,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "tue",
+   "thu"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "13:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "13:30"
+  ]
+ },
+ {
+  "id": "T115044~d15-44",
+  "day": 15,
+  "right": false,
+  "sensitive": false,
+  "agent_days": [
+   "mon",
+   "wed",
+   "fri"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "09:30",
+   "09:45"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "09:30",
+   "09:45"
+  ]
+ },
+ {
+  "id": "T115046~d15-46",
+  "day": 15,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "wednesday",
+   "friday"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "16:15",
+   "16:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T115047~d15-47",
+  "day": 15,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "tuesday",
+   "thursday"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "16:15"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15"
+  ]
+ },
+ {
+  "id": "T115050~d15-50",
+  "day": 15,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "monday",
+   "wednesday"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "16:15"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T115053~d15-53",
+  "day": 15,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "wed",
+   "fri"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "16:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "16:30"
+  ]
+ },
+ {
+  "id": "T115056~d15-56",
+  "day": 15,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "tue",
+   "thu"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "15:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "15:30"
+  ]
+ },
+ {
+  "id": "T115058~d15-58",
+  "day": 15,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "wednesday",
+   "friday"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "13:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "12:30",
+   "12:45",
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T115084~d15-84",
+  "day": 15,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "mon",
+   "wed"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "11:15"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "11:15"
+  ]
+ },
+ {
+  "id": "T115092~d15-92",
+  "day": 15,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "tue",
+   "thu"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "16:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "16:30"
+  ]
+ },
+ {
+  "id": "T115093~d15-93",
+  "day": 15,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "monday",
+   "wednesday"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "09:30",
+   "11:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "09:00",
+   "09:15",
+   "09:30",
+   "09:45",
+   "10:00",
+   "10:15",
+   "10:30",
+   "10:45",
+   "11:00",
+   "11:15",
+   "11:30"
+  ]
+ },
+ {
+  "id": "T115097~d15-97",
+  "day": 15,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "monday",
+   "wednesday"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "16:15",
+   "16:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "12:30",
+   "12:45",
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T115105~d15-105",
+  "day": 15,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "wednesday",
+   "friday"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "16:15",
+   "16:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T115114~d15-114",
+  "day": 15,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "wednesday",
+   "friday"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "15:45",
+   "16:00"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T115129~d15-129",
+  "day": 15,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "tue",
+   "thu"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "14:00"
+  ],
+  "v2_canonical": true,
+  "v2_names": true,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "14:00"
+  ]
+ },
+ {
+  "id": "T115143~d15-143",
+  "day": 15,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "mon",
+   "wed"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "12:00"
+  ],
+  "v2_canonical": true,
+  "v2_names": true,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "12:00"
+  ]
+ },
+ {
+  "id": "T115144~d15-144",
+  "day": 15,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "mon",
+   "wed"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "16:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "16:30"
+  ]
+ },
+ {
+  "id": "T115148~d15-148",
+  "day": 15,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "mon",
+   "wed"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "09:30",
+   "09:45"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "09:30",
+   "09:45"
+  ]
+ },
+ {
+  "id": "T115172~d15-172",
+  "day": 15,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "tue",
+   "thu"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "09:15",
+   "09:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "09:15",
+   "09:30"
+  ]
+ },
+ {
+  "id": "T115173~d15-173",
+  "day": 15,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "mon",
+   "wed"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "16:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "16:30"
+  ]
+ },
+ {
+  "id": "T115179~d15-179",
+  "day": 15,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "monday",
+   "wednesday"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "14:45",
+   "15:00"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30"
+  ]
+ },
+ {
+  "id": "T115183~d15-183",
+  "day": 15,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "mon",
+   "wed"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "12:00"
+  ],
+  "v2_canonical": true,
+  "v2_names": true,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "12:00"
+  ]
+ },
+ {
+  "id": "T115193~d15-193",
+  "day": 15,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "monday",
+   "wednesday"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "15:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T115194~d15-194",
+  "day": 15,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "wednesday",
+   "friday"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "15:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T115198~d15-198",
+  "day": 15,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "wednesday",
+   "friday"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "16:15"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "12:30",
+   "12:45",
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T116000~d16-0",
+  "day": 16,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "tuesday",
+   "thursday"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "14:15"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T116004~d16-4",
+  "day": 16,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "wednesday",
+   "friday"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "10:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "09:00",
+   "09:15",
+   "09:30",
+   "09:45",
+   "10:00",
+   "10:15",
+   "10:30",
+   "10:45",
+   "11:00",
+   "11:15",
+   "11:30"
+  ]
+ },
+ {
+  "id": "T116017~d16-17",
+  "day": 16,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "wednesday",
+   "friday"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "15:45"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T116023~d16-23",
+  "day": 16,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "wed",
+   "fri"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "16:15"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "16:15"
+  ]
+ },
+ {
+  "id": "T116029~d16-29",
+  "day": 16,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "wednesday",
+   "friday"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "11:00"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "09:00",
+   "09:15",
+   "09:30",
+   "09:45",
+   "10:00",
+   "10:15",
+   "10:30",
+   "10:45",
+   "11:00",
+   "11:15",
+   "11:30",
+   "11:45"
+  ]
+ },
+ {
+  "id": "T116031~d16-31",
+  "day": 16,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "wednesday",
+   "friday"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "12:00",
+   "12:15"
+  ],
+  "v2_canonical": true,
+  "v2_names": true,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "12:00",
+   "12:15",
+   "12:30"
+  ]
+ },
+ {
+  "id": "T116041~d16-41",
+  "day": 16,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "wednesday",
+   "friday"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "16:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T116049~d16-49",
+  "day": 16,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "mon",
+   "wed"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "16:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "16:30"
+  ]
+ },
+ {
+  "id": "T116050~d16-50",
+  "day": 16,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "wed",
+   "fri"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "15:30",
+   "15:45"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "15:30",
+   "15:45"
+  ]
+ },
+ {
+  "id": "T116055~d16-55",
+  "day": 16,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "mon",
+   "wed"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "15:00",
+   "15:15"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "15:00",
+   "15:15"
+  ]
+ },
+ {
+  "id": "T116057~d16-57",
+  "day": 16,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "mon",
+   "wed"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "09:45"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "09:45"
+  ]
+ },
+ {
+  "id": "T116065~d16-65",
+  "day": 16,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "monday",
+   "wednesday"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "15:15",
+   "15:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30"
+  ]
+ },
+ {
+  "id": "T116079~d16-79",
+  "day": 16,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "monday",
+   "wednesday"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "16:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T116092~d16-92",
+  "day": 16,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "wednesday",
+   "friday"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "10:15"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "09:00",
+   "09:15",
+   "09:30",
+   "09:45",
+   "10:00",
+   "10:15",
+   "10:30",
+   "10:45",
+   "11:00",
+   "11:15",
+   "11:30"
+  ]
+ },
+ {
+  "id": "T116096~d16-96",
+  "day": 16,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "tuesday",
+   "thursday"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "15:15",
+   "16:15",
+   "16:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "12:30",
+   "12:45",
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T116104~d16-104",
+  "day": 16,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "wednesday",
+   "friday"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "10:00"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "09:00",
+   "09:15",
+   "09:30",
+   "09:45",
+   "10:00",
+   "10:15",
+   "10:30",
+   "10:45",
+   "11:00",
+   "11:15",
+   "11:30"
+  ]
+ },
+ {
+  "id": "T116105~d16-105",
+  "day": 16,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "wed",
+   "fri"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "16:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "16:30"
+  ]
+ },
+ {
+  "id": "T116114~d16-114",
+  "day": 16,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "wed",
+   "fri"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "16:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "16:30"
+  ]
+ },
+ {
+  "id": "T116120~d16-120",
+  "day": 16,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "tuesday",
+   "thursday"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "09:15",
+   "09:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "09:00",
+   "09:15",
+   "09:30",
+   "09:45",
+   "10:00",
+   "10:15",
+   "10:30",
+   "10:45",
+   "11:00",
+   "11:15",
+   "11:30",
+   "11:45",
+   "12:00"
+  ]
+ },
+ {
+  "id": "T116130~d16-130",
+  "day": 16,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "mon",
+   "wed"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "15:30",
+   "15:45"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "15:30",
+   "15:45"
+  ]
+ },
+ {
+  "id": "T116131~d16-131",
+  "day": 16,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "tue",
+   "thu"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "15:00",
+   "15:15"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "15:00",
+   "15:15"
+  ]
+ },
+ {
+  "id": "T116134~d16-134",
+  "day": 16,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "tue",
+   "thu"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "16:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "16:30"
+  ]
+ },
+ {
+  "id": "T116157~d16-157",
+  "day": 16,
+  "right": false,
+  "sensitive": true,
+  "agent_days": [
+   "mon",
+   "wed",
+   "fri"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "16:00"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "16:00"
+  ]
+ },
+ {
+  "id": "T116165~d16-165",
+  "day": 16,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "wed",
+   "fri"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "14:15",
+   "14:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "14:15",
+   "14:30"
+  ]
+ },
+ {
+  "id": "T116167~d16-167",
+  "day": 16,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "tue",
+   "thu"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "14:15",
+   "14:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "14:15",
+   "14:30"
+  ]
+ },
+ {
+  "id": "T116172~d16-172",
+  "day": 16,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "monday",
+   "wednesday"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "10:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "09:00",
+   "09:15",
+   "09:30",
+   "09:45",
+   "10:00",
+   "10:15",
+   "10:30",
+   "10:45",
+   "11:00",
+   "11:15",
+   "11:30"
+  ]
+ },
+ {
+  "id": "T116177~d16-177",
+  "day": 16,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "wednesday",
+   "friday"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "16:15"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T116187~d16-187",
+  "day": 16,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "wednesday",
+   "friday"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "12:00"
+  ],
+  "v2_canonical": true,
+  "v2_names": true,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "12:00",
+   "12:15",
+   "12:30"
+  ]
+ },
+ {
+  "id": "T116194~d16-194",
+  "day": 16,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "mon",
+   "wed"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "16:15"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "16:15"
+  ]
+ },
+ {
+  "id": "T116198~d16-198",
+  "day": 16,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "wed",
+   "fri"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "16:15",
+   "16:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T117001~d17-1",
+  "day": 17,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "wednesday",
+   "friday"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "09:00",
+   "09:15",
+   "09:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": true,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "09:00",
+   "09:15",
+   "09:30",
+   "09:45",
+   "10:00",
+   "10:15",
+   "10:30",
+   "10:45",
+   "11:00",
+   "11:15",
+   "11:30"
+  ]
+ },
+ {
+  "id": "T117002~d17-2",
+  "day": 17,
+  "right": false,
+  "sensitive": true,
+  "agent_days": [
+   "mon",
+   "wed"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "16:30"
+  ]
+ },
+ {
+  "id": "T117024~d17-24",
+  "day": 17,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "tue",
+   "thu"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "11:00",
+   "11:15"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "11:00",
+   "11:15"
+  ]
+ },
+ {
+  "id": "T117036~d17-36",
+  "day": 17,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "tue",
+   "thu"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "11:15"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "11:15"
+  ]
+ },
+ {
+  "id": "T117038~d17-38",
+  "day": 17,
+  "right": false,
+  "sensitive": false,
+  "agent_days": [
+   "tuesday",
+   "thursday"
+  ],
+  "offered": "find_common_starts@1",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "12:30",
+   "12:45",
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30"
+  ]
+ },
+ {
+  "id": "T117041~d17-41",
+  "day": 17,
+  "right": true,
+  "sensitive": true,
+  "agent_days": null,
+  "offered": "-",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v2_canonical": true,
+  "v2_names": false
+ },
+ {
+  "id": "T117044~d17-44",
+  "day": 17,
+  "right": false,
+  "sensitive": false,
+  "agent_days": [
+   "wed",
+   "fri"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "09:00"
+  ],
+  "v2_canonical": true,
+  "v2_names": true,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "09:00"
+  ]
+ },
+ {
+  "id": "T117048~d17-48",
+  "day": 17,
+  "right": false,
+  "sensitive": false,
+  "agent_days": [
+   "mon",
+   "wed",
+   "fri"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "09:00"
+  ],
+  "v2_canonical": true,
+  "v2_names": true,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "09:00"
+  ]
+ },
+ {
+  "id": "T117050~d17-50",
+  "day": 17,
+  "right": false,
+  "sensitive": false,
+  "agent_days": [
+   "monday",
+   "wednesday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T117063~d17-63",
+  "day": 17,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "mon",
+   "wed"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "15:30"
+  ]
+ },
+ {
+  "id": "T117064~d17-64",
+  "day": 17,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "tue",
+   "thu"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "13:45"
+  ]
+ },
+ {
+  "id": "T117076~d17-76",
+  "day": 17,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "wed",
+   "fri"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "15:00",
+   "15:15",
+   "15:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "15:00",
+   "15:15",
+   "15:30"
+  ]
+ },
+ {
+  "id": "T117080~d17-80",
+  "day": 17,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "mon",
+   "wed"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "15:45"
+  ]
+ },
+ {
+  "id": "T117086~d17-86",
+  "day": 17,
+  "right": false,
+  "sensitive": false,
+  "agent_days": [
+   "tuesday",
+   "thursday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "12:30",
+   "12:45",
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T117090~d17-90",
+  "day": 17,
+  "right": false,
+  "sensitive": false,
+  "agent_days": [
+   "wednesday",
+   "friday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T117102~d17-102",
+  "day": 17,
+  "right": false,
+  "sensitive": false,
+  "agent_days": [
+   "wednesday",
+   "friday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30"
+  ]
+ },
+ {
+  "id": "T117107~d17-107",
+  "day": 17,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "monday",
+   "wednesday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": true,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "12:00",
+   "12:15",
+   "12:30"
+  ]
+ },
+ {
+  "id": "T117119~d17-119",
+  "day": 17,
+  "right": false,
+  "sensitive": true,
+  "agent_days": [
+   "monday",
+   "wednesday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "16:00",
+   "16:15",
+   "16:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "12:30",
+   "12:45",
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T117123~d17-123",
+  "day": 17,
+  "right": false,
+  "sensitive": false,
+  "agent_days": [
+   "tuesday",
+   "thursday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "12:00",
+   "12:15",
+   "12:30"
+  ]
+ },
+ {
+  "id": "T117124~d17-124",
+  "day": 17,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "tue",
+   "thu"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "16:30"
+  ]
+ },
+ {
+  "id": "T117131~d17-131",
+  "day": 17,
+  "right": false,
+  "sensitive": true,
+  "agent_days": [
+   "tuesday",
+   "thursday",
+   "friday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T117135~d17-135",
+  "day": 17,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "tue",
+   "thu"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "12:15"
+  ]
+ },
+ {
+  "id": "T117145~d17-145",
+  "day": 17,
+  "right": false,
+  "sensitive": false,
+  "agent_days": [
+   "tuesday",
+   "thursday",
+   "friday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "10:00"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "09:00",
+   "09:15",
+   "09:30",
+   "09:45",
+   "10:00",
+   "10:15",
+   "10:30",
+   "10:45",
+   "11:00",
+   "11:15"
+  ]
+ },
+ {
+  "id": "T117147~d17-147",
+  "day": 17,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "wed",
+   "fri"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "16:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T117149~d17-149",
+  "day": 17,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "tue",
+   "thu"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "16:00"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "16:00"
+  ]
+ },
+ {
+  "id": "T117150~d17-150",
+  "day": 17,
+  "right": false,
+  "sensitive": true,
+  "agent_days": [
+   "monday",
+   "wednesday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "12:30",
+   "12:45",
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T117153~d17-153",
+  "day": 17,
+  "right": false,
+  "sensitive": false,
+  "agent_days": [
+   "tuesday",
+   "thursday",
+   "friday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "09:00"
+  ],
+  "v2_canonical": true,
+  "v2_names": true,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "09:00",
+   "09:15",
+   "09:30",
+   "09:45",
+   "10:00",
+   "10:15",
+   "10:30",
+   "10:45",
+   "11:00",
+   "11:15",
+   "11:30",
+   "11:45",
+   "12:00",
+   "12:15",
+   "12:30"
+  ]
+ },
+ {
+  "id": "T117170~d17-170",
+  "day": 17,
+  "right": false,
+  "sensitive": false,
+  "agent_days": [
+   "wednesday",
+   "friday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T117181~d17-181",
+  "day": 17,
+  "right": false,
+  "sensitive": true,
+  "agent_days": [
+   "tuesday",
+   "thursday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "12:30",
+   "12:45",
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T117188~d17-188",
+  "day": 17,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "tue",
+   "thu"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "14:15",
+   "14:30"
+  ]
+ },
+ {
+  "id": "T118001~d18-1",
+  "day": 18,
+  "right": false,
+  "sensitive": false,
+  "agent_days": [
+   "monday",
+   "wednesday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "14:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30"
+  ]
+ },
+ {
+  "id": "T118007~d18-7",
+  "day": 18,
+  "right": false,
+  "sensitive": true,
+  "agent_days": [
+   "wednesday",
+   "friday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T118021~d18-21",
+  "day": 18,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "tue",
+   "thu"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "10:15",
+   "10:30",
+   "10:45",
+   "11:00"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "10:15",
+   "10:30",
+   "10:45",
+   "11:00"
+  ]
+ },
+ {
+  "id": "T118023~d18-23",
+  "day": 18,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "wed",
+   "fri"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "16:30"
+  ]
+ },
+ {
+  "id": "T118031~d18-31",
+  "day": 18,
+  "right": false,
+  "sensitive": true,
+  "agent_days": [
+   "wednesday",
+   "friday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T118051~d18-51",
+  "day": 18,
+  "right": false,
+  "sensitive": false,
+  "agent_days": [
+   "tuesday",
+   "thursday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "16:15",
+   "16:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "12:30",
+   "12:45",
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T118063~d18-63",
+  "day": 18,
+  "right": false,
+  "sensitive": true,
+  "agent_days": [
+   "tuesday",
+   "thursday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "15:00"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T118065~d18-65",
+  "day": 18,
+  "right": false,
+  "sensitive": true,
+  "agent_days": [
+   "tuesday",
+   "thursday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T118072~d18-72",
+  "day": 18,
+  "right": false,
+  "sensitive": false,
+  "agent_days": [
+   "monday",
+   "wednesday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "11:00",
+   "11:15"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "09:00",
+   "09:15",
+   "09:30",
+   "09:45",
+   "10:00",
+   "10:15",
+   "10:30",
+   "10:45",
+   "11:00",
+   "11:15"
+  ]
+ },
+ {
+  "id": "T118074~d18-74",
+  "day": 18,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "wed",
+   "fri"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "14:15"
+  ]
+ },
+ {
+  "id": "T118077~d18-77",
+  "day": 18,
+  "right": false,
+  "sensitive": false,
+  "agent_days": [
+   "monday",
+   "wednesday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "14:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T118078~d18-78",
+  "day": 18,
+  "right": false,
+  "sensitive": true,
+  "agent_days": [
+   "mon",
+   "wed",
+   "fri"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "16:15"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T118092~d18-92",
+  "day": 18,
+  "right": false,
+  "sensitive": false,
+  "agent_days": [
+   "monday",
+   "wednesday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "09:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "09:00",
+   "09:15",
+   "09:30",
+   "09:45",
+   "10:00",
+   "10:15",
+   "10:30",
+   "10:45",
+   "11:00",
+   "11:15",
+   "11:30",
+   "11:45",
+   "12:00",
+   "12:15",
+   "12:30"
+  ]
+ },
+ {
+  "id": "T118100~d18-100",
+  "day": 18,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "monday",
+   "wednesday",
+   "friday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "09:00",
+   "09:15"
+  ],
+  "v2_canonical": true,
+  "v2_names": true,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "09:00",
+   "09:15",
+   "09:30",
+   "09:45",
+   "10:00",
+   "10:15",
+   "10:30",
+   "10:45",
+   "11:00",
+   "11:15",
+   "11:30"
+  ]
+ },
+ {
+  "id": "T118102~d18-102",
+  "day": 18,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "tue",
+   "thu"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "14:45"
+  ]
+ },
+ {
+  "id": "T118104~d18-104",
+  "day": 18,
+  "right": false,
+  "sensitive": false,
+  "agent_days": [
+   "tuesday",
+   "thursday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "11:45",
+   "12:00"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "09:00",
+   "09:15",
+   "09:30",
+   "09:45",
+   "10:00",
+   "10:15",
+   "10:30",
+   "10:45",
+   "11:00",
+   "11:15",
+   "11:30",
+   "11:45",
+   "12:00"
+  ]
+ },
+ {
+  "id": "T118133~d18-133",
+  "day": 18,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "mon",
+   "wed"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "16:30"
+  ]
+ },
+ {
+  "id": "T118148~d18-148",
+  "day": 18,
+  "right": false,
+  "sensitive": true,
+  "agent_days": [
+   "tuesday",
+   "thursday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "12:30",
+   "12:45",
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30"
+  ]
+ },
+ {
+  "id": "T118162~d18-162",
+  "day": 18,
+  "right": false,
+  "sensitive": true,
+  "agent_days": [
+   "wed",
+   "fri"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "16:30"
+  ]
+ },
+ {
+  "id": "T118163~d18-163",
+  "day": 18,
+  "right": false,
+  "sensitive": false,
+  "agent_days": [
+   "tuesday",
+   "thursday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00"
+  ]
+ },
+ {
+  "id": "T118167~d18-167",
+  "day": 18,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "mon",
+   "wed"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "12:15"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "12:15"
+  ]
+ },
+ {
+  "id": "T118172~d18-172",
+  "day": 18,
+  "right": false,
+  "sensitive": false,
+  "agent_days": [
+   "wednesday",
+   "friday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "11:45",
+   "12:00"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "09:00",
+   "09:15",
+   "09:30",
+   "09:45",
+   "10:00",
+   "10:15",
+   "10:30",
+   "10:45",
+   "11:00",
+   "11:15",
+   "11:30",
+   "11:45",
+   "12:00"
+  ]
+ },
+ {
+  "id": "T118178~d18-178",
+  "day": 18,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "mon",
+   "wed"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "15:30"
+  ]
+ },
+ {
+  "id": "T118181~d18-181",
+  "day": 18,
+  "right": false,
+  "sensitive": true,
+  "agent_days": [
+   "tuesday",
+   "thursday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "12:30",
+   "12:45",
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00"
+  ]
+ },
+ {
+  "id": "T118185~d18-185",
+  "day": 18,
+  "right": false,
+  "sensitive": false,
+  "agent_days": [
+   "wednesday",
+   "friday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "14:15"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "12:30",
+   "12:45",
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T118188~d18-188",
+  "day": 18,
+  "right": false,
+  "sensitive": false,
+  "agent_days": [
+   "tuesday",
+   "thursday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "11:15"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "09:00",
+   "09:15",
+   "09:30",
+   "09:45",
+   "10:00",
+   "10:15",
+   "10:30",
+   "10:45",
+   "11:00",
+   "11:15",
+   "11:30",
+   "11:45",
+   "12:00",
+   "12:15",
+   "12:30"
+  ]
+ },
+ {
+  "id": "T118189~d18-189",
+  "day": 18,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "wed",
+   "fri"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "16:15"
+  ]
+ },
+ {
+  "id": "T118193~d18-193",
+  "day": 18,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "mon",
+   "wed"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "12:30",
+   "12:45",
+   "13:00",
+   "13:15"
+  ],
+  "v2_canonical": true,
+  "v2_names": true,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "12:30",
+   "12:45",
+   "13:00",
+   "13:15"
+  ]
+ },
+ {
+  "id": "T118195~d18-195",
+  "day": 18,
+  "right": false,
+  "sensitive": false,
+  "agent_days": [
+   "wednesday",
+   "friday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T118197~d18-197",
+  "day": 18,
+  "right": false,
+  "sensitive": false,
+  "agent_days": [
+   "tuesday",
+   "thursday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "14:45"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "12:30",
+   "12:45",
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15"
+  ]
+ },
+ {
+  "id": "T119003~d19-3",
+  "day": 19,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "wed",
+   "fri"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "12:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "12:30"
+  ]
+ },
+ {
+  "id": "T119006~d19-6",
+  "day": 19,
+  "right": false,
+  "sensitive": true,
+  "agent_days": [
+   "tuesday",
+   "thursday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "12:30",
+   "12:45",
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T119013~d19-13",
+  "day": 19,
+  "right": false,
+  "sensitive": false,
+  "agent_days": [
+   "mon",
+   "wed",
+   "fri"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "09:00",
+   "09:15",
+   "09:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": true,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "09:00",
+   "09:15",
+   "09:30"
+  ]
+ },
+ {
+  "id": "T119015~d19-15",
+  "day": 19,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "mon",
+   "wed"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "12:00"
+  ],
+  "v2_canonical": true,
+  "v2_names": true,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "12:00",
+   "12:15"
+  ]
+ },
+ {
+  "id": "T119016~d19-16",
+  "day": 19,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "wed",
+   "fri"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "16:30"
+  ]
+ },
+ {
+  "id": "T119044~d19-44",
+  "day": 19,
+  "right": false,
+  "sensitive": true,
+  "agent_days": [
+   "mon",
+   "wed",
+   "fri"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T119047~d19-47",
+  "day": 19,
+  "right": false,
+  "sensitive": false,
+  "agent_days": [
+   "monday",
+   "wednesday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15"
+  ]
+ },
+ {
+  "id": "T119057~d19-57",
+  "day": 19,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "mon",
+   "wed"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "10:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "10:30"
+  ]
+ },
+ {
+  "id": "T119066~d19-66",
+  "day": 19,
+  "right": false,
+  "sensitive": false,
+  "agent_days": [
+   "monday",
+   "wednesday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T119070~d19-70",
+  "day": 19,
+  "right": false,
+  "sensitive": false,
+  "agent_days": [
+   "monday",
+   "wednesday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "12:30",
+   "12:45",
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15"
+  ]
+ },
+ {
+  "id": "T119072~d19-72",
+  "day": 19,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "tue",
+   "thu"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "10:00",
+   "10:15"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "10:00",
+   "10:15"
+  ]
+ },
+ {
+  "id": "T119078~d19-78",
+  "day": 19,
+  "right": false,
+  "sensitive": true,
+  "agent_days": [
+   "wednesday",
+   "friday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "12:30",
+   "12:45",
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T119089~d19-89",
+  "day": 19,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "mon",
+   "wed"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "14:45"
+  ]
+ },
+ {
+  "id": "T119101~d19-101",
+  "day": 19,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "tue",
+   "thu"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "09:00"
+  ],
+  "v2_canonical": true,
+  "v2_names": true,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "09:00"
+  ]
+ },
+ {
+  "id": "T119106~d19-106",
+  "day": 19,
+  "right": false,
+  "sensitive": true,
+  "agent_days": [
+   "tuesday",
+   "thursday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15"
+  ]
+ },
+ {
+  "id": "T119108~d19-108",
+  "day": 19,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "wed",
+   "fri"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "15:15",
+   "15:30"
+  ]
+ },
+ {
+  "id": "T119115~d19-115",
+  "day": 19,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "wed",
+   "fri"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "15:30"
+  ]
+ },
+ {
+  "id": "T119127~d19-127",
+  "day": 19,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "mon",
+   "wed"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": true,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "12:00"
+  ]
+ },
+ {
+  "id": "T119129~d19-129",
+  "day": 19,
+  "right": false,
+  "sensitive": false,
+  "agent_days": [
+   "tuesday",
+   "thursday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "11:15"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "09:00",
+   "09:15",
+   "09:30",
+   "09:45",
+   "10:00",
+   "10:15",
+   "10:30",
+   "10:45",
+   "11:00",
+   "11:15",
+   "11:30",
+   "11:45"
+  ]
+ },
+ {
+  "id": "T119134~d19-134",
+  "day": 19,
+  "right": false,
+  "sensitive": false,
+  "agent_days": [
+   "wednesday",
+   "friday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T119140~d19-140",
+  "day": 19,
+  "right": false,
+  "sensitive": true,
+  "agent_days": [
+   "mon",
+   "wed"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "16:30"
+  ]
+ },
+ {
+  "id": "T119146~d19-146",
+  "day": 19,
+  "right": false,
+  "sensitive": false,
+  "agent_days": [
+   "monday",
+   "wednesday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "12:30",
+   "12:45",
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30"
+  ]
+ },
+ {
+  "id": "T119150~d19-150",
+  "day": 19,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "mon",
+   "wed"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "16:15"
+  ]
+ },
+ {
+  "id": "T119155~d19-155",
+  "day": 19,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "mon",
+   "wed"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "15:00"
+  ]
+ },
+ {
+  "id": "T119158~d19-158",
+  "day": 19,
+  "right": false,
+  "sensitive": false,
+  "agent_days": [
+   "wednesday",
+   "friday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15"
+  ]
+ },
+ {
+  "id": "T119163~d19-163",
+  "day": 19,
+  "right": false,
+  "sensitive": true,
+  "agent_days": [
+   "monday",
+   "wednesday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30"
+  ]
+ },
+ {
+  "id": "T119173~d19-173",
+  "day": 19,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "mon",
+   "wed"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T119175~d19-175",
+  "day": 19,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "mon",
+   "wed"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": true,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "12:00"
+  ]
+ },
+ {
+  "id": "T119183~d19-183",
+  "day": 19,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "mon",
+   "wed"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "12:00"
+  ],
+  "v2_canonical": true,
+  "v2_names": true,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "12:00"
+  ]
+ },
+ {
+  "id": "T119191~d19-191",
+  "day": 19,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "tue",
+   "thu"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": true,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "12:00"
+  ]
+ },
+ {
+  "id": "T120001~d20-1",
+  "day": 20,
+  "right": false,
+  "sensitive": false,
+  "agent_days": [
+   "wednesday",
+   "friday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "13:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30"
+  ]
+ },
+ {
+  "id": "T120002~d20-2",
+  "day": 20,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "mon",
+   "wed"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "15:15"
+  ]
+ },
+ {
+  "id": "T120007~d20-7",
+  "day": 20,
+  "right": false,
+  "sensitive": true,
+  "agent_days": [
+   "tuesday",
+   "thursday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T120013~d20-13",
+  "day": 20,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "mon",
+   "wed"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "12:45"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "12:45"
+  ]
+ },
+ {
+  "id": "T120019~d20-19",
+  "day": 20,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "tuesday",
+   "thursday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": true,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "12:00",
+   "12:15",
+   "12:30"
+  ]
+ },
+ {
+  "id": "T120029~d20-29",
+  "day": 20,
+  "right": false,
+  "sensitive": false,
+  "agent_days": [
+   "monday",
+   "wednesday",
+   "friday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "09:00"
+  ],
+  "v2_canonical": true,
+  "v2_names": true,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "09:00",
+   "09:15",
+   "09:30",
+   "09:45",
+   "10:00",
+   "10:15",
+   "10:30",
+   "10:45",
+   "11:00"
+  ]
+ },
+ {
+  "id": "T120036~d20-36",
+  "day": 20,
+  "right": false,
+  "sensitive": false,
+  "agent_days": [
+   "wednesday",
+   "friday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "11:30",
+   "11:45"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "09:00",
+   "09:15",
+   "09:30",
+   "09:45",
+   "10:00",
+   "10:15",
+   "10:30",
+   "10:45",
+   "11:00",
+   "11:15",
+   "11:30",
+   "11:45",
+   "12:00",
+   "12:15",
+   "12:30"
+  ]
+ },
+ {
+  "id": "T120042~d20-42",
+  "day": 20,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "wed",
+   "fri"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "16:30"
+  ]
+ },
+ {
+  "id": "T120043~d20-43",
+  "day": 20,
+  "right": false,
+  "sensitive": true,
+  "agent_days": [
+   "monday",
+   "wednesday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "14:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "12:30",
+   "12:45",
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T120046~d20-46",
+  "day": 20,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "mon",
+   "wed"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "13:45"
+  ]
+ },
+ {
+  "id": "T120048~d20-48",
+  "day": 20,
+  "right": false,
+  "sensitive": true,
+  "agent_days": [
+   "monday",
+   "wednesday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30"
+  ]
+ },
+ {
+  "id": "T120059~d20-59",
+  "day": 20,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "wed",
+   "fri"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": true,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "12:00"
+  ]
+ },
+ {
+  "id": "T120086~d20-86",
+  "day": 20,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "mon",
+   "wed"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "15:00"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "14:45",
+   "15:00",
+   "15:15"
+  ]
+ },
+ {
+  "id": "T120114~d20-114",
+  "day": 20,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "mon",
+   "wed"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "13:30"
+  ]
+ },
+ {
+  "id": "T120116~d20-116",
+  "day": 20,
+  "right": false,
+  "sensitive": false,
+  "agent_days": [
+   "tuesday",
+   "thursday",
+   "friday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "09:00"
+  ],
+  "v2_canonical": true,
+  "v2_names": true,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "09:00",
+   "09:15",
+   "09:30",
+   "09:45",
+   "10:00",
+   "10:15",
+   "10:30",
+   "10:45",
+   "11:00",
+   "11:15"
+  ]
+ },
+ {
+  "id": "T120124~d20-124",
+  "day": 20,
+  "right": false,
+  "sensitive": true,
+  "agent_days": [
+   "monday",
+   "wednesday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "12:30",
+   "12:45",
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15"
+  ]
+ },
+ {
+  "id": "T120126~d20-126",
+  "day": 20,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "tue",
+   "thu"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "14:00"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "13:45",
+   "14:00",
+   "14:15"
+  ]
+ },
+ {
+  "id": "T120128~d20-128",
+  "day": 20,
+  "right": false,
+  "sensitive": false,
+  "agent_days": [
+   "wednesday",
+   "friday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "12:45"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "12:30",
+   "12:45",
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30"
+  ]
+ },
+ {
+  "id": "T120133~d20-133",
+  "day": 20,
+  "right": false,
+  "sensitive": false,
+  "agent_days": [
+   "mon",
+   "wed",
+   "fri"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "16:00",
+   "16:15",
+   "16:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T120137~d20-137",
+  "day": 20,
+  "right": false,
+  "sensitive": true,
+  "agent_days": [
+   "wednesday",
+   "friday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T120141~d20-141",
+  "day": 20,
+  "right": false,
+  "sensitive": true,
+  "agent_days": [
+   "tuesday",
+   "thursday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "12:30",
+   "12:45",
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T120144~d20-144",
+  "day": 20,
+  "right": false,
+  "sensitive": false,
+  "agent_days": [
+   "tuesday",
+   "thursday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "10:15"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "09:00",
+   "09:15",
+   "09:30",
+   "09:45",
+   "10:00",
+   "10:15",
+   "10:30",
+   "10:45",
+   "11:00",
+   "11:15",
+   "11:30",
+   "11:45",
+   "12:00"
+  ]
+ },
+ {
+  "id": "T120150~d20-150",
+  "day": 20,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "tue",
+   "thu"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "16:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T120155~d20-155",
+  "day": 20,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "wed",
+   "fri"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "12:00"
+  ],
+  "v2_canonical": true,
+  "v2_names": true,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "12:00"
+  ]
+ },
+ {
+  "id": "T120156~d20-156",
+  "day": 20,
+  "right": false,
+  "sensitive": true,
+  "agent_days": [
+   "tuesday",
+   "thursday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "12:30",
+   "12:45",
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15"
+  ]
+ },
+ {
+  "id": "T120157~d20-157",
+  "day": 20,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "tue",
+   "thu"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "09:00"
+  ],
+  "v2_canonical": true,
+  "v2_names": true,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "09:00"
+  ]
+ },
+ {
+  "id": "T120166~d20-166",
+  "day": 20,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "tue",
+   "thu"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "15:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "14:15",
+   "15:30"
+  ]
+ },
+ {
+  "id": "T120167~d20-167",
+  "day": 20,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "mon",
+   "wed"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "16:00",
+   "16:15"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "15:45",
+   "16:00",
+   "16:15"
+  ]
+ },
+ {
+  "id": "T120168~d20-168",
+  "day": 20,
+  "right": false,
+  "sensitive": false,
+  "agent_days": [
+   "monday",
+   "wednesday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "11:15"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "09:00",
+   "09:15",
+   "09:30",
+   "09:45",
+   "10:00",
+   "10:15",
+   "10:30",
+   "10:45",
+   "11:00",
+   "11:15",
+   "11:30"
+  ]
+ },
+ {
+  "id": "T120192~d20-192",
+  "day": 20,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "wednesday",
+   "friday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "09:00"
+  ],
+  "v2_canonical": true,
+  "v2_names": true,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "09:00",
+   "09:15",
+   "09:30",
+   "09:45",
+   "10:00",
+   "10:15",
+   "10:30",
+   "10:45",
+   "11:00",
+   "11:15",
+   "11:30"
+  ]
+ },
+ {
+  "id": "T600019~exam0-19",
+  "day": 21,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "wed",
+   "fri"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "16:00",
+   "16:15"
+  ]
+ },
+ {
+  "id": "T600028~exam0-28",
+  "day": 21,
+  "right": false,
+  "sensitive": true,
+  "agent_days": [
+   "monday",
+   "wednesday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "12:30",
+   "12:45",
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T600031~exam0-31",
+  "day": 21,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "tue",
+   "thu"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "16:00"
+  ]
+ },
+ {
+  "id": "T600033~exam0-33",
+  "day": 21,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "mon",
+   "wed"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "16:15"
+  ]
+ },
+ {
+  "id": "T600034~exam0-34",
+  "day": 21,
+  "right": false,
+  "sensitive": false,
+  "agent_days": [
+   "monday",
+   "wednesday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "16:15",
+   "16:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T600036~exam0-36",
+  "day": 21,
+  "right": false,
+  "sensitive": true,
+  "agent_days": [
+   "tuesday",
+   "thursday",
+   "friday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "12:30",
+   "12:45",
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T600037~exam0-37",
+  "day": 21,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "wed",
+   "fri"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "11:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "11:30"
+  ]
+ },
+ {
+  "id": "T600041~exam0-41",
+  "day": 21,
+  "right": false,
+  "sensitive": false,
+  "agent_days": [
+   "tue",
+   "thu",
+   "fri"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "09:00",
+   "09:15"
+  ],
+  "v2_canonical": true,
+  "v2_names": true,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "09:00",
+   "09:15"
+  ]
+ },
+ {
+  "id": "T600053~exam0-53",
+  "day": 21,
+  "right": false,
+  "sensitive": false,
+  "agent_days": [
+   "tuesday",
+   "thursday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "16:15"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15"
+  ]
+ },
+ {
+  "id": "T600056~exam0-56",
+  "day": 21,
+  "right": false,
+  "sensitive": false,
+  "agent_days": [
+   "wednesday",
+   "friday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "10:00"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "09:00",
+   "09:15",
+   "09:30",
+   "09:45",
+   "10:00",
+   "10:15",
+   "10:30",
+   "10:45",
+   "11:00",
+   "11:15",
+   "11:30"
+  ]
+ },
+ {
+  "id": "T600071~exam0-71",
+  "day": 21,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "mon",
+   "wed"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "15:45"
+  ]
+ },
+ {
+  "id": "T600077~exam0-77",
+  "day": 21,
+  "right": false,
+  "sensitive": false,
+  "agent_days": [
+   "tue",
+   "thu",
+   "fri"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "11:15"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "11:15"
+  ]
+ },
+ {
+  "id": "T600086~exam0-86",
+  "day": 21,
+  "right": false,
+  "sensitive": true,
+  "agent_days": [
+   "tuesday",
+   "thursday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30"
+  ]
+ },
+ {
+  "id": "T600087~exam0-87",
+  "day": 21,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "tue",
+   "thu"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "15:45"
+  ]
+ },
+ {
+  "id": "T600091~exam0-91",
+  "day": 21,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "wed",
+   "fri"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T600098~exam0-98",
+  "day": 21,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "mon",
+   "wed"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "15:30"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "15:15",
+   "15:30"
+  ]
+ },
+ {
+  "id": "T600100~exam0-100",
+  "day": 21,
+  "right": false,
+  "sensitive": true,
+  "agent_days": [
+   "monday",
+   "wednesday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "12:30",
+   "12:45",
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T600113~exam0-113",
+  "day": 21,
+  "right": false,
+  "sensitive": true,
+  "agent_days": [
+   "monday",
+   "wednesday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "12:30",
+   "12:45",
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15"
+  ]
+ },
+ {
+  "id": "T600122~exam0-122",
+  "day": 21,
+  "right": false,
+  "sensitive": false,
+  "agent_days": [
+   "monday",
+   "wednesday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "12:30",
+   "12:45",
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15"
+  ]
+ },
+ {
+  "id": "T600125~exam0-125",
+  "day": 21,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "mon",
+   "wed"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "10:45"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "10:45"
+  ]
+ },
+ {
+  "id": "T600126~exam0-126",
+  "day": 21,
+  "right": false,
+  "sensitive": true,
+  "agent_days": [
+   "wednesday",
+   "friday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "14:45"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00"
+  ]
+ },
+ {
+  "id": "T600143~exam0-143",
+  "day": 21,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "tue",
+   "thu"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "12:00"
+  ],
+  "v2_canonical": true,
+  "v2_names": true,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "12:00"
+  ]
+ },
+ {
+  "id": "T600144~exam0-144",
+  "day": 21,
+  "right": false,
+  "sensitive": true,
+  "agent_days": [
+   "tuesday",
+   "thursday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15"
+  ]
+ },
+ {
+  "id": "T600147~exam0-147",
+  "day": 21,
+  "right": true,
+  "sensitive": true,
+  "agent_days": [
+   "wed",
+   "fri"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "15:30",
+   "15:45"
+  ]
+ },
+ {
+  "id": "T600160~exam0-160",
+  "day": 21,
+  "right": false,
+  "sensitive": true,
+  "agent_days": [
+   "tuesday",
+   "thursday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T600166~exam0-166",
+  "day": 21,
+  "right": false,
+  "sensitive": false,
+  "agent_days": [
+   "wednesday",
+   "friday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00"
+  ]
+ },
+ {
+  "id": "T600167~exam0-167",
+  "day": 21,
+  "right": false,
+  "sensitive": true,
+  "agent_days": [
+   "tuesday",
+   "thursday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "12:30",
+   "12:45",
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T600168~exam0-168",
+  "day": 21,
+  "right": false,
+  "sensitive": false,
+  "agent_days": [
+   "wednesday",
+   "friday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": true,
+  "v1_names": true,
+  "v1_agent": true,
+  "v1_agent_starts": [
+   "09:30",
+   "10:45"
+  ],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "09:00",
+   "09:15",
+   "09:30",
+   "09:45",
+   "10:00",
+   "10:15",
+   "10:30",
+   "10:45",
+   "11:00",
+   "11:15",
+   "11:30"
+  ]
+ },
+ {
+  "id": "T600170~exam0-170",
+  "day": 21,
+  "right": false,
+  "sensitive": true,
+  "agent_days": [
+   "monday",
+   "wednesday"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": false,
+  "v2_agent_starts": [
+   "13:00",
+   "13:15",
+   "13:30",
+   "13:45",
+   "14:00",
+   "14:15",
+   "14:30",
+   "14:45",
+   "15:00",
+   "15:15",
+   "15:30",
+   "15:45",
+   "16:00",
+   "16:15",
+   "16:30"
+  ]
+ },
+ {
+  "id": "T600171~exam0-171",
+  "day": 21,
+  "right": true,
+  "sensitive": false,
+  "agent_days": [
+   "mon",
+   "wed"
+  ],
+  "offered": "find_common_starts@2",
+  "v1_canonical": false,
+  "v1_names": false,
+  "v1_agent": false,
+  "v1_agent_starts": [],
+  "v2_canonical": true,
+  "v2_names": false,
+  "v2_agent": true,
+  "v2_agent_starts": [
+   "14:30",
+   "14:45"
+  ]
+ }
+]

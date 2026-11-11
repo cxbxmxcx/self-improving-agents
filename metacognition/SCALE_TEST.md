@@ -1,6 +1,6 @@
 # The production-scale test
 
-Written on November 10, 2026, before any of its runs. Nothing in this plan has been run on a paid model. The pass criteria in section 7 are to be committed before the first run, as the frozen-method test's were in [DOMAINS.md](DOMAINS.md).
+Written on November 10, 2026, before any of its runs. The calendar desk's paid run followed on November 11, and section 11 reports it. The pass criteria in section 7 are to be committed before the first run, as the frozen-method test's were in [DOMAINS.md](DOMAINS.md).
 
 Two scripted tests that call no model were run the same day, and section 3 reports them: a stream of 100,000 requests served one at a time, and a load test with up to 128 requests in flight. They test the loop's own mechanics at scale. They do not test how a model behaves at that length, which is still the job of the paid runs planned below.
 
@@ -296,3 +296,79 @@ The parts run one after another and alone on the machine: about three hours for 
 | 5 | The outside desk's data | Decided on November 11: downloaded. The inbox is built and soaked, and its paid run waits for its own cap |
 | 6 | Committing this plan | Commit the criteria before any run, so they cannot move afterward |
 | 7 | Re-testing by day | Decided on November 11: yes. It is change 6 in section 4, and on the scripted stream the fast path was back within 9 requests of each change |
+| 8 | The gate's blind spot, found on day 17 of the calendar desk (11.3) | Make both changes in 11.6 before the next desk's paid run, test them with a scripted agent that writes the days in full half the time, and record them as change 10. The calendar desk's result stands as measured and is not run again |
+
+## 11. Results on the calendar desk
+
+The calendar desk ran on November 11 in the order rule 4 sets: the live check, the agent alone, the loop, the full system and the search repeats, each alone on the machine and each replayed with no key before the next started. Every replay matched its recording request by request, in every verdict, outcome, reasoning level, booking, dollar and learning step. Only the time of a request a decision program served differs, by at most 0.2 milliseconds, because a program's own run time is measured on the clock. The paid calls cost $36.75 of the $40 cap. `examples/scale/desk_report.py` computed every number here from the recordings. The results, the data behind the results page's figures and the evidence for 11.3 are in `examples/scale/results/desk_calendar/`, and the recordings, about 76 MB, are kept compressed outside git.
+
+**The pattern does not hold on the calendar desk.** Criteria 6 and 7 fail, and section 7 counts that as a failure whatever the cost and time criteria show. One fault decides both. On day 17 the loop relearned a function that was right on every week it was judged on, and wrong about half the times the agent called it (11.3). Criterion 3 fails for a different reason (11.4).
+
+### 11.1 The criteria
+
+| # | Criterion | Result | Measured |
+|---|---|---|---|
+| 1 | Cheaper to serve | Pass | $0.00161 a request against $0.00262, 61% of the baseline |
+| 2 | Pays for its learning | Pass | $10.58 for the whole stream with $4.06 of learning, against $12.40 with $1.90. It was the cheaper of the two from request 248 on |
+| 3 | Faster | Fail | Mean 2.11 s against 2.80 s (75%); 95th percentile 5.11 s against 4.12 s (124%) |
+| 4 | As accurate | Pass | 783 of 800 right against 768 |
+| 5 | Safer | Pass | Programs acted wrongly on 2 of the 1,332 requests they served (0.15%), and there were 10 wrong actions against 21 on the common requests |
+| 6 | Robust | Fail | Requests until back after each change: 45, 40, 47, 40 and 333. Forty is the least the measure can show |
+| 7 | More predictable | Fail | 192 of 200 exam requests got one verdict in all three servings, against 194 |
+| 8 | Repeatable | Pass | All 5 searches admitted, after 5, 2, 3, 3 and 2 rewrites, and each got 52 of 52 held-out requests right, against 48 for the agent at its floor |
+| 9 | Worth it against a first deployment | Pass | $10.58 for the stream against $77.30 (14%), and 155 of 160 right against 118 |
+
+Over the whole stream the full system got 3,898 of 4,000 requests right, and decision programs served 1,332 of them. The agent alone at high reasoning got 118 of its 160 right, at about $0.019 and 21 seconds a request, which is what a team that deploys the agent first would see.
+
+### 11.2 What it cost
+
+| Part | What was recorded | Cost | Cap |
+|---|---|---|---|
+| Live check | The keys, both models, and 72 routing judgments, all correct | $0.02 | $0.50 |
+| Agent alone | 160 requests in 447 agent calls | $3.09 | $3.40 |
+| Agent with Chapter 6's loop | 800 requests, 20 nights, the exam three times; 8 builder calls ($1.91) | $5.39 | $8.00 |
+| Full system | 4,000 requests, 20 nights, the exam three times; 12 builder calls ($3.98) and 8,335 decision-model calls ($0.48) | $11.67 | $19.00 |
+| Five search repeats | Five searches, each serving the 52 held-out requests; 42 builder calls ($15.60) | $16.58 | $19.50 |
+| Total | | $36.75 | $40 |
+
+Section 9 estimated $25 to $40 and the run cost $36.75. Two parts cost more than I estimated: the agent alone, for the reason section 9 gives, and the search repeats (11.5).
+
+### 11.3 Day 17: a relearned function the gate could not see
+
+On day 17 Dana changed her note to ask for three quarters of an hour. The loop found `find_common_starts` stale and relearned it the same day, from one accepted run and one builder call ($0.20), and the new version passed its gate, 6 of 6. It reads the new note correctly. On all 120 same-time requests of days 17 to 20, and all 30 of the exam's, booking its first start is accepted when it is called with the days written as its contract writes them, "mon" to "fri".
+
+The agent does not always write them that way. On days 14 to 16 it wrote full names such as "monday" on 45 of its 89 calls, and the first version compared only the first three letters of a day, so the agent was right on 44 of those 45. The relearned version compares a day exactly as given. Called with full names it finds nobody's events, so it returns every quarter hour the working hours allow, and the first of those is seldom free. With the relearned version, on days 17 to 20, the agent wrote full names on 59 of its 114 calls and 4 of those were right, against 47 of the 55 with short names. In the exam's last serving it was 0 of 16, against 12 of 14.
+
+With that one comparison written as the first version wrote it, the relearned function answers all 144 of the agent's calls right (days 17 to 20 and the exam's last serving). Of the 81 same-time requests the full system got wrong in those, 68 trace to the comparison. The other 13 are the agent's own bookings, such as two days booked of three; on days 14 to 16 it made 4 such misses in 90.
+
+The gate could not see it, because it calls a function the way its author would: with the request's own parameters, the days written short. Chapter 7's online practice does the same. Chapter 6's acceptance test called every function both ways, "since the agent, not the search, decides how it calls the function", and that rule did not carry into the online gate. Change 7 in section 4 then kept the function in place. When the detector suspected it after rejected runs, the confirmation put it through the same gate, it passed, and it stayed trusted: 30 times in four days, 6 to 10 times a day.
+
+The same fault decides criteria 6 and 7. Every exam request the full system got wrong in all three servings was a same-time request (14 of them), as were six of the eight whose verdict changed between servings. On the other 170 exam requests it was right on 170, 168 and 169 in the three servings, and the loop on 167, 167 and 164. Whether criteria 6 and 7 would pass without the fault only a run can say, and rule 1 allows none.
+
+Chapter 7's own results are not touched by it. The six functions its recordings hold give the same result with the days written either way, and the only one of them that passes the chapter's gate after Dana's note does so both ways. The gap in its practice is real, but it has cost the chapter nothing.
+
+### 11.4 Why it is not faster enough
+
+The full system was faster on every kind of request a decision program can take: one meeting 1.31 s against 2.64 s, near misses 1.97 s against 2.45 s, and out of scope 1.03 s against 1.55 s. Requests that need several actions stay with the agent, as section 1 says, and they were a little slower than with the loop: two meetings 4.67 s against 4.38 s, and the same time on several days 6.09 s against 4.57 s. They are 36 of the 41 slowest requests, so they set the 95th percentile. Change 9 in section 4, a decision program that may take several actions, is the change that would address it.
+
+### 11.5 The search repeats
+
+Five searches started from the component that keeps every request on the agent, each with the day of experience Chapter 7 recorded and none of the builder's recorded replies, so each asked the builder afresh. All five were admitted within six rewrites, and every admitted component got all 52 of the chapter's held-out requests right, against 48 for the agent at its floor, with no wrong action by a program.
+
+| Search | Rewrites | Held-out right | Served by programs | Cost a request | Seconds a request |
+|---|---|---|---|---|---|
+| 1 | 5 | 52 of 52 | 5 | $0.00221 | 2.36 |
+| 2 | 2 | 52 of 52 | 16 | $0.00162 | 2.09 |
+| 3 | 3 | 52 of 52 | 19 | $0.00141 | 2.07 |
+| 4 | 3 | 52 of 52 | 22 | $0.00106 | 1.49 |
+| 5 | 2 | 52 of 52 | 24 | $0.00116 | 1.39 |
+
+Every admitted component made the same split. One meeting goes to a decision program, and two meetings, questions about the calendar and work outside the job go to the agent, the last two read-only. Search 3 kept the agent at low reasoning where the others chose none, and search 1 kept a second memory for single meetings on the agent, which is why its programs served only 5 of the 52. So the cost of a request ranged from about the agent's own to half of it. Admission and accuracy repeat; the size of the saving does not.
+
+The searches cost $16.58, of which $15.60 was the builder's 42 calls, or $3.32 a search in all. My estimate of $1.40 to $2.40 a search came from Chapter 7's search, which was admitted on its first rewrite, and these needed two to five. Of the 15 rewrites, 8 were refused on their own cases and 2 failed before they could be measured.
+
+### 11.6 What to change before the next desk
+
+1. **A gate calls a function the ways the agent calls it.** The smallest change restores Chapter 6's rule in the desk's practice and in Chapter 7's: a function passes a week only when it is right with the days written either way. The general change belongs to the harness: the gate also replays, on each held-back week, the arguments the agent passed in the runs that taught the function, so whatever the agent varies, the gate varies too.
+2. **A suspected function is confirmed on the runs that raised the suspicion.** The confirmation should run it on those weeks with the agent's own arguments, and quarantine it when its answers there would be rejected, instead of re-running the gate that admitted it.
+3. Both change code that section 4 froze until every run in this plan is done. That is decision 8 in section 10.
