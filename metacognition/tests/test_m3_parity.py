@@ -12,11 +12,11 @@ import random
 from chapters.ch06.assistant import context_search as cs
 from chapters.ch06.assistant.environment import SchedulingEnvironment
 from chapters.ch06.assistant.generator import task_set
-from chapters.ch06.assistant.harness import BOOTSTRAPPED_MEMORY, MEMORIES
+from chapters.ch06.assistant.harness import MEMORIES, STARTING_MEMORY
 from chapters.ch06.assistant.learning import (
     act,
     behavior_cases,
-    bootstrapped_source,
+    starting_source,
     gather_experience,
     recall_experience,
     remember,
@@ -31,7 +31,7 @@ from metacog import Recording, RunConfig
 
 async def test_e1_floors_and_the_controller_table_through_calibrate(ch06_recording):
     meta = Metacognition([FIND_SHARED_STARTS], verifier=check, recall_k=1, learning="inline")
-    meta.install("find_shared_starts", (MEMORIES / BOOTSTRAPPED_MEMORY["file"]).read_text(encoding="utf-8"))
+    meta.install("find_shared_starts", (MEMORIES / STARTING_MEMORY["file"]).read_text(encoding="utf-8"))
     cases = [Case(t["id"], t["text"], t) for t in task_set("dev")]
     with Recording(ch06_recording("reasoning_floor.jsonl")).active():
         floors = await calibrate(assistant(metacognition=meta), cases, verifier=check, world=SchedulingEnvironment,
@@ -67,7 +67,7 @@ async def test_e3_learning_mechanism_search(ch06_recording):
     experience = await recall_experience(await remember(episodes))
     with Recording(ch06_recording("learning_search.jsonl")).active():
         found = await search_learners(
-            FIND_SHARED_STARTS, experience, practice=act, reference=bootstrapped_source(), run_case=run_on_case,
+            FIND_SHARED_STARTS, experience, practice=act, reference=starting_source(), run_case=run_on_case,
             cases=behavior_cases("validation"), test_cases=behavior_cases("test"), prompts=CALENDAR,
             case_id=lambda task: task["id"])
     table = {t.mechanism: (t.matched, t.writer_calls) for t in found.trials}

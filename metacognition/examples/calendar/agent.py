@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import Any
 
 from chapters.ch06.assistant.environment import SchedulingEnvironment
-from chapters.ch06.assistant.harness import BOOTSTRAPPED_MEMORY, MODEL, PROMPT
+from chapters.ch06.assistant.harness import MODEL, PROMPT, STARTING_MEMORY
 from chapters.ch06.assistant.learning import CONTRACT
 from chapters.ch06.assistant.tools import make_tools
 from helix.metacognition import Procedure
@@ -38,7 +38,7 @@ async def cancel_event(ctx: RunContextWrapper[SchedulingEnvironment], event_id: 
 
 # The first task class's procedure, with the book's contract text and tool description.
 FIND_SHARED_STARTS = Procedure.from_contract(CONTRACT, api=[read_calendar],
-                                             description=BOOTSTRAPPED_MEMORY["description"])
+                                             description=STARTING_MEMORY["description"])
 
 
 def assistant(**kwargs: Any) -> Agent:

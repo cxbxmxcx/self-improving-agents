@@ -7,7 +7,7 @@ on went read-only, 0.4 when the language model got it right, 1 when it was
 not done, and 3 for a wrong action. The service gap is the mean distance.
 
 The held-out requests are measured three ways: Chapter 6's assistant at the
-floor listing 6.2 measured, the same assistant at high reasoning, and the
+floor listing 6.1 measured, the same assistant at high reasoning, and the
 assistant with the hand-written component of listing 7.1 beside it. The gate
 admits the component on requests of its own before it serves any.
 Replay uses saved replies; --record adds paid calls up to --budget.

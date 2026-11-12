@@ -20,7 +20,7 @@ import pytest
 
 from chapters.ch06.assistant.environment import SchedulingEnvironment, to_hhmm
 from chapters.ch06.assistant.generator import _starts
-from chapters.ch06.assistant.learning import MEMORIES, bootstrapped_source
+from chapters.ch06.assistant.learning import MEMORIES, starting_source
 from chapters.ch07.assistant import harness, requests
 from chapters.ch07.assistant.components import hand_written_component
 from helix.metacognition import recording
@@ -152,7 +152,7 @@ class Jev:
 @pytest.fixture
 def listing(monkeypatch, tmp_path):
     """Load a listing by file name and run it on the scripted models; returns what it saved."""
-    monkeypatch.setattr(harness, "kept_procedure", lambda: (bootstrapped_source(), "reference"))
+    monkeypatch.setattr(harness, "starting_procedure", lambda: (starting_source(), "starting_memory"))
 
     async def run(name: str, saved: str, **flags: Any) -> dict[str, Any]:
         spec = importlib.util.spec_from_file_location(f"listing_{name[:2]}", LISTINGS / name)
@@ -206,7 +206,7 @@ async def test_listing_3_runs_the_same_search_with_gepa_when_the_method_is_swapp
 
 
 async def test_listing_4_serves_by_day_improves_by_night_and_recovers_from_the_changed_note(listing):
-    out = await listing("04_online_week.py", "online_week.json")
+    out = await listing("04_online_week.py", "online_week.json", routes_lower_reasoning=False)
     nights, summary = out["nights"], out["summary"]
     assert any("passed, installed" in event for event in nights["Monday"])
     assert nights["Tuesday"] == [] and nights["Thursday"] == []
@@ -249,13 +249,13 @@ READ_ONLY_ROUTER = 'async def decide(request, kit):\n    return {"handoff": "not
 
 def test_listing_5s_harness_cannot_quarantine_a_function(monkeypatch):
     """Its gate holds cases for the first function only, so a relearning of the second could never pass."""
-    monkeypatch.setattr(harness, "kept_procedure", lambda: (bootstrapped_source(), "reference"))
+    monkeypatch.setattr(harness, "starting_procedure", lambda: (starting_source(), "starting_memory"))
     assert harness.harness(second_class=True)[1].gating_sources == ()
     assert harness.harness()[1].gating_sources == ("verifier",)
 
 
 async def test_acting_on_near_misses_is_not_held_against_the_scheduling_function(monkeypatch):
-    monkeypatch.setattr(harness, "kept_procedure", lambda: (bootstrapped_source(), "reference"))
+    monkeypatch.setattr(harness, "starting_procedure", lambda: (starting_source(), "starting_memory"))
     agent, meta = harness.harness()
     near_misses = [r for r in requests.load("experience") if r["expect"] == "handoff"][:6]
     models, log = Models(careless=True), []
@@ -266,7 +266,7 @@ async def test_acting_on_near_misses_is_not_held_against_the_scheduling_function
 
 
 async def test_work_sent_on_read_only_is_not_held_against_the_scheduling_function(monkeypatch):
-    monkeypatch.setattr(harness, "kept_procedure", lambda: (bootstrapped_source(), "reference"))
+    monkeypatch.setattr(harness, "starting_procedure", lambda: (starting_source(), "starting_memory"))
     tier = harness.decision_tier(Jev(), [("sends_everything_on", "")])
     agent, meta = harness.harness(tier)
     meta.store.add_version("decision_program", READ_ONLY_ROUTER, state="trusted", created_by="test")

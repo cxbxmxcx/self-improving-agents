@@ -16,17 +16,17 @@ from helix.metacognition.recording import Recording
 EXPECTED = {
     "no_memory": {"none": (2, 0, 0.0032), "low": (4, 1000, 0.0076),
                   "medium": (12, 2077, 0.0125), "high": (13, 2810, 0.0162)},
-    "bootstrapped_memory": {"none": (16, 0, 0.0021), "low": (16, 82, 0.0025),
-                            "medium": (16, 152, 0.0028), "high": (16, 253, 0.0033)},
+    "starting_memory": {"none": (16, 0, 0.0021), "low": (16, 82, 0.0025),
+                        "medium": (16, 152, 0.0028), "high": (16, 253, 0.0033)},
 }
 
 
 async def test_e1_reasoning_floors_replay_through_metacog(ch06_recording):
     from chapters.ch06.assistant.generator import task_set
-    from chapters.ch06.assistant.harness import BOOTSTRAPPED_MEMORY, install_memory, run_task
+    from chapters.ch06.assistant.harness import STARTING_MEMORY, install_memory, run_task
 
     tasks = task_set("dev")
-    arms = {"no_memory": None, "bootstrapped_memory": BOOTSTRAPPED_MEMORY}
+    arms = {"no_memory": None, "starting_memory": STARTING_MEMORY}
     with Recording(ch06_recording("reasoning_floor.jsonl"), mode="replay").active():
         for arm, entry in arms.items():
             memory = await install_memory(entry)

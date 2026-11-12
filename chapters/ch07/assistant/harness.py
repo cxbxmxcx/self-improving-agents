@@ -1,6 +1,6 @@
 """Put Chapter 6's assistant on helix's packaged harness and give it a decision tier that a code search can fill.
 
-Listing 6.5 wired a recorder, a detector, a learner, a gate and a controller around the agent by hand. helix's
+Listing 6.2 wired a recorder, a detector, a learner, a gate and a controller around the agent by hand. helix's
 `Metacognition` holds those parts in one object. A `ProgramTier` adds what this chapter searches: a learning component
 that stores memories and says what serves each one. Everything here is a setting of helix or a way to print what
 happened, and the chapter adds no mechanism of its own.
@@ -22,7 +22,7 @@ from typing import Any
 
 import helix
 from chapters.ch06.assistant import generator, generator_drift
-from chapters.ch06.assistant.learning import act, bootstrapped_source
+from chapters.ch06.assistant.learning import act, starting_source
 from chapters.ch07.assistant import requests
 from chapters.ch07.assistant.desk import (
     FIND_COMMON_STARTS,
@@ -75,30 +75,23 @@ FRESH_WEEKS = range(901, 907)  # first-class weeks no request set uses, held bac
 # ---------------------------------------------------------------- what Chapter 6 left
 
 
-def kept_procedure() -> tuple[str, str]:
-    """The function listing 6.3's kept mechanism wrote, and that mechanism's name."""
-    summary = CH06_RUNS / "learning_search" / "learning_search.json"
-    if not summary.exists():
-        print("Listing 6.3 has not been run here, so the assistant starts with Chapter 6's reference function.")
-        return bootstrapped_source(), "reference"
-    kept = json.loads(summary.read_text(encoding="utf-8"))["kept"]
-    return (summary.parent / f"learned_{kept}.py").read_text(encoding="utf-8"), kept
+def starting_procedure() -> tuple[str, str]:
+    """Chapter 6's starting memory, the function its GEPA search found and a person promoted, and its label.
+
+    The label marks model-written code, so the installed function runs the way a learned one does."""
+    return starting_source(), "starting_memory"
 
 
 def second_procedure() -> tuple[str, str]:
-    """The function listing 6.4 learned for Chapter 6's second class, or that class's reference function."""
-    learned = CH06_RUNS / "generalization" / "learned_find_common_starts.py"
-    if learned.exists():
-        return learned.read_text(encoding="utf-8"), "listing_6_4"
-    print("Listing 6.4 has not been run here, so the second class starts with Chapter 6's reference function.")
-    return bootstrapped_source("same_time"), "reference"
+    """The starting function of the second class in Chapter 6's code: one meeting at the same time on several days."""
+    return starting_source("same_time"), "starting_memory"
 
 
 def controller() -> Controller:
-    """The reasoning listing 6.2 measured: its floor with a trusted memory, and its floor without one."""
+    """The reasoning listing 6.1 measured: its floor with a trusted memory, and its floor without one."""
     floors = CH06_RUNS / "reasoning_floor.json"
     if floors.exists():
-        return Controller.from_sweeps(floors, memory="bootstrapped_memory", no_memory="no_memory")
+        return Controller.from_sweeps(floors, memory="starting_memory", no_memory="no_memory")
     return Controller({"memory": "none", "no_memory": "high"})
 
 
@@ -150,7 +143,7 @@ def harness(tier: ProgramTier | None = None, *, second_class: bool = False,
     so there the detector is off: no verdict can quarantine a function and start a relearning that could not pass.
     `changes` replace any of the loop's settings, such as its store or its learning budget.
     """
-    source, kept = kept_procedure()
+    source, origin = starting_procedure()
     procedures = [FIND_SHARED_STARTS, FIND_COMMON_STARTS] if second_class else [FIND_SHARED_STARTS]
     settings: dict[str, Any] = {
         "verifier": check, "controller": controller(), "recall_k": len(procedures),
@@ -161,7 +154,7 @@ def harness(tier: ProgramTier | None = None, *, second_class: bool = False,
         # cannot.
         "gating_sources": () if second_class else ("verifier",)}
     meta = Metacognition(procedures, **{**settings, **changes})
-    meta.install("find_shared_starts", source, created_by=kept)
+    meta.install("find_shared_starts", source, created_by=origin)
     if second_class:
         second, origin = second_procedure()
         meta.install("find_common_starts", second, created_by=origin)
@@ -277,7 +270,7 @@ def summarize(log: Sequence[dict[str, Any]]) -> dict[str, dict[str, Any]]:
                 "wrong_actions": sum(r["outcome"] == "wrong" for r in rows),
                 "dollars": sum(r["dollars"] for r in rows) / len(rows),
                 "seconds": sum(r["seconds"] for r in rows) / len(rows), "kinds": {}}
-        print(f"{stage}: {cell['right']}/{cell['requests']} right, gap {cell['gap']:.2f}, "
+        print(f"{stage}: {cell['right']}/{cell['requests']} right, gap {gap(rows):.2f}, "
               f"${cell['dollars']:.5f} and {cell['seconds']:.2f} s a request")
         for kind in KINDS:
             part = [r for r in rows if r["kind"] == kind]

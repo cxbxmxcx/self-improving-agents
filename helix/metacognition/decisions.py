@@ -245,6 +245,8 @@ class ProgramTier:
     # quarantined, a route cannot take that request below the reasoning the controller raised for it
     retest_by_day: bool = False  # with `long_running`: when a procedure has been relearned, an action that was
     # switched off is tested again at once, and not at the next night. The gate's cases have to be current by then
+    keep_raised_effort: bool | None = None  # while a procedure a request matches is quarantined, a route cannot take
+    # that request below the reasoning the controller raised for it. None leaves it to `long_running`
     retry_after: int = 12
     writer_model: str | None = None
     writer_params: dict[str, Any] = field(default_factory=lambda: {"reasoning_effort": "medium"})
@@ -256,6 +258,11 @@ class ProgramTier:
     read_only_handoffs: bool = False  # a request that should not be acted on is right only if handed off read-only
     world: Any = None  # task -> the agent's context; with it, a program's route is tried on the real agent
     route_practice: Any = None  # async (task, effort, memory) -> (accepted, reason); overrides `world`
+
+    @property
+    def keeps_raised_effort(self) -> bool:
+        """Whether a route is held to the reasoning the controller raised for a quarantined procedure."""
+        return self.long_running if self.keep_raised_effort is None else self.keep_raised_effort
 
 
 @dataclass
@@ -453,7 +460,7 @@ class DecisionLoop:
         if "handoff" in decision or tool is None or self.off(str(action)):
             why = decision.get("handoff") or (f"{action} is switched off" if tool else f"no action {action!r}")
             route = decision.get("route")
-            if route and self.tier.long_running and plan.matched and not plan.offered:
+            if route and self.tier.keeps_raised_effort and plan.matched and not plan.offered:
                 # A procedure this request matches is quarantined, and the controller raised the reasoning for
                 # that. A route chosen while the procedure worked does not lower it again.
                 route = most_demanding([route, plan.effort]) or route

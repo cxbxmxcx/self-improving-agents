@@ -561,13 +561,15 @@ async def test_a_relearned_procedure_has_a_switched_off_action_tested_again_at_o
     assert meta.store.state("decision:loop").get("attempts", 0) == 0  # a re-test uses no attempt
 
 
-@pytest.mark.parametrize(("long_running", "quarantined", "effort"),
-                         [(True, True, "high"), (False, True, "low"), (True, False, "low")])
-async def test_a_route_does_not_lower_the_reasoning_raised_for_a_quarantined_procedure(model, long_running,
+@pytest.mark.parametrize(("long_running", "keep", "quarantined", "effort"),
+                         [(True, None, True, "high"), (False, None, True, "low"), (True, None, False, "low"),
+                          (False, True, True, "high"), (True, False, True, "low"), (False, True, False, "low")])
+async def test_a_route_does_not_lower_the_reasoning_raised_for_a_quarantined_procedure(model, long_running, keep,
                                                                                       quarantined, effort):
     """In the recorded week three of a day's six failures came from a route that kept the agent at low reasoning
-    while the function it relied on was quarantined."""
-    agent, meta = build(trusted=ROUTING, long_running=long_running)
+    while the function it relied on was quarantined. `keep_raised_effort` sets this alone; unset, it follows
+    `long_running`."""
+    agent, meta = build(trusted=ROUTING, long_running=long_running, keep_raised_effort=keep)
     meta.controller = Controller({"memory": "none", "no_memory": "high"})
     if quarantined:
         meta.quarantine("order_status")

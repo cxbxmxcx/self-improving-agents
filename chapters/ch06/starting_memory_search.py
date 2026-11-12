@@ -9,7 +9,7 @@ Every candidate is a version in the archive with its parent and score.
 
 The best candidate is then checked on the validation and test requests.
 When it is accepted on all of them, a person promotes it with --promote,
-and it becomes the bootstrapped memory: the searched context that the
+and it becomes the starting memory: the searched context that the
 learning search must reproduce.
 
 Replays the recording by default; --record sends missing calls to

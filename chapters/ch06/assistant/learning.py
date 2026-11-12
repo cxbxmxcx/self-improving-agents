@@ -7,8 +7,9 @@ produces a function matching the task class's name and return contract.
 
 The act helper tries a function on a development request and returns feedback.
 The match signal compares its outputs with the reference on evaluation cases.
-Both classes share the calendar environment while supplying different
-contracts and booking rules.
+The classes share the calendar environment while supplying different
+contracts and booking rules; after four colleagues add rules to their notes,
+the checker also honors each rule.
 """
 
 from __future__ import annotations
@@ -20,10 +21,10 @@ from pathlib import Path
 from typing import Any
 
 from chapters.ch05.personal.encoder import embed
-from chapters.ch06.assistant import generator, generator_drift, generator_same_time
+from chapters.ch06.assistant import generator, generator_drift, generator_rules, generator_same_time
 from chapters.ch06.assistant.environment import DAY_NAMES, SchedulingEnvironment
-from chapters.ch06.assistant.harness import (BOOTSTRAPPED_MEMORY, BOOTSTRAPPED_SAME_TIME, MEMORIES, ReadOnlyCalendar,
-                                             run_task)
+from chapters.ch06.assistant.harness import (MEMORIES, STARTING_MEMORY, STARTING_SAME_TIME, ReadOnlyCalendar,
+                                             environment, run_task)
 from helix.memory.base import MemoryContext, MemoryEntry, MemoryQuery, Scope, ScopeKey
 from helix.memory.code_skills import skill_tool
 from helix.memory.episodic import EpisodicMemory
@@ -60,6 +61,15 @@ def _book_each_day(env: SchedulingEnvironment, task: dict[str, Any], starts: Any
     return None
 
 
+def _book_each_day_checked(env: SchedulingEnvironment, task: dict[str, Any], starts: Any) -> str | None:
+    """After the colleagues' rules: the first class's booking, refusing starts that are not lists of times."""
+    if isinstance(starts, dict) and any(not isinstance(day, str) or not isinstance(values, list)
+                                        or any(not isinstance(value, str) for value in values)
+                                        for day, values in starts.items()):
+        return "a mapping of day to lists of time strings"
+    return _book_each_day(env, task, starts)
+
+
 def _book_same_time(env: SchedulingEnvironment, task: dict[str, Any], starts: Any) -> str | None:
     """Second class: the earliest common start, on every listed day."""
     if not isinstance(starts, list):
@@ -76,7 +86,7 @@ def _book_same_time(env: SchedulingEnvironment, task: dict[str, Any], starts: An
 class TaskClass:
     name: str
     prefix: str  # task ids begin with it
-    entry: dict[str, Any]  # the bootstrapped memory
+    entry: dict[str, Any]  # the starting memory
     contract: Contract
     generate: Callable[[int], dict[str, Any]]
     task_set: Callable[[str], list[dict[str, Any]]]
@@ -84,26 +94,29 @@ class TaskClass:
 
 
 CONTRACT = Contract(
-    name=BOOTSTRAPPED_MEMORY["name"], signature=_signature(BOOTSTRAPPED_MEMORY["name"]),
-    description=BOOTSTRAPPED_MEMORY["description"], api=API,
+    name=STARTING_MEMORY["name"], signature=_signature(STARTING_MEMORY["name"]),
+    description=STARTING_MEMORY["description"], api=API,
     returns=("Return {\"starts\": {day: [\"HH:MM\", ...]}} with each day keyed as the calendar keys it, starts "
              "on quarter hours and earliest first, and days with no start left out. Times in the arguments and "
              "the result are on the user's clock."),
 )
 SAME_TIME_CONTRACT = Contract(
-    name=BOOTSTRAPPED_SAME_TIME["name"], signature=_signature(BOOTSTRAPPED_SAME_TIME["name"]),
-    description=BOOTSTRAPPED_SAME_TIME["description"], api=API,
+    name=STARTING_SAME_TIME["name"], signature=_signature(STARTING_SAME_TIME["name"]),
+    description=STARTING_SAME_TIME["description"], api=API,
     returns=("Return {\"starts\": [\"HH:MM\", ...]} with the starts that work on every listed day, on quarter "
              "hours and earliest first. Times in the arguments and the result are on the user's clock."),
 )
 CLASSES = {
-    "multi_attendee": TaskClass("multi_attendee", "S", BOOTSTRAPPED_MEMORY, CONTRACT, generator.generate,
+    "multi_attendee": TaskClass("multi_attendee", "S", STARTING_MEMORY, CONTRACT, generator.generate,
                                 generator.task_set, _book_each_day),
-    "same_time": TaskClass("same_time", "T", BOOTSTRAPPED_SAME_TIME, SAME_TIME_CONTRACT,
+    "same_time": TaskClass("same_time", "T", STARTING_SAME_TIME, SAME_TIME_CONTRACT,
                            generator_same_time.generate, generator_same_time.task_set, _book_same_time),
     # The first class after Dana's note changes, served by the online loop.
-    "drift": TaskClass("drift", "D", BOOTSTRAPPED_MEMORY, CONTRACT, generator_drift.generate,
+    "drift": TaskClass("drift", "D", STARTING_MEMORY, CONTRACT, generator_drift.generate,
                        generator_drift.task_set, _book_each_day),
+    # The first class after four colleagues add rules to their calendar notes, served by listing 6.3.
+    "team_rules": TaskClass("team_rules", generator_rules.PREFIX, STARTING_MEMORY, CONTRACT,
+                            generator_rules.generate, generator_rules.task_set, _book_each_day_checked),
 }
 
 
@@ -112,7 +125,7 @@ def class_of(task_or_id: dict[str, Any] | str) -> TaskClass:
     return next(c for c in CLASSES.values() if task_id.startswith(c.prefix))
 
 
-def bootstrapped_source(task_class: str = "multi_attendee") -> str:
+def starting_source(task_class: str = "multi_attendee") -> str:
     return (MEMORIES / CLASSES[task_class].entry["file"]).read_text(encoding="utf-8")
 
 
@@ -131,7 +144,7 @@ def arguments(task: dict[str, Any], *, day_names: bool = False) -> dict[str, Any
 async def run_on_case(source: str, task: dict[str, Any], *, day_names: bool = False) -> Any:
     """A function's result on one request's calendars, under the guard."""
     contract = class_of(task).contract
-    env = SchedulingEnvironment(task)
+    env = environment(task)
     try:
         tool = skill_tool(contract.name, contract.description, source, bind={"api": ReadOnlyCalendar(env)})
         return await tool.call(**arguments(task, day_names=day_names))
@@ -141,7 +154,7 @@ async def run_on_case(source: str, task: dict[str, Any], *, day_names: bool = Fa
 
 def calendars_read(task: dict[str, Any]) -> str:
     """The calendars a request touches, as the tool shows them."""
-    env = SchedulingEnvironment(task)
+    env = environment(task)
     pages = [env.read_calendar(person, day) for person in ["", *task["truth"]["attendees"]]
              for day in task["truth"]["days"]]
     return "\n".join(json.dumps(page) for page in pages)
@@ -151,7 +164,7 @@ async def act(source: str, task_id: str, *, day_names: bool = False) -> tuple[fl
     """Use a function on one request as the agent with memory would, and return the verdict."""
     task_class = class_of(task_id)
     task = task_class.generate(int(task_id[1:]))
-    env = SchedulingEnvironment(task)
+    env = environment(task)
     result = await run_on_case(source, task, day_names=day_names)
     if isinstance(result, dict) and "error" in result:
         return 0.0, f"the function crashed when run: {result['error']}", calendars_read(task)
@@ -202,7 +215,7 @@ async def recall_experience(tier: EpisodicMemory) -> list[Episode]:
 
 
 def match_signal(task_class: str = "multi_attendee") -> BehaviorMatchSignal:
-    return BehaviorMatchSignal(bootstrapped_source(task_class), run_on_case, case_id=lambda task: task["id"])
+    return BehaviorMatchSignal(starting_source(task_class), run_on_case, case_id=lambda task: task["id"])
 
 
 def behavior_cases(split: str, task_class: str = "multi_attendee") -> list[dict[str, Any]]:

@@ -24,8 +24,8 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from chapters.ch06.assistant.harness import (
-    BOOTSTRAPPED_MEMORY,
-    BOOTSTRAPPED_SAME_TIME,
+    STARTING_MEMORY,
+    STARTING_SAME_TIME,
     GLOBAL,
     MEMORIES,
     PRICES,
@@ -80,9 +80,9 @@ def first_class_memory(mechanism: str) -> tuple[str, str]:
     ):
         if path.exists():
             return path.read_text(encoding="utf-8"), label
-    return (MEMORIES / BOOTSTRAPPED_MEMORY["file"]).read_text(
+    return (MEMORIES / STARTING_MEMORY["file"]).read_text(
         encoding="utf-8"
-    ), "bootstrapped memory"
+    ), "starting memory"
 
 
 def report(result) -> None:
@@ -109,12 +109,12 @@ async def main(args: argparse.Namespace) -> None:
     results: dict = {"mechanism": name}
     with recording.active():
         # The second class's reasoning floor, without memory and with its
-        # bootstrapped memory.
+        # starting memory.
         dev = CLASS.task_set("dev")
-        bootstrapped = await install_memory(BOOTSTRAPPED_SAME_TIME)
+        starting = await install_memory(STARTING_SAME_TIME)
         for arm, memory in (
             ("no_memory", None),
-            ("bootstrapped_memory", bootstrapped),
+            ("starting_memory", starting),
         ):
             result = await sweep(
                 arm,
@@ -190,15 +190,15 @@ async def main(args: argparse.Namespace) -> None:
             print(
                 "Test tasks, scored once:"
                 f" {test.metadata['matched']}/{test.metadata['cases']}"
-                " match the class reference"
+                " match the starting memory"
             )
             results["test_matched"] = test.metadata["matched"]
 
             # The learned memory's own floor on validation, as listing 6.2
-            # measured the bootstrapped one.
+            # measured the starting one.
             memory = await install_memory(
                 {
-                    **BOOTSTRAPPED_SAME_TIME,
+                    **STARTING_SAME_TIME,
                     "body": source,
                     "created_by": name,
                 }
@@ -218,7 +218,7 @@ async def main(args: argparse.Namespace) -> None:
             first_source, first_label = first_class_memory(name)
             both = await install_memory(
                 {
-                    **BOOTSTRAPPED_MEMORY,
+                    **STARTING_MEMORY,
                     "body": first_source,
                     "created_by": name,
                 }

@@ -25,7 +25,7 @@ if str(REPO_ROOT) not in sys.path:
 
 from chapters.ch06.assistant.generator import task_set
 from chapters.ch06.assistant.harness import (
-    BOOTSTRAPPED_MEMORY,
+    STARTING_MEMORY,
     MEMORIES,
     PRICES,
     install_memory,
@@ -168,7 +168,7 @@ async def main(args: argparse.Namespace) -> None:
         print(
             "Test tasks, scored once:"
             f" {test.metadata['matched']}/{test.metadata['cases']} match"
-            " the bootstrapped memory"
+            " the starting memory"
         )
         if test.feedback:
             print(f"  mismatches: {test.feedback}")
@@ -195,10 +195,10 @@ async def main(args: argparse.Namespace) -> None:
         }
 
         if args.floor:
-            # The learned memory's own floor, measured as the bootstrapped
+            # The learned memory's own floor, measured as the starting
             # memory's was.
             entry = {
-                **BOOTSTRAPPED_MEMORY,
+                **STARTING_MEMORY,
                 "body": learned.source,
                 "created_by": name,
             }

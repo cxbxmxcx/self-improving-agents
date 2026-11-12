@@ -1,8 +1,8 @@
 """Apply the component the search found to a second kind of scheduling work.
 
 Listing 7.3's search wrote a learning component from requests for one
-meeting. Here the assistant also takes Chapter 6's second class: the same
-meeting at the same time on several days. Each of those requests needs one
+meeting. Here the assistant also takes a second class from Chapter 6's code:
+the same meeting at the same time on several days. Each of those requests needs one
 booking per day, and a decision program takes one action, so that work
 cannot leave the language model. What a component can still decide is the
 reasoning level it runs at and the memory it reads first.

@@ -1,10 +1,12 @@
-"""Run the metacognition loop online while the user's conditions change.
+"""Run the metacognitive loop online while the user's conditions change.
 
-The assistant starts with the memory the kept learning mechanism wrote in
-listing 6.3, trusted from its offline measurements, and a controller that
-reads its setting from listing 6.2's floors. It serves first-class requests, then requests
-after Dana rewords her note to ask for half an hour. The detector watches
-the runs that used memory and quarantines the memory when they fail.
+The assistant starts with the memory and the learner it holds when
+metacognition is switched on: the function chapter 4's GEPA search found,
+trusted, and chapter 5's value learning. The controller reads its settings
+from listing 6.1's floors. The assistant serves familiar requests it
+recognizes, then requests after Dana rewords her note to ask for half an
+hour. The detector watches the runs that used memory and quarantines the
+memory when they fail.
 
 While the memory is quarantined, the controller raises reasoning and the
 recorder keeps writing runs to episodic memory. The learner writes a new
@@ -26,23 +28,27 @@ if str(REPO_ROOT) not in sys.path:
 
 from chapters.ch06.assistant import generator, generator_drift
 from chapters.ch06.assistant.harness import (
-    BOOTSTRAPPED_MEMORY,
     PRICES,
+    STARTING_LEARNER,
+    STARTING_MEMORY,
     install_memory,
     run_task,
 )
-from chapters.ch06.assistant.learning import CONTRACT, act
-from chapters.ch06.assistant.online import recorder as make_recorder
+from chapters.ch06.assistant.learning import CONTRACT, act, starting_source
+from chapters.ch06.assistant.online import (
+    Controller,
+    Detector,
+    Gate,
+    Recorder,
+)
 from chapters.ch06.assistant.recording import Recording
 from helix.eval.effort import RunRecord
-from helix.metacognition import Controller, Detector, Gate
 from helix.memory.learning_mechanisms import MECHANISMS, Episode, Writer
 from helix.signals.cost import call_dollars
 
 HERE = Path(__file__).parent
 RECORDED = HERE / "assistant" / "recorded" / "online_loop.jsonl"
 FLOORS = HERE / "runs" / "reasoning_floor.json"
-LEARNED = HERE / "runs" / "learning_search"
 WRITER = {
     "model": "gpt-5.4-mini",
     "params": {"reasoning_effort": "medium"},
@@ -50,7 +56,7 @@ WRITER = {
 
 
 async def install(source: str, created_by: str):
-    entry = {**BOOTSTRAPPED_MEMORY, "body": source, "created_by": created_by}
+    entry = {**STARTING_MEMORY, "body": source, "created_by": created_by}
     return await install_memory(entry)
 
 
@@ -65,13 +71,13 @@ def log_run(log, n, task, trusted, effort, solved, reason, trajectory):
                 "reasoning_tokens": spent.reasoning_tokens, "dollars": spent.dollars})
 
 
-def log_learning(log, kept, episodes, learned, writer, gate_result):
-    accepted, total, passed = gate_result.accepted, gate_result.total, gate_result.passed
-    log[-1].update(event=f"{kept} relearned from {len(episodes)} runs; gate {accepted}/{total}",
+def log_learning(log, name, episodes, learned, writer, gate_result):
+    accepted, total, passed = gate_result
+    log[-1].update(event=f"{name} relearned from {len(episodes)} runs; gate {accepted}/{total}",
                    writer_calls=learned.writer_calls,
                    learning_dollars=round(sum(call_dollars(WRITER["model"], u, PRICES) or 0.0
                                               for u in writer.usage), 4))
-    print(f"   learner: {kept} wrote a function from {len(episodes)} runs;"
+    print(f"   learner: {name} wrote a function from {len(episodes)} runs;"
           f" gate {accepted}/{total} {'passed, installed' if passed else 'refused'}")
 
 
@@ -83,7 +89,7 @@ def summarize(log) -> None:
               f" {sum(r['reasoning_tokens'] for r in rows) / len(rows):.0f} reasoning tokens and"
               f" ${sum(r['dollars'] for r in rows) / len(rows):.4f} a request")
     learning = [row for row in log if "learning_dollars" in row]
-    print(f"  learning: {sum(r['writer_calls'] for r in learning)} writer calls,"
+    print(f"  learning: {sum(r['writer_calls'] for r in learning)} learning calls,"
           f" ${sum(r['learning_dollars'] for r in learning):.4f}")
 
 
@@ -91,19 +97,16 @@ async def main(args: argparse.Namespace) -> None:
     recording = Recording(
         args.recording, mode="record" if args.record else "replay"
     )
-    # The mechanism listing 6.3 kept, and the memory it wrote.
-    kept = json.loads(
-        (LEARNED / "learning_search.json").read_text(encoding="utf-8")
-    )["kept"]
-    learner = MECHANISMS[kept]
-    source = (LEARNED / f"learned_{kept}.py").read_text(encoding="utf-8")
-    memory = await install(source, kept)
+    # The memory and the learner the harness holds when metacognition starts.
+    learner = MECHANISMS[STARTING_LEARNER]
+    source = starting_source()
+    memory = await install_memory(STARTING_MEMORY)
     trusted = True
 
-    controller = Controller.from_sweeps(FLOORS, memory="bootstrapped_memory", no_memory="no_memory")
+    controller = Controller.from_floors(FLOORS)
     detector = Detector()
-    gate = Gate(cases=[task["id"] for task in generator_drift.task_set("gate")])
-    recorder = make_recorder()
+    gate = Gate(generator_drift.task_set("gate"))
+    recorder = Recorder()
     print(
         f"Controller: {controller.table['memory']} with trusted memory,"
         f" {controller.table['no_memory']} without"
@@ -120,7 +123,7 @@ async def main(args: argparse.Namespace) -> None:
             if recording.spent(PRICES) > args.budget:
                 print("Budget spent; the stream stops here.")
                 break
-            effort = controller.effort(trusted=trusted)
+            effort = controller.effort(trusted)
             solved, reason, trajectory = await run_task(
                 task, effort, memory=memory if trusted else None
             )
@@ -153,12 +156,10 @@ async def main(args: argparse.Namespace) -> None:
                 learned = await learner.learn(
                     episodes, act, writer, CONTRACT
                 )
-                result = await gate.check(
-                    learned.source, act, gate.cases
-                )
-                log_learning(log, kept, episodes, learned, writer, result)
-                if result.passed:
-                    memory = await install(learned.source, kept)
+                result = await gate.check(learned.source)
+                log_learning(log, learner.name, episodes, learned, writer, result)
+                if result[2]:
+                    memory = await install(learned.source, learner.name)
                     source, trusted = learned.source, True
                     detector.reset()
     recorder.close()

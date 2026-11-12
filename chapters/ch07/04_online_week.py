@@ -7,10 +7,13 @@ looks at the day. If the language model still does work that code could do,
 the search of listing 7.3 runs. If a decision program was switched off after
 wrong actions, it is tested again and switched back on only if it passes.
 
-On Wednesday Dana rewords her note, as in listing 6.5. The function the
+On Wednesday Dana rewords her note, as in listing 6.2. The function the
 programs call is stale, so bookings go wrong until the loop relearns it.
 From that day the gate judges on cases held back from the changed weeks,
 because cases from before the change no longer describe the user's world.
+While the function is quarantined, a program's route cannot take a request
+below the reasoning the controller raised for it. --routes-lower-reasoning
+replays the first recording, where a route could lower it.
 Replay uses saved replies; --record adds paid calls up to --budget.
 """
 
@@ -44,13 +47,17 @@ from chapters.ch07.assistant.harness import (
 
 async def main(args: argparse.Namespace) -> None:
     models, jev = recordings(args.record, args.budget)
+    if args.output is None:
+        name = "online_week_routes_lower" if args.routes_lower_reasoning else "online_week"
+        args.output = RUNS / name
     args.output.mkdir(parents=True, exist_ok=True)
     archive = args.output / "archive.sqlite"
     archive.unlink(missing_ok=True)
 
     # The same seed and search as listing 7.3, so Monday night replays it.
     tier = decision_tier(jev, [seed("component_llm")],
-                         search=code_search("dgm", archive))
+                         search=code_search("dgm", archive),
+                         keep_raised_effort=not args.routes_lower_reasoning)
     agent, meta = harness(tier)
     log: list[dict] = []
     nights: dict[str, list[str]] = {}
@@ -92,5 +99,10 @@ if __name__ == "__main__":
         "--budget", type=float, default=5.0,
         help="Dollars of new model calls before the listing stops.",
     )
-    parser.add_argument("--output", type=Path, default=RUNS / "online_week")
+    parser.add_argument(
+        "--routes-lower-reasoning", action="store_true",
+        help="Let a route lower the reasoning the controller raised while a"
+             " function is quarantined, as the first recording did.",
+    )
+    parser.add_argument("--output", type=Path, default=None)
     run(main, parser.parse_args())

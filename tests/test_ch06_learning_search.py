@@ -9,7 +9,7 @@ from unittest.mock import patch
 import pytest
 
 from chapters.ch06.assistant.generator import task_set
-from chapters.ch06.assistant.learning import (CONTRACT, act, bootstrapped_source, match_signal, recall_experience,
+from chapters.ch06.assistant.learning import (CONTRACT, act, starting_source, match_signal, recall_experience,
                                               remember, run_on_case)
 from helix.artifact import ArtifactKind, genesis
 from helix.memory.learning_mechanisms import (ALPHA, CONTROL, INITIAL_VALUE, MECHANISMS, Episode, Reflection,
@@ -76,8 +76,8 @@ def _block(source):
     return f"Here it is.\n```python\n{source}```"
 
 
-def test_the_bootstrapped_memory_is_accepted_on_every_development_task():
-    rewards = [asyncio.run(act(bootstrapped_source(), t["id"]))[0] for t in task_set("dev")]
+def test_the_starting_memory_is_accepted_on_every_development_task():
+    rewards = [asyncio.run(act(starting_source(), t["id"]))[0] for t in task_set("dev")]
     assert rewards == [1.0] * 16
 
 
@@ -89,7 +89,7 @@ def test_a_function_written_blind_is_rejected_on_every_development_task():
 def test_behavior_match_is_exact_for_the_reference_and_partial_for_a_blind_function():
     signal = match_signal()
     cases = task_set("validation")
-    same = asyncio.run(signal.measure(bootstrapped_source(), ground_truth=cases))
+    same = asyncio.run(signal.measure(starting_source(), ground_truth=cases))
     assert same.score == 1.0 and not same.triggered
     blind = asyncio.run(signal.measure(FACE_VALUE, ground_truth=cases))
     assert blind.score < 1.0 and blind.triggered and blind.feedback
@@ -114,11 +114,11 @@ def test_experience_round_trips_through_episodic_memory_in_order():
 
 
 def test_the_writer_extracts_the_function_and_retries_once_when_the_guard_refuses():
-    replies = iter([_block("import os\n" + bootstrapped_source()), _block(bootstrapped_source())])
+    replies = iter([_block("import os\n" + starting_source()), _block(starting_source())])
     model, prompts = _scripted_writer(lambda prompt: next(replies))
     with patch("helix.memory.learning_mechanisms.helix_acompletion", side_effect=model):
         source = asyncio.run(Writer().write("write it", CONTRACT))
-    assert source == extract_source(_block(bootstrapped_source()))
+    assert source == extract_source(_block(starting_source()))
     assert "refused" in prompts[1]
 
 
@@ -134,11 +134,11 @@ def test_value_learning_keeps_the_candidate_chapter_5s_rule_values_highest():
     episodes = [Episode(t["id"], t["text"], [], True, "accepted") for t in task_set("dev")[:4]]
     good = {episodes[1].request}
     # The candidate written from the second run is the right method; the rest read at face value.
-    model, _ = _scripted_writer(lambda prompt: _block(bootstrapped_source() if any(r in prompt for r in good)
+    model, _ = _scripted_writer(lambda prompt: _block(starting_source() if any(r in prompt for r in good)
                                                       else FACE_VALUE))
     with patch("helix.memory.learning_mechanisms.helix_acompletion", side_effect=model):
         learned = asyncio.run(ValueLearning(epochs=1).learn(episodes, act, Writer(), CONTRACT))
-    assert learned.source == extract_source(_block(bootstrapped_source()))
+    assert learned.source == extract_source(_block(starting_source()))
     first = episodes[0].task_id
     assert learned.values[first] == INITIAL_VALUE + ALPHA * (0.0 - INITIAL_VALUE)
     assert learned.values[episodes[1].task_id] > INITIAL_VALUE
@@ -149,7 +149,7 @@ def test_reflection_writes_a_lesson_and_a_revision_after_a_rejection():
         if prompt.startswith("A calendar assistant used the function"):
             return "Calendars are in their owner's local time; convert with the UTC offset."
         if "Lessons learned" in prompt:
-            return _block(bootstrapped_source())
+            return _block(starting_source())
         return _block(FACE_VALUE)
 
     model, prompts = _scripted_writer(rule)
@@ -157,7 +157,7 @@ def test_reflection_writes_a_lesson_and_a_revision_after_a_rejection():
     with patch("helix.memory.learning_mechanisms.helix_acompletion", side_effect=model):
         learned = asyncio.run(Reflection().learn(episodes, act, Writer(), CONTRACT))
     assert learned.notes == ["Calendars are in their owner's local time; convert with the UTC offset."]
-    assert learned.source == extract_source(_block(bootstrapped_source()))
+    assert learned.source == extract_source(_block(starting_source()))
 
 
 def test_mechanisms_are_proposed_with_chapter_5s_rl_first():
@@ -185,7 +185,7 @@ def test_the_search_keeps_the_incumbent_on_a_tie_and_replaces_it_only_on_strict_
 
 
 def test_a_learned_function_runs_under_the_guard_on_a_case():
-    result = asyncio.run(run_on_case(bootstrapped_source(), task_set("validation")[0]))
+    result = asyncio.run(run_on_case(starting_source(), task_set("validation")[0]))
     assert set(result) == {"starts"}
 
 
@@ -261,10 +261,10 @@ def test_the_second_class_has_a_common_solution_and_a_face_value_trap():
             assert task["truth"]["same_start"] and task["truth"]["count"] == len(task["truth"]["days"])
 
 
-def test_the_second_bootstrapped_memory_is_accepted_and_a_blind_function_is_not():
+def test_the_second_starting_memory_is_accepted_and_a_blind_function_is_not():
     from chapters.ch06.assistant.generator_same_time import task_set as same_tasks
 
-    source = bootstrapped_source("same_time")
+    source = starting_source("same_time")
     tasks = same_tasks("dev")
     assert [asyncio.run(act(source, t["id"]))[0] for t in tasks] == [1.0] * 16
     assert [asyncio.run(act(FACE_VALUE_COMMON, t["id"]))[0] for t in tasks] == [0.0] * 16
@@ -284,13 +284,13 @@ def test_the_checker_refuses_meetings_at_different_times_on_a_same_time_request(
 
 
 def test_a_function_without_type_hints_is_called_with_the_contracts_arguments():
-    plain = bootstrapped_source()
+    plain = starting_source()
     for hinted, bare in (("attendees: list[str]", "attendees"), ("days: list[str]", "days"),
                          ("minutes: int", "minutes")):
         assert hinted in plain
         plain = plain.replace(hinted, bare, 1)
     task = task_set("validation")[0]
-    assert asyncio.run(run_on_case(plain, task)) == asyncio.run(run_on_case(bootstrapped_source(), task))
+    assert asyncio.run(run_on_case(plain, task)) == asyncio.run(run_on_case(starting_source(), task))
 
 
 def test_a_function_the_guard_refuses_is_reported_not_raised():

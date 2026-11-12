@@ -30,7 +30,7 @@ from chapters.ch07.assistant.components import (
 )
 from chapters.ch07.assistant.desk import desk
 from chapters.ch07.assistant.harness import (
-    kept_procedure,
+    starting_procedure,
     kind_of,
     recordings,
     run,
@@ -75,7 +75,7 @@ async def main(args: argparse.Namespace) -> None:
         print(f"   {memory['name']:<17} {route_of(memory):<22}"
               f" {memory['description']}")
 
-    procedure, _ = kept_procedure()
+    procedure, _ = starting_procedure()
     the_desk = desk(procedure)
     outcomes, shown = Counter(), False
     cost = seconds = 0.0

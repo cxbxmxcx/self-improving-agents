@@ -2,7 +2,7 @@
 
 Chapter 6 built this assistant's calendars, checker, tools and procedure, and nothing here changes them. This module
 names those parts for helix's packaged metacognition harness, which holds the recorder, detector, learner, gate and
-controller that listing 6.5 wired by hand. It also describes the same world to a decision program as a desk.
+controller that listing 6.2 wired by hand. It also describes the same world to a decision program as a desk.
 
 A desk gives a program the read tool, the trusted procedure, the one action it may take, and the checker's verdict.
 The contract tells whoever writes a program what the job is and what must be handed off. A request that should not be
@@ -15,8 +15,8 @@ from typing import Any
 
 from chapters.ch06.assistant.environment import SchedulingEnvironment
 from chapters.ch06.assistant.harness import (
-    BOOTSTRAPPED_MEMORY,
-    BOOTSTRAPPED_SAME_TIME,
+    STARTING_MEMORY,
+    STARTING_SAME_TIME,
     MODEL,
     PROMPT,
     ReadOnlyCalendar,
@@ -24,7 +24,7 @@ from chapters.ch06.assistant.harness import (
 from chapters.ch06.assistant.learning import (
     CONTRACT,
     SAME_TIME_CONTRACT,
-    bootstrapped_source,
+    starting_source,
 )
 from chapters.ch06.assistant.tools import make_tools
 from helix.memory.code_skills import skill_tool
@@ -79,10 +79,10 @@ async def cancel_event(ctx: RunContextWrapper[SchedulingEnvironment], event_id: 
 
 # Chapter 6's procedure, with its contract and the description the agent reads.
 FIND_SHARED_STARTS = Procedure.from_contract(CONTRACT, api=[read_calendar],
-                                             description=BOOTSTRAPPED_MEMORY["description"])
+                                             description=STARTING_MEMORY["description"])
 # The procedure of Chapter 6's second class: the same start on every listed day.
 FIND_COMMON_STARTS = Procedure.from_contract(SAME_TIME_CONTRACT, api=[read_calendar],
-                                             description=BOOTSTRAPPED_SAME_TIME["description"])
+                                             description=STARTING_SAME_TIME["description"])
 
 
 def assistant(model: str = MODEL, **kwargs: Any) -> Agent:
@@ -113,7 +113,7 @@ def desk(procedure: str | None = None) -> Desk:
     Inside the decision tier the loop calls the procedure the agent trusts at that moment, so this one is used only
     when a program is served on its own.
     """
-    source = procedure or bootstrapped_source()
+    source = procedure or starting_source()
 
     def procedures(world: SchedulingEnvironment) -> dict[str, Any]:
         async def find_shared_starts(**arguments: Any) -> Any:
