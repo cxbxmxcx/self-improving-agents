@@ -1,0 +1,136 @@
+{
+  "requests": {
+    "dev": {
+      "casual": [
+        "Hey, can you issue the prorated credit for {account}? They changed plans last week and it's owed.",
+        "Morning! {account} downgraded mid-cycle, so go ahead and push through the credit they're due."
+      ],
+      "shorthand": [
+        "Issue the prorated credit on account {number} now, please.",
+        "Credit owed on {number} after the plan switch - process it."
+      ],
+      "distractor": [
+        "Only {account} gets the prorated credit today; {other} is squared away and needs nothing. Please issue it.",
+        "Two accounts came up in review: issue the credit owed to {account}, and leave {other} alone since it's already balanced."
+      ],
+      "buried": [
+        "The quarterly reconciliation wrapped up yesterday and finance signed off on everything. While we were at it we spotted one open item. Please issue the prorated credit that {account} is owed from their recent plan change. After that the ledger should be clean for the month.",
+        "Support had a busy morning with the outage tickets. One billing item slipped through, though. Go ahead and apply the prorated credit due to {account} for the mid-cycle downgrade. Everything else on my list can wait until tomorrow."
+      ]
+    },
+    "search": {
+      "casual": [
+        "Quick one - {account} is still waiting on their proration credit from the plan change, can you put it through?",
+        "Hiya, would you mind sorting the credit {account} is owed? They swapped tiers partway through the billing period and it should go out today."
+      ],
+      "shorthand": [
+        "Please run the proration credit for account {number} today.",
+        "Account {number} switched plans and the refund portion hasn't gone out - issue that credit."
+      ],
+      "distractor": [
+        "Heads up on two ids: {account} needs its prorated credit issued right away, while {other} was already settled and requires no action.",
+        "Between {account} and {other}, it's only {account} that's due a credit - put it through now; {other} is fine as is."
+      ],
+      "buried": [
+        "We moved a batch of customers to annual billing over the weekend. Most migrations went smoothly and nobody noticed. The one loose end is {account}, which is owed a prorated credit for the plan change - please issue it now. Once that's done I'll close out the migration tracker.",
+        "I'm prepping the end-of-week billing summary for leadership. The numbers mostly reconcile already. Before I send it, issue the credit that {account} is due from its recent tier switch. Then I can mark the summary as final."
+      ]
+    },
+    "gate": {
+      "casual": [
+        "hey - plan change on {account} means they're owed some money back. mind issuing that credit now?",
+        "Could you fire off the prorated credit for {account}? Customer pinged us twice about it this morning."
+      ],
+      "shorthand": [
+        "Push the owed credit through on {number}, thanks.",
+        "Proration on account {number} is outstanding - go ahead and issue it."
+      ],
+      "distractor": [
+        "To be clear, the credit goes to {account} and only {account}; {other} has no balance owed. Please process it now.",
+        "We reviewed both {account} and {other} this morning - issue the proration credit for {account}, and don't touch {other}, it's current."
+      ],
+      "buried": [
+        "Thanks for jumping on the invoice questions earlier. There's still one thing hanging from the plan-change batch. Could you issue the prorated credit owed to {account} right away? The customer success team wants to confirm it before their call at three.",
+        "Our sprint review ran long so I'm catching up on billing tasks late. Most of them are just bookkeeping. The urgent one is to apply the credit {account} is owed after switching plans - please do that now. I'll handle the rest of the queue myself."
+      ]
+    },
+    "held": {
+      "casual": [
+        "yo, {account} dropped to the starter tier and is due money back - can you get that credit out?",
+        "Afternoon! Please settle up {account}'s proration from the plan swap - they're owed a credit and it needs to go out right away."
+      ],
+      "shorthand": [
+        "Send the plan-change credit on {number} through now.",
+        "Account {number} is carrying an unissued proration credit; please release it."
+      ],
+      "distractor": [
+        "One action item: {account} should receive its prorated credit immediately. {other} came up in the same report but owes and is owed nothing.",
+        "Ignore {other} - that one's already even. It's {account} that needs the credit from its plan change issued, so please take care of it now."
+      ],
+      "buried": [
+        "The new billing dashboard went live this morning and it flagged a handful of edge cases. Most were false alarms from the migration. One is real, though: please issue the prorated credit {account} is owed for its recent plan change. I'll note the rest as resolved in the ticket.",
+        "Finance asked us to clear every open adjustment before the audit window opens. I've worked through nearly the whole list. The last entry is {account}, which needs its plan-change credit issued today - go ahead and do that. Once it's posted I can hand the file over."
+      ]
+    }
+  },
+  "out_of_scope": {
+    "dev": [
+      "Can you update the billing contact email on {account}?",
+      "When does the next invoice for {account} get generated?",
+      "Please add a second admin seat to {account}.",
+      "What plan is {account} currently on?"
+    ],
+    "test": [
+      "Change the company name shown on {account}'s invoices.",
+      "Could you pull last quarter's payment history for {account}?",
+      "{account} wants to switch from card to wire transfer - set that up.",
+      "Is {account} enrolled in auto-renewal?"
+    ]
+  },
+  "near_miss": {
+    "dev": [
+      "Has the prorated credit for {account} already gone out?",
+      "Don't issue anything for {account} yet - hold off until I confirm with finance.",
+      "What would the credit amount be for {account}? Just the figure, no action.",
+      "Who signs off on proration credits like the one {account} is in line for?",
+      "The credit on {account} was handled by Dana yesterday, so nothing is needed from you.",
+      "Can you issue {account}'s credit next Monday instead of today?"
+    ],
+    "search": [
+      "Did the plan-change credit for {account} ever get issued?",
+      "Just tell me how much {account} is owed - I don't want it processed.",
+      "Please wait on {account}'s credit; the customer may upgrade again this week.",
+      "We need to reverse the credit that went to {account} last Tuesday.",
+      "Whose approval do I need before {account}'s proration can be released?",
+      "No action on {account} - accounting already pushed that credit through.",
+      "Schedule {account}'s credit for the first of next month, not now.",
+      "If {account} had downgraded a week earlier, would the credit have been bigger?",
+      "Is {account} even eligible for a prorated credit under the new policy?",
+      "Hold everything on {account} until the dispute is closed."
+    ],
+    "gate": [
+      "Was {account} credited after the downgrade, or is that still pending?",
+      "Can you quote me the proration figure for {account} without posting anything?",
+      "Leave {account} alone for now - we'll revisit the credit after the renewal call.",
+      "The credit issued to {account} was too large; it needs to be adjusted down.",
+      "Which manager approves credits in {account}'s tier?",
+      "FYI, Priya already took care of {account}'s credit this morning.",
+      "Let's do {account}'s credit at the end of the quarter rather than today.",
+      "Would {account} be owed anything if they switch back to the old plan?",
+      "I'm just checking whether the system flagged {account} for a credit at all.",
+      "Pause the credit for {account} - legal wants a look first."
+    ],
+    "held": [
+      "Any idea if the proration for {account} has been paid out yet?",
+      "What's {account} due from the plan change? Only asking for the number.",
+      "Hold {account}'s credit until the chargeback investigation wraps up.",
+      "Please claw back the credit that was mistakenly applied to {account}.",
+      "Does issuing {account}'s credit need VP sign-off, or can anyone do it?",
+      "{account} is sorted - their credit posted overnight, so skip it.",
+      "Queue up {account}'s credit for next billing cycle; don't send it now.",
+      "Suppose {account} cancels outright - is a credit still owed then?",
+      "Before anything happens, confirm whether {account} qualifies for proration at all.",
+      "Stand down on {account} for the moment; the account manager asked us not to act."
+    ]
+  }
+}

@@ -25,9 +25,11 @@ import inspect
 import sys
 import time
 from collections.abc import Callable
+from functools import lru_cache
+from types import CodeType
 from typing import Any, get_type_hints
 
-from pydantic import create_model
+from pydantic import BaseModel, create_model
 
 from helix.tools import Tool
 
@@ -63,6 +65,13 @@ class UnsafeSkill(ValueError):
 
 def check_source(source: str, entry: str) -> None:
     """Refuse source the guard does not allow; return quietly when it passes."""
+    _checked(source, entry)
+
+
+@lru_cache(maxsize=1024)
+def _checked(source: str, entry: str) -> None:
+    # A trusted skill is offered on every request. Its source is the same text each time, so it is parsed and
+    # walked once and not once a request. A source the guard refuses raises each time and is never kept.
     try:
         tree = ast.parse(source)
     except SyntaxError as exc:
@@ -92,12 +101,41 @@ def check_source(source: str, entry: str) -> None:
         raise UnsafeSkill(f"the skill does not define {entry}()")
 
 
+@lru_cache(maxsize=1024)
+def _code(source: str, entry: str) -> CodeType:
+    return compile(source, f"<skill:{entry}>", "exec")
+
+
 def compile_skill(source: str, entry: str) -> Callable[..., Any]:
-    """The skill's entry function, compiled under the guard."""
+    """The skill's entry function, compiled under the guard.
+
+    The compiled code is kept, and each call here runs it into a namespace of its own, so nothing a skill keeps
+    at its top level passes from one run to the next.
+    """
     check_source(source, entry)
     namespace: dict[str, Any] = {"__builtins__": SAFE_BUILTINS}
-    exec(compile(source, f"<skill:{entry}>", "exec"), namespace)
+    exec(_code(source, entry), namespace)
     return namespace[entry]
+
+
+@lru_cache(maxsize=1024)
+def args_model(source: str, name: str, bound: tuple[str, ...] = ()) -> type[BaseModel]:
+    """The arguments a model may pass to a skill: its parameters, less those the harness binds.
+
+    Built once for each source. A trusted skill becomes a tool again on every request, and building its model
+    each time cost more than running the skill.
+    """
+    fn = compile_skill(source, name)
+    hints = get_type_hints(fn)
+    fields: dict[str, Any] = {}
+    for param, spec in inspect.signature(fn).parameters.items():
+        if param in bound:
+            continue
+        default = ... if spec.default is inspect.Parameter.empty else spec.default
+        # A learned function may leave parameters unannotated; accept anything
+        # there rather than guess a type and refuse the call.
+        fields[param] = (hints.get(param, Any), default)
+    return create_model(f"{name}_Args", **fields)
 
 
 def skill_tool(name: str, description: str, source: str, *, bind: dict[str, Any] | None = None,
@@ -110,16 +148,7 @@ def skill_tool(name: str, description: str, source: str, *, bind: dict[str, Any]
     """
     bind = dict(bind or {})
     fn = compile_skill(source, name)
-    hints = get_type_hints(fn)
-    fields: dict[str, Any] = {}
-    for param, spec in inspect.signature(fn).parameters.items():
-        if param in bind:
-            continue
-        default = ... if spec.default is inspect.Parameter.empty else spec.default
-        # A learned function may leave parameters unannotated; accept anything
-        # there rather than guess a type and refuse the call.
-        fields[param] = (hints.get(param, Any), default)
-    args_model = create_model(f"{name}_Args", **fields)
+    model = args_model(source, name, tuple(sorted(bind)))
 
     def run(**kwargs: Any) -> Any:
         # A thread cannot be killed, so the skill stops itself: a trace
@@ -146,7 +175,7 @@ def skill_tool(name: str, description: str, source: str, *, bind: dict[str, Any]
         except Exception as exc:  # the skill's own bug, reported to the model
             return {"error": f"{name} failed: {type(exc).__name__}: {exc}"}
 
-    return Tool(name=name, description=description, args_model=args_model, fn=call)
+    return Tool(name=name, description=description, args_model=model, fn=call)
 
 
 def tools_from_entries(entries: list[Any], *, bind: dict[str, Any] | None = None,

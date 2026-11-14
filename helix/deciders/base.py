@@ -3,8 +3,7 @@
 A decision model reads a state and answers named questions with a choice
 among described options, a position on ordered levels, or the probability
 that a statement holds. It writes no prose, so its answers can be compared
-with thresholds in code. Chapter 6 uses one to direct the metacognitive
-scaffold beside the LLM that does the task.
+with thresholds in code.
 
 Every provider sits behind the same `Decider` interface, so the harness
 never binds to one: Jev (TypeSafe), OpenAI's Decisions API, an LLM answering
@@ -58,6 +57,10 @@ class Probability:
 
 
 Question = Union[Choice, Score, Probability]
+
+
+class MissingAnswer(KeyError):
+    """A replay met a question its recording has no answer for."""
 
 
 @dataclass(frozen=True)

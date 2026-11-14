@@ -1,0 +1,143 @@
+{
+ "arm": "searches",
+ "searches": [
+  {
+   "search": 1,
+   "admitted": true,
+   "rewrites": 5,
+   "outcomes": [
+    "refused on its own cases",
+    "refused on its own cases",
+    "refused on its own cases",
+    "admitted",
+    "proposal failed validation"
+   ],
+   "held_out_right": 52,
+   "held_out": 52,
+   "dollars_per_request": 0.002214507,
+   "seconds_per_request": 2.3633566730774542,
+   "served_by_programs": 5,
+   "wrong_program_actions": 0,
+   "night": [
+    "gap: the LLM spends $0.0021 and 2.6 s a request over 80 runs, and no program serves this work",
+    "program: component_llm wrote a program the gate refused: 13/26, 0 wrong actions",
+    "search: a proposal failed validation: ROUTER_PROMPT can't be filled: lab.fill takes plain names only, not {\"serve\"}. Write a literal brace as {{ or }}",
+    "search: designed_7bc5b07d885d wrote a program the gate admits",
+    "program: designed_7bc5b07d885d wrote decision_program@1; gate 26/26 passed, installed",
+    "program: memories book_one_meeting (program), book_multiple_meetings (none), meeting_question_or_non_booking_change (none, read-only), outside_the_job (none, read-only), book_one_meeting_notes (none)"
+   ]
+  },
+  {
+   "search": 2,
+   "admitted": true,
+   "rewrites": 2,
+   "outcomes": [
+    "refused on its own cases",
+    "admitted"
+   ],
+   "held_out_right": 52,
+   "held_out": 52,
+   "dollars_per_request": 0.0016206396923076924,
+   "seconds_per_request": 2.0917131384613854,
+   "served_by_programs": 16,
+   "wrong_program_actions": 0,
+   "night": [
+    "gap: the LLM spends $0.0021 and 2.6 s a request over 80 runs, and no program serves this work",
+    "program: component_llm wrote a program the gate refused: 20/26, 0 wrong actions",
+    "search: designed_2c5256c934cb wrote a program the gate admits",
+    "program: designed_2c5256c934cb wrote decision_program@1; gate 26/26 passed, installed",
+    "program: memories book_one_meeting (program), book_two_meetings (none), calendar_question_or_non_booking (none, read-only), outside_the_job (none, read-only)"
+   ]
+  },
+  {
+   "search": 3,
+   "admitted": true,
+   "rewrites": 3,
+   "outcomes": [
+    "wrote nothing",
+    "refused on its own cases",
+    "admitted"
+   ],
+   "held_out_right": 52,
+   "held_out": 52,
+   "dollars_per_request": 0.0014143316538461537,
+   "seconds_per_request": 2.066707332691682,
+   "served_by_programs": 19,
+   "wrong_program_actions": 0,
+   "night": [
+    "gap: the LLM spends $0.0021 and 2.6 s a request over 80 runs, and no program serves this work",
+    "program: component_llm wrote nothing (MechanismStopped: the mechanism failed: KeyError: 'acts')",
+    "search: designed_73e666fa3981 wrote a program the gate admits",
+    "program: designed_73e666fa3981 wrote decision_program@1; gate 26/26 passed, installed",
+    "program: memories book_single_meeting (program), book_two_meetings (low), meeting_question_or_no_booking (low, read-only), out_of_scope (low, read-only)"
+   ]
+  },
+  {
+   "search": 4,
+   "admitted": true,
+   "rewrites": 3,
+   "outcomes": [
+    "refused on its own cases",
+    "refused on its own cases",
+    "admitted"
+   ],
+   "held_out_right": 52,
+   "held_out": 52,
+   "dollars_per_request": 0.0010599379615384616,
+   "seconds_per_request": 1.4909313846150547,
+   "served_by_programs": 22,
+   "wrong_program_actions": 0,
+   "night": [
+    "gap: the LLM spends $0.0021 and 2.6 s a request over 80 runs, and no program serves this work",
+    "program: component_llm wrote a program the gate refused: 18/26, 0 wrong actions",
+    "search: designed_9eca214784c9 wrote a program the gate admits",
+    "program: designed_9eca214784c9 wrote decision_program@1; gate 26/26 passed, installed",
+    "program: memories book_one_meeting (program), book_several_meetings (none), meeting_question_or_non_booking (none, read-only), outside_the_job (none, read-only)"
+   ]
+  },
+  {
+   "search": 5,
+   "admitted": true,
+   "rewrites": 2,
+   "outcomes": [
+    "refused on its own cases",
+    "admitted"
+   ],
+   "held_out_right": 52,
+   "held_out": 52,
+   "dollars_per_request": 0.001163000423076923,
+   "seconds_per_request": 1.3917836673083654,
+   "served_by_programs": 24,
+   "wrong_program_actions": 0,
+   "night": [
+    "gap: the LLM spends $0.0021 and 2.6 s a request over 80 runs, and no program serves this work",
+    "program: component_llm wrote a program the gate refused: 16/26, 0 wrong actions",
+    "search: designed_45193d6254d8 wrote a program the gate admits",
+    "program: designed_45193d6254d8 wrote decision_program@1; gate 26/26 passed, installed",
+    "program: memories book_one_meeting (program), book_two_meetings (none), calendar_question_or_non_booking (none, read-only), off_topic_request (none, read-only)"
+   ]
+  }
+ ],
+ "stopped": "",
+ "floor": {
+  "right": 48,
+  "requests": 52
+ },
+ "spent": {
+  "by_model": {
+   "decision model": {
+    "calls": 1176,
+    "dollars": 0.06336976799999997
+   },
+   "claude-fable-5-2": {
+    "calls": 42,
+    "dollars": 15.598064
+   },
+   "gpt-5.4-mini": {
+    "calls": 994,
+    "dollars": 0.9160463999999989
+   }
+  }
+ },
+ "seconds": 4131.3
+}

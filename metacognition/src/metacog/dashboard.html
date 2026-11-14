@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>metacog</title>
+<style>
+:root {
+  --bg: #f7f7f5; --panel: #ffffff; --fg: #1d1d1f; --mute: #66666d; --line: #e3e3e6; --accent: #2f5bd3;
+  --ok: #1a7f37; --bad: #c62828; --warn: #8a5a00; --code: #f2f2f4; --add: #e3f3e7; --del: #fbe8e8;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #121214; --panel: #1b1b1f; --fg: #ececef; --mute: #a2a2aa; --line: #2d2d33; --accent: #84a6ff;
+    --ok: #52c272; --bad: #ff7070; --warn: #e3b341; --code: #24242a; --add: #173222; --del: #3b1e1e;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg);
+       font: 14px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+main { max-width: 1120px; margin: 0 auto; padding: 20px 16px 48px; }
+header { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+h1 { font-size: 20px; margin: 0; }
+h2 { font-size: 15px; margin: 0 0 8px; }
+.sub { color: var(--mute); }
+.live { margin-left: auto; font-size: 13px; color: var(--mute); white-space: nowrap; }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--mute); margin-right: 6px; }
+.live.on .dot { background: var(--ok); }
+#summary { margin: 6px 0 18px; color: var(--mute); }
+section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px;
+          margin-bottom: 16px; }
+.empty { color: var(--mute); margin: 0; }
+.item { display: flex; gap: 8px 10px; align-items: center; flex-wrap: wrap; padding: 8px 0;
+        border-top: 1px solid var(--line); }
+.list > :first-child .item, .list > .item:first-child { border-top: 0; }
+.spacer { flex: 1; }
+button { font: inherit; border: 1px solid var(--line); background: var(--panel); color: var(--fg); border-radius: 6px;
+         padding: 3px 10px; cursor: pointer; }
+button:hover { border-color: var(--mute); }
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+button.danger { color: var(--bad); }
+button:disabled { opacity: .5; cursor: default; }
+input[type=text] { font: inherit; padding: 3px 8px; border: 1px solid var(--line); border-radius: 6px;
+                   background: var(--bg); color: var(--fg); width: 220px; max-width: 100%; }
+.scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap;
+         vertical-align: top; }
+th { color: var(--mute); font-weight: 600; font-size: 12px; }
+tr.run { cursor: pointer; }
+tr.run:hover td, tr.run.open td { background: var(--code); }
+tr.detail td { white-space: normal; background: var(--code); padding: 10px 12px 14px; }
+.accepted, .trusted, .mark-ok { color: var(--ok); }
+.rejected, .quarantined, .refused, .mark-bad { color: var(--bad); }
+.pending, .proposed { color: var(--warn); }
+.kv { display: grid; grid-template-columns: max-content 1fr; gap: 3px 14px; margin: 0; }
+.kv dt { color: var(--mute); }
+.kv dd { margin: 0; overflow-wrap: anywhere; }
+pre { background: var(--code); padding: 8px 10px; border-radius: 8px; overflow-x: auto; margin: 6px 0 0;
+      font: 12px/1.45 ui-monospace, "Cascadia Mono", Consolas, monospace; }
+tr.detail pre { background: var(--panel); white-space: pre-wrap; overflow-wrap: anywhere; }
+.diff { max-height: 60vh; overflow: auto; }
+.diff span { display: block; }
+.diff .add { background: var(--add); }
+.diff .del { background: var(--del); }
+.chips span { display: inline-block; border: 1px solid var(--line); border-radius: 999px; padding: 0 8px;
+              margin: 2px 4px 2px 0; font-size: 12px; }
+.proc + .proc { border-top: 1px solid var(--line); margin-top: 6px; padding-top: 6px; }
+.proc p { margin: 2px 0; }
+#error { color: var(--bad); min-height: 1em; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1 id="agent">metacog</h1>
+    <span class="sub" id="about"></span>
+    <span class="live" id="live"><span class="dot"></span><span id="live-text">connecting</span></span>
+  </header>
+  <p id="summary"></p>
+  <section>
+    <h2>Needs you</h2>
+    <div class="list" id="queue"></div>
+  </section>
+  <section>
+    <h2>Runs</h2>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>#</th><th>case</th><th>procedures (* called)</th><th>effort</th><th>verdict</th>
+          <th>cost</th><th>request</th></tr></thead>
+        <tbody id="runs"></tbody>
+      </table>
+    </div>
+  </section>
+  <section>
+    <h2>Procedures</h2>
+    <div id="procedures"></div>
+  </section>
+  <p id="error"></p>
+</main>
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const enc = encodeURIComponent;
+const expanded = new Set();           // run ids whose details are open
+const drafts = new Map();             // typed reasons, by run id, kept across refreshes
+const diffsOpen = new Set();          // "name@version" proposals whose diff is open
+
+function el(tag, attrs, ...children) {
+  const node = document.createElement(tag);
+  for (const [key, value] of Object.entries(attrs || {})) {
+    if (value == null || value === false) continue;
+    if (key === "class") node.className = value;
+    else if (key.startsWith("on")) node.addEventListener(key.slice(2), value);
+    else node.setAttribute(key, value);
+  }
+  for (const child of children.flat(Infinity)) {
+    if (child == null || child === false) continue;
+    node.append(child instanceof Node ? child : String(child));
+  }
+  return node;
+}
+
+async function api(path, body) {
+  const init = body === undefined ? {} : {
+    method: "POST", body: JSON.stringify(body),
+    headers: {"Content-Type": "application/json", "X-Metacog": "1"},
+  };
+  const response = await fetch(path, init);
+  if (!response.ok) throw new Error(`${response.status} ${(await response.text()).slice(0, 300)}`);
+  return response.json();
+}
+
+async function act(fn) {
+  try { await fn(); $("error").textContent = ""; } catch (error) { $("error").textContent = String(error); }
+  await refresh();
+}
+
+const money = (x) => (x == null ? "–" : `$${Number(x).toFixed(4)}`);
+const short = (text, n = 72) => (text && text.length > n ? `${text.slice(0, n - 1)}…` : text || "");
+const procedures = (run) => run.offered.length
+  ? run.offered.map((p) => (run.called.includes(p) ? `${p}*` : p)).join(", ") : "–";
+const verdict = (run) => (run.verdict
+  ? run.verdict + (run.verdict_source && run.verdict_source !== "verifier" ? ` (${run.verdict_source})` : "")
+  : "pending");
+
+// ---------------------------------------------------------------- summary
+
+function renderSummary(s) {
+  $("agent").textContent = s.agent;
+  document.title = `${s.agent} · metacog`;
+  const installs = s.approval === "human" ? "a person approves installs" : "installs after the gate";
+  $("about").textContent = `${s.model} · learning: ${s.learning_mode} · ${installs}`;
+  const cells = Object.values(s.by_effort);
+  const judged = cells.reduce((sum, c) => sum + c.judged, 0);
+  const accepted = cells.reduce((sum, c) => sum + c.accepted, 0);
+  const parts = [`${s.runs} runs`, `${accepted} of ${judged} judged accepted`];
+  if (s.with_procedure.runs && s.without_procedure.runs) {
+    parts.push(`${money(s.with_procedure.mean_dollars)} a run with a procedure, ` +
+               `${money(s.without_procedure.mean_dollars)} without`);
+  }
+  const attempts = s.learning.attempts;
+  parts.push(`learning ${money(s.learning.dollars)} in ${attempts} attempt${attempts === 1 ? "" : "s"}`);
+  if (s.break_even_requests != null) parts.push(`pays back after about ${s.break_even_requests.toFixed(1)} requests`);
+  $("summary").textContent = parts.join(" · ");
+}
+
+// ---------------------------------------------------------------- what needs a person
+
+async function diffBlock(p) {
+  const v = await api(`/api/procedures/${enc(p.name)}/${p.version}`);
+  const lines = (v.diff || v.source).split("\n").map((line) =>
+    el("span", {class: line.startsWith("+") && !line.startsWith("+++") ? "add"
+                    : line.startsWith("-") && !line.startsWith("---") ? "del" : null}, line || " "));
+  const failures = (v.gate && v.gate.failures) || [];
+  return el("div", {},
+    el("pre", {class: "diff"}, lines),
+    failures.length ? el("p", {class: "sub"}, `Gate failures: ${failures.join("; ")}`) : null);
+}
+
+async function proposal(p) {
+  const key = `${p.name}@${p.version}`;
+  const facts = [`by ${p.created_by}`];
+  if (p.learned_from) facts.push(`learned from ${p.learned_from} runs`);
+  if (p.gate) facts.push(`gate ${p.gate.accepted}/${p.gate.total}`);
+  if (p.dollars != null) facts.push(money(p.dollars));
+  const open = diffsOpen.has(key);
+  return el("div", {},
+    el("div", {class: "item"},
+      el("strong", {}, `${p.name} v${p.version}`),
+      el("span", {class: "proposed"}, "proposed"),
+      el("span", {class: "sub"}, facts.join(" · ")),
+      el("span", {class: "spacer"}),
+      el("button", {onclick: () => { open ? diffsOpen.delete(key) : diffsOpen.add(key); refresh(); }},
+         open ? "Hide diff" : "Show diff"),
+      el("button", {class: "primary",
+                    onclick: () => act(() => api(`/api/procedures/${enc(p.name)}/${p.version}/approve`, {}))},
+         "Approve")),
+    open ? await diffBlock(p) : null);
+}
+
+function unjudged(run) {
+  const reason = el("input", {type: "text", placeholder: "reason (optional)", "data-run": run.run_id,
+                              value: drafts.get(run.run_id) || ""});
+  reason.addEventListener("input", () => drafts.set(run.run_id, reason.value));
+  const judge = (accepted) => act(async () => {
+    await api(`/api/runs/${enc(run.run_id)}/feedback`, {accepted, reason: reason.value});
+    drafts.delete(run.run_id);
+  });
+  return el("div", {class: "item"},
+    el("strong", {}, `run ${run.ord + 1}`),
+    el("span", {class: "pending"}, "awaiting a verdict"),
+    el("span", {class: "sub"}, `${run.case_id} · ${short(run.request, 64)}`),
+    el("span", {class: "spacer"}),
+    reason,
+    el("button", {onclick: () => judge(true)}, "Accept"),
+    el("button", {class: "danger", onclick: () => judge(false)}, "Reject"));
+}
+
+async function renderQueue(q) {
+  const focused = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.run : null;
+  const items = [...await Promise.all(q.proposals.map(proposal)), ...q.unjudged.map(unjudged)];
+  $("queue").replaceChildren(...(items.length ? items : [el("p", {class: "empty"}, "Nothing is waiting for you.")]));
+  if (focused) {
+    const again = $("queue").querySelector(`input[data-run="${CSS.escape(focused)}"]`);
+    if (again) { again.focus(); again.setSelectionRange(again.value.length, again.value.length); }
+  }
+}
+
+// ---------------------------------------------------------------- runs
+
+async function detailRow(id) {
+  const r = await api(`/api/runs/${enc(id)}`);
+  const scores = Object.entries(r.scores || {}).map(([name, score]) => `${name} ${score.toFixed(2)}`).join(", ");
+  const steps = (r.steps || []).map((s) => {
+    const result = JSON.stringify(s.result);
+    return `${s.tool}(${JSON.stringify(s.arguments || {})}) → ${result && result.length > 400 ? result.slice(0, 400) + " …" : result}`;
+  });
+  const pairs = [
+    ["request", r.request],
+    ["model", `${r.model || "–"} at ${r.effort || "its own setting"}`],
+    ["routing", `${r.matched.length ? r.matched.join(", ") : "no procedure's class"}${scores ? ` (scores: ${scores})` : ""}`],
+    ["verdict", `${verdict(r)}${r.reason ? `: ${r.reason}` : ""}`],
+    ["answer", r.answer == null ? "–" : typeof r.answer === "string" ? r.answer : JSON.stringify(r.answer)],
+    ["cost", `${money(r.dollars)} · ${r.reasoning_tokens || 0} reasoning tokens · ${Number(r.seconds || 0).toFixed(1)} s`],
+  ];
+  return el("tr", {class: "detail"}, el("td", {colspan: "7"},
+    el("dl", {class: "kv"}, pairs.map(([k, v]) => [el("dt", {}, k), el("dd", {}, v)])),
+    steps.length ? el("pre", {}, steps.join("\n")) : el("p", {class: "sub"}, "No tool calls.")));
+}
+
+async function renderRuns(runs) {
+  const rows = [];
+  for (const r of runs) {
+    const open = expanded.has(r.run_id);
+    rows.push(el("tr", {class: open ? "run open" : "run",
+                        onclick: () => { open ? expanded.delete(r.run_id) : expanded.add(r.run_id); refresh(); }},
+      el("td", {}, r.ord + 1), el("td", {}, r.case_id), el("td", {}, procedures(r)),
+      el("td", {}, r.effort || "agent's own"), el("td", {class: r.verdict || "pending"}, verdict(r)),
+      el("td", {}, money(r.dollars)), el("td", {class: "sub"}, short(r.request))));
+    if (open) rows.push(await detailRow(r.run_id));
+  }
+  $("runs").replaceChildren(...(rows.length ? rows
+    : [el("tr", {}, el("td", {colspan: "7", class: "empty"}, "No runs yet."))]));
+}
+
+// ---------------------------------------------------------------- procedures
+
+function quarantineButton(name) {
+  const button = el("button", {class: "danger"}, "Quarantine");
+  let armed = null;
+  button.addEventListener("click", () => {
+    if (armed) { clearTimeout(armed); act(() => api(`/api/procedures/${enc(name)}/quarantine`, {})); return; }
+    button.textContent = "Click again to quarantine";
+    armed = setTimeout(() => { armed = null; button.textContent = "Quarantine"; }, 4000);
+  });
+  return button;
+}
+
+function renderProcedures(list) {
+  const blocks = list.map((p) => {
+    const proposed = p.versions.some((v) => v.state === "proposed");
+    const status = p.trusted != null ? `v${p.trusted} trusted` : proposed ? "a version awaits approval" : "none trusted";
+    const marks = p.recent.map((ok) => el("span", {class: ok ? "mark-ok" : "mark-bad",
+                                                    title: ok ? "accepted" : "rejected"}, ok ? "✓" : "✗"));
+    return el("div", {class: "proc"},
+      el("div", {class: "item"},
+        el("strong", {}, p.name),
+        el("span", {class: p.trusted != null ? "trusted" : "sub"}, status),
+        marks.length ? el("span", {class: "sub"}, "recent uses:") : null, marks,
+        el("span", {class: "spacer"}),
+        p.trusted != null ? quarantineButton(p.name) : null),
+      el("p", {class: "sub"}, p.description),
+      el("div", {class: "chips"}, p.versions.map((v) =>
+        el("span", {class: v.state, title: `by ${v.created_by}`}, `v${v.version} ${v.state}`))),
+      p.trusted == null && p.quarantine_reason ? el("p", {class: "sub"}, `Last quarantined: ${p.quarantine_reason}`) : null);
+  });
+  $("procedures").replaceChildren(...(blocks.length ? blocks : [el("p", {class: "empty"}, "No procedures declared.")]));
+}
+
+// ---------------------------------------------------------------- refresh, live
+
+let busy = false, again = false;
+async function refresh() {
+  if (busy) { again = true; return; }
+  busy = true;
+  try {
+    const [summary, queue, runs, procs] = await Promise.all(
+      [api("/api/summary"), api("/api/queue"), api("/api/runs?limit=50"), api("/api/procedures")]);
+    renderSummary(summary);
+    await renderQueue(queue);
+    await renderRuns(runs);
+    renderProcedures(procs);
+  } catch (error) {
+    $("error").textContent = String(error);
+  } finally {
+    busy = false;
+    if (again) { again = false; refresh(); }
+  }
+}
+
+function setLive(on) {
+  $("live").classList.toggle("on", on);
+  $("live-text").textContent = on ? "live" : "reconnecting";
+}
+
+let pending = null;
+const source = new EventSource("/api/stream");
+source.onopen = () => setLive(true);
+source.onerror = () => setLive(false);  // EventSource reconnects on its own
+source.onmessage = () => { clearTimeout(pending); pending = setTimeout(refresh, 120); };
+refresh();
+</script>
+</body>
+</html>

@@ -24,6 +24,7 @@ ingestion/              PDF -> LanceDB ingestion pipeline
 data/helix_corpus.lance the shipped corpus (built from ingestion/pdfs/)
 docs/architecture/      editable architecture diagram sources (drawio)
 tests/                  spec-conformance tests
+metacognition/          side project: a metacognitive harness on helix (see below)
 SPEC.md                 architectural specification (source of truth)
 DESIGN_NOTES.md         the why behind the spec
 ```
@@ -121,6 +122,13 @@ The Observatory also streams live: leave the Lineage panel open while a loop
 runs and new versions animate into the tree as they are recorded. The older
 Streamlit dashboard (`streamlit run helix/dashboard/app.py`) still works but
 is superseded by the Observatory.
+
+## Side project: the metacognitive harness
+
+[`metacognition/`](metacognition/README.md) packages chapter 6's metacognition as an agent SDK shaped like
+the OpenAI Agents SDK, whose agents learn to think less. Like the Observatory, it consumes helix as a library
+and leaves the agent loop unchanged. It is the one part of the repo you install (`pip install -e
+metacognition`), and its tests replay the chapter 6 recordings. Its README covers setup.
 
 ## What this repo is not
 

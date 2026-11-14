@@ -17,6 +17,7 @@ from helix.deciders.base import (
     Answer,
     Decider,
     DecisionUsage,
+    MissingAnswer,
     Question,
     ask_measured,
     question_key,
@@ -55,6 +56,10 @@ class RecordingDecider:
         return answers, call
 
     def usage(self) -> DecisionUsage:
+        return self.inner.usage()
+
+    def live_usage(self) -> DecisionUsage:
+        """What the calls that actually reached the model cost."""
         return self.inner.usage()
 
 
@@ -104,7 +109,7 @@ class ReplayDecider:
                 self._usage.add(call)
                 return answers, call
             if self.strict:
-                raise KeyError(f"no recorded answer for this state and these questions (key {key[:12]})")
+                raise MissingAnswer(f"no recorded answer for this state and these questions (key {key[:12]})")
             return {}, DecisionUsage()
         call = DecisionUsage(calls=1, input_tokens=int(record.get("input_tokens") or 0),
                              dollars=float(record.get("dollars") or 0.0),
@@ -114,3 +119,7 @@ class ReplayDecider:
 
     def usage(self) -> DecisionUsage:
         return replace(self._usage)
+
+    def live_usage(self) -> DecisionUsage:
+        """What the calls that actually reached the model cost: the misses a fallback answered."""
+        return self.fallback.usage() if self.fallback is not None else DecisionUsage()

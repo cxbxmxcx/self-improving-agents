@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 import pytest
 
-from chapters.ch06.assistant.learning import CONTRACT, bootstrapped_source
+from chapters.ch06.assistant.learning import CONTRACT, starting_source
 from chapters.ch07.mechanisms import CONTROL, SEEDS, seed_source
 from helix.memory.learning_mechanisms import Episode, Writer
 from helix.memory.mechanism_runtime import (Lab, MechanismBudget, MechanismStopped, UnsafeMechanism,
@@ -40,7 +40,7 @@ def _lab(budget=None):
 
 
 def _run(source, lab=None, reply=None):
-    model, calls = _scripted_writer(reply or _block(bootstrapped_source()))
+    model, calls = _scripted_writer(reply or _block(starting_source()))
     with patch("helix.memory.learning_mechanisms.helix_acompletion", side_effect=model):
         return asyncio.run(run_mechanism(source, lab or _lab(), name="test")), calls
 

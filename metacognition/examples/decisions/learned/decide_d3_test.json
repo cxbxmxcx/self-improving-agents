@@ -1,0 +1,677 @@
+{
+  "domain": "d3",
+  "split": "test",
+  "requests": 62,
+  "handled": 56,
+  "right": 56,
+  "handoffs": 6,
+  "dollars_per_request": 2.993583870967742e-05,
+  "seconds_per_request": 0.0722209677419355,
+  "jev_calls": 62,
+  "rows": [
+    {
+      "case_id": "V201~casual",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 675,
+      "dollars": 2.835e-05,
+      "seconds": 0.0968
+    },
+    {
+      "case_id": "V201~shorthand",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 674,
+      "dollars": 2.8308000000000004e-05,
+      "seconds": 0.085
+    },
+    {
+      "case_id": "V201~distractor",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 721,
+      "dollars": 3.0282000000000002e-05,
+      "seconds": 0.0675
+    },
+    {
+      "case_id": "V201~buried",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 698,
+      "dollars": 2.9316000000000002e-05,
+      "seconds": 0.0718
+    },
+    {
+      "case_id": "V202~casual",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 680,
+      "dollars": 2.856e-05,
+      "seconds": 0.0743
+    },
+    {
+      "case_id": "V202~shorthand",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 676,
+      "dollars": 2.8392000000000002e-05,
+      "seconds": 0.0695
+    },
+    {
+      "case_id": "V202~distractor",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 722,
+      "dollars": 3.0324000000000003e-05,
+      "seconds": 0.0684
+    },
+    {
+      "case_id": "V202~buried",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 709,
+      "dollars": 2.9778000000000002e-05,
+      "seconds": 0.0651
+    },
+    {
+      "case_id": "V203~casual",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 686,
+      "dollars": 2.8812e-05,
+      "seconds": 0.0654
+    },
+    {
+      "case_id": "V203~shorthand",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 684,
+      "dollars": 2.8728e-05,
+      "seconds": 0.0873
+    },
+    {
+      "case_id": "V203~distractor",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 732,
+      "dollars": 3.0744e-05,
+      "seconds": 0.0982
+    },
+    {
+      "case_id": "V203~buried",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 702,
+      "dollars": 2.9484e-05,
+      "seconds": 0.0656
+    },
+    {
+      "case_id": "V204",
+      "handled": false,
+      "right": true,
+      "reason": "request is not asking for a supported job",
+      "jev_calls": 1,
+      "jev_input_tokens": 557,
+      "dollars": 2.3394000000000003e-05,
+      "seconds": 0.0699
+    },
+    {
+      "case_id": "V205~casual",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 681,
+      "dollars": 2.8602e-05,
+      "seconds": 0.0642
+    },
+    {
+      "case_id": "V205~shorthand",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 680,
+      "dollars": 2.856e-05,
+      "seconds": 0.0684
+    },
+    {
+      "case_id": "V205~distractor",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 727,
+      "dollars": 3.0534e-05,
+      "seconds": 0.0724
+    },
+    {
+      "case_id": "V205~buried",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 720,
+      "dollars": 3.0240000000000002e-05,
+      "seconds": 0.0657
+    },
+    {
+      "case_id": "V206~casual",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 685,
+      "dollars": 2.8770000000000004e-05,
+      "seconds": 0.071
+    },
+    {
+      "case_id": "V206~shorthand",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 682,
+      "dollars": 2.8644000000000002e-05,
+      "seconds": 0.0689
+    },
+    {
+      "case_id": "V206~distractor",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 736,
+      "dollars": 3.0912000000000005e-05,
+      "seconds": 0.0688
+    },
+    {
+      "case_id": "V206~buried",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 701,
+      "dollars": 2.9442e-05,
+      "seconds": 0.0635
+    },
+    {
+      "case_id": "V207~casual",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 677,
+      "dollars": 2.8434000000000003e-05,
+      "seconds": 0.073
+    },
+    {
+      "case_id": "V207~shorthand",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 674,
+      "dollars": 2.8308000000000004e-05,
+      "seconds": 0.0633
+    },
+    {
+      "case_id": "V207~distractor",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 719,
+      "dollars": 3.0198e-05,
+      "seconds": 0.068
+    },
+    {
+      "case_id": "V207~buried",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 739,
+      "dollars": 3.1038e-05,
+      "seconds": 0.0659
+    },
+    {
+      "case_id": "V208~casual",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 678,
+      "dollars": 2.8476000000000003e-05,
+      "seconds": 0.0655
+    },
+    {
+      "case_id": "V208~shorthand",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 676,
+      "dollars": 2.8392000000000002e-05,
+      "seconds": 0.0639
+    },
+    {
+      "case_id": "V208~distractor",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 721,
+      "dollars": 3.0282000000000002e-05,
+      "seconds": 0.0652
+    },
+    {
+      "case_id": "V208~buried",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 725,
+      "dollars": 3.045e-05,
+      "seconds": 0.1013
+    },
+    {
+      "case_id": "V209~casual",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 686,
+      "dollars": 2.8812e-05,
+      "seconds": 0.0632
+    },
+    {
+      "case_id": "V209~shorthand",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 683,
+      "dollars": 2.8686000000000003e-05,
+      "seconds": 0.067
+    },
+    {
+      "case_id": "V209~distractor",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 755,
+      "dollars": 3.171e-05,
+      "seconds": 0.0657
+    },
+    {
+      "case_id": "V209~buried",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 725,
+      "dollars": 3.045e-05,
+      "seconds": 0.0816
+    },
+    {
+      "case_id": "V210~casual",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 805,
+      "dollars": 3.381e-05,
+      "seconds": 0.0669
+    },
+    {
+      "case_id": "V210~shorthand",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 803,
+      "dollars": 3.3726e-05,
+      "seconds": 0.0749
+    },
+    {
+      "case_id": "V210~distractor",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 851,
+      "dollars": 3.5742000000000004e-05,
+      "seconds": 0.0742
+    },
+    {
+      "case_id": "V210~buried",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 834,
+      "dollars": 3.5028e-05,
+      "seconds": 0.0717
+    },
+    {
+      "case_id": "V211~casual",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 682,
+      "dollars": 2.8644000000000002e-05,
+      "seconds": 0.0661
+    },
+    {
+      "case_id": "V211~shorthand",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 679,
+      "dollars": 2.8518e-05,
+      "seconds": 0.0679
+    },
+    {
+      "case_id": "V211~distractor",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 724,
+      "dollars": 3.0408e-05,
+      "seconds": 0.0665
+    },
+    {
+      "case_id": "V211~buried",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 711,
+      "dollars": 2.9862000000000003e-05,
+      "seconds": 0.0753
+    },
+    {
+      "case_id": "V212",
+      "handled": false,
+      "right": true,
+      "reason": "request is not asking for a supported job",
+      "jev_calls": 1,
+      "jev_input_tokens": 563,
+      "dollars": 2.3646e-05,
+      "seconds": 0.0824
+    },
+    {
+      "case_id": "V213~casual",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 677,
+      "dollars": 2.8434000000000003e-05,
+      "seconds": 0.0716
+    },
+    {
+      "case_id": "V213~shorthand",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 673,
+      "dollars": 2.8266000000000003e-05,
+      "seconds": 0.0669
+    },
+    {
+      "case_id": "V213~distractor",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 720,
+      "dollars": 3.0240000000000002e-05,
+      "seconds": 0.0819
+    },
+    {
+      "case_id": "V213~buried",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 712,
+      "dollars": 2.9904000000000004e-05,
+      "seconds": 0.0621
+    },
+    {
+      "case_id": "V214~casual",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 678,
+      "dollars": 2.8476000000000003e-05,
+      "seconds": 0.0674
+    },
+    {
+      "case_id": "V214~shorthand",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 676,
+      "dollars": 2.8392000000000002e-05,
+      "seconds": 0.0656
+    },
+    {
+      "case_id": "V214~distractor",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 721,
+      "dollars": 3.0282000000000002e-05,
+      "seconds": 0.0699
+    },
+    {
+      "case_id": "V214~buried",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 721,
+      "dollars": 3.0282000000000002e-05,
+      "seconds": 0.0666
+    },
+    {
+      "case_id": "V215~casual",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 686,
+      "dollars": 2.8812e-05,
+      "seconds": 0.0722
+    },
+    {
+      "case_id": "V215~shorthand",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 683,
+      "dollars": 2.8686000000000003e-05,
+      "seconds": 0.0699
+    },
+    {
+      "case_id": "V215~distractor",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 729,
+      "dollars": 3.0618000000000004e-05,
+      "seconds": 0.0692
+    },
+    {
+      "case_id": "V215~buried",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 710,
+      "dollars": 2.982e-05,
+      "seconds": 0.0645
+    },
+    {
+      "case_id": "V216~casual",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 806,
+      "dollars": 3.385200000000001e-05,
+      "seconds": 0.0661
+    },
+    {
+      "case_id": "V216~shorthand",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 803,
+      "dollars": 3.3726e-05,
+      "seconds": 0.1435
+    },
+    {
+      "case_id": "V216~distractor",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 851,
+      "dollars": 3.5742000000000004e-05,
+      "seconds": 0.0667
+    },
+    {
+      "case_id": "V216~buried",
+      "handled": true,
+      "right": true,
+      "reason": "accepted",
+      "jev_calls": 1,
+      "jev_input_tokens": 867,
+      "dollars": 3.6414e-05,
+      "seconds": 0.0683
+    },
+    {
+      "case_id": "V201~out0",
+      "handled": false,
+      "right": true,
+      "reason": "request is not asking for a supported job",
+      "jev_calls": 1,
+      "jev_input_tokens": 708,
+      "dollars": 2.9736e-05,
+      "seconds": 0.0684
+    },
+    {
+      "case_id": "V201~out1",
+      "handled": false,
+      "right": true,
+      "reason": "request is not asking for a supported job",
+      "jev_calls": 1,
+      "jev_input_tokens": 710,
+      "dollars": 2.982e-05,
+      "seconds": 0.0769
+    },
+    {
+      "case_id": "V201~out2",
+      "handled": false,
+      "right": true,
+      "reason": "request is not asking for a supported job",
+      "jev_calls": 1,
+      "jev_input_tokens": 710,
+      "dollars": 2.982e-05,
+      "seconds": 0.0718
+    },
+    {
+      "case_id": "V202~out3",
+      "handled": false,
+      "right": true,
+      "reason": "request is not asking for a supported job",
+      "jev_calls": 1,
+      "jev_input_tokens": 712,
+      "dollars": 2.9904000000000004e-05,
+      "seconds": 0.071
+    }
+  ],
+  "by_style": {
+    "casual": {
+      "requests": 14,
+      "kept": 14,
+      "right": 14,
+      "wrong": 0,
+      "handoffs": 0
+    },
+    "shorthand": {
+      "requests": 14,
+      "kept": 14,
+      "right": 14,
+      "wrong": 0,
+      "handoffs": 0
+    },
+    "distractor": {
+      "requests": 14,
+      "kept": 14,
+      "right": 14,
+      "wrong": 0,
+      "handoffs": 0
+    },
+    "buried": {
+      "requests": 14,
+      "kept": 14,
+      "right": 14,
+      "wrong": 0,
+      "handoffs": 0
+    },
+    "question": {
+      "requests": 2,
+      "kept": 0,
+      "right": 0,
+      "wrong": 0,
+      "handoffs": 2
+    },
+    "out_of_scope": {
+      "requests": 4,
+      "kept": 0,
+      "right": 0,
+      "wrong": 0,
+      "handoffs": 4
+    }
+  }
+}

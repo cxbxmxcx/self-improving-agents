@@ -1,0 +1,10 @@
+number,criterion,result,measured
+1,Cheaper to serve,pass,"$0.00161 a request against $0.00262, 61% of the baseline"
+2,Pays for its learning,pass,"$10.58 for the stream with $4.06 of learning, against $12.40 with $1.90"
+3,Faster,fail,"mean 2.11 s against 2.80 s, 95th percentile 5.11 s against 4.12 s"
+4,As accurate,pass,783/800 right against 768/800
+5,Safer,pass,programs acted wrongly on 2 of 1332 requests they served (0.15%); wrong actions 10 against 21 on the common requests
+6,Robust,fail,"requests until back to its earlier level after each change: 45, 40, 47, 40, 333"
+7,More predictable,fail,192/200 requests with one verdict in three servings against 194/200
+8,Repeatable,pass,"5 of 5 searches admitted; held-out right [52, 52, 52, 52, 52] against 48 for the agent at its floor"
+9,Worth it against a first deployment,pass,"$10.58 for the stream against $77.30, 14%; 155/160 right against 118/160"

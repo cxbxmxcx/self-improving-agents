@@ -1,0 +1,4 @@
+assistant,order,requests_served,right,right_percent,right_low,right_high,whole_stream_dollars,per_1000,serving_per_1000,learning_dollars,builder_dollars,mean_seconds,p95_seconds,wrong_actions,served_by_programs,wrong_by_programs,stopped
+Agent alone at high reasoning,1,160,118,73.8,66.4,80.0,77.3,19.324,19.324,0.0,0,21.33,65.11,30,0,0,
+Agent with chapter 6's loop,2,800,768,96.0,94.4,97.2,12.4,3.099,2.625,1.9,1.91,2.8,4.12,21,0,0,
+Full system,3,4000,3898,97.5,96.9,97.9,10.58,2.645,1.63,4.06,3.98,2.15,5.13,58,1332,2,

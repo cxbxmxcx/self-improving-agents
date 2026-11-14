@@ -1,0 +1,6 @@
+day,change,requests_until_back,wrong_in_first_200,level_before_percent
+5,Dana's note asks for half an hour,45,5,100.0
+8,two more groups of writers,40,0,100.0
+11,the calendar is down for one request in ten,47,15,100.0
+14,requests for the same time on several days arrive,40,2,100.0
+17,Dana's note asks for three quarters of an hour,333,21,99.5

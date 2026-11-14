@@ -1,0 +1,792 @@
+{
+ "criteria": [
+  {
+   "number": 1,
+   "criterion": "Cheaper to serve",
+   "passed": true,
+   "measured": "$0.00161 a request against $0.00262, 61% of the baseline"
+  },
+  {
+   "number": 2,
+   "criterion": "Pays for its learning",
+   "passed": true,
+   "measured": "$10.58 for the stream with $4.06 of learning, against $12.40 with $1.90"
+  },
+  {
+   "number": 3,
+   "criterion": "Faster",
+   "passed": false,
+   "measured": "mean 2.11 s against 2.80 s, 95th percentile 5.11 s against 4.12 s"
+  },
+  {
+   "number": 4,
+   "criterion": "As accurate",
+   "passed": true,
+   "measured": "783/800 right against 768/800"
+  },
+  {
+   "number": 5,
+   "criterion": "Safer",
+   "passed": true,
+   "measured": "programs acted wrongly on 2 of 1332 requests they served (0.15%); wrong actions 10 against 21 on the common requests"
+  },
+  {
+   "number": 6,
+   "criterion": "Robust",
+   "passed": false,
+   "measured": "requests until back to its earlier level after each change: 45, 40, 47, 40, 333"
+  },
+  {
+   "number": 7,
+   "criterion": "More predictable",
+   "passed": false,
+   "measured": "192/200 requests with one verdict in three servings against 194/200"
+  },
+  {
+   "number": 8,
+   "criterion": "Repeatable",
+   "passed": true,
+   "measured": "5 of 5 searches admitted; held-out right [52, 52, 52, 52, 52] against 48 for the agent at its floor"
+  },
+  {
+   "number": 9,
+   "criterion": "Worth it against a first deployment",
+   "passed": true,
+   "measured": "$10.58 for the stream against $77.30, 14%; 155/160 right against 118/160"
+  }
+ ],
+ "arms": {
+  "full": {
+   "requests": 4000,
+   "right": 3898,
+   "share_right": 0.9745,
+   "share_right_low": 0.9691406399267911,
+   "share_right_high": 0.9789488149607349,
+   "dollars_per_request": 0.0016298657835000002,
+   "seconds_mean": 2.1475845149999544,
+   "seconds_median": 1.65855,
+   "seconds_p95": 5.1334,
+   "wrong_actions": 58,
+   "by_programs": 1332,
+   "wrong_by_programs": 2,
+   "serving": 6.519463134,
+   "learning": 4.062201309999985,
+   "builder": 3.98392,
+   "whole_stream": 10.581664443999985,
+   "serving_whole_stream": 6.519463134,
+   "requests_whole_stream": 4000,
+   "stopped": ""
+  },
+  "loop": {
+   "requests": 800,
+   "right": 768,
+   "share_right": 0.96,
+   "share_right_low": 0.9440776298309863,
+   "share_right_high": 0.9715256432516708,
+   "dollars_per_request": 0.00262457634,
+   "seconds_mean": 2.8023142500000002,
+   "seconds_median": 2.4034,
+   "seconds_p95": 4.1242,
+   "wrong_actions": 21,
+   "by_programs": 0,
+   "wrong_by_programs": 0,
+   "serving": 2.099661072,
+   "learning": 1.8994499680000039,
+   "builder": 1.911928,
+   "whole_stream": 12.397755328000004,
+   "serving_whole_stream": 10.49830536,
+   "requests_whole_stream": 4000,
+   "stopped": ""
+  },
+  "alone": {
+   "requests": 160,
+   "right": 118,
+   "share_right": 0.7375,
+   "share_right_low": 0.6643280015812724,
+   "share_right_high": 0.7995346560099622,
+   "dollars_per_request": 0.0193239028125,
+   "seconds_mean": 21.333109999999998,
+   "seconds_median": 15.274999999999999,
+   "seconds_p95": 65.1072,
+   "wrong_actions": 30,
+   "by_programs": 0,
+   "wrong_by_programs": 0,
+   "serving": 3.09182445,
+   "learning": 0.0,
+   "builder": 0,
+   "whole_stream": 77.29561125,
+   "serving_whole_stream": 77.29561125,
+   "requests_whole_stream": 4000,
+   "stopped": ""
+  }
+ },
+ "changes": [
+  {
+   "day": 5,
+   "change": "Dana's note asks for half an hour",
+   "level_before": 1.0,
+   "requests_until_back": 45,
+   "wrong_in_first_200": 5
+  },
+  {
+   "day": 8,
+   "change": "two more groups of writers",
+   "level_before": 1.0,
+   "requests_until_back": 40,
+   "wrong_in_first_200": 0
+  },
+  {
+   "day": 11,
+   "change": "the calendar is down for one request in ten",
+   "level_before": 1.0,
+   "requests_until_back": 47,
+   "wrong_in_first_200": 15
+  },
+  {
+   "day": 14,
+   "change": "requests for the same time on several days arrive",
+   "level_before": 1.0,
+   "requests_until_back": 40,
+   "wrong_in_first_200": 2
+  },
+  {
+   "day": 17,
+   "change": "Dana's note asks for three quarters of an hour",
+   "level_before": 0.995,
+   "requests_until_back": 333,
+   "wrong_in_first_200": 21
+  }
+ ],
+ "missing": [],
+ "exam": {
+  "full": {
+   "requests": 200,
+   "right": 183,
+   "share_right": 0.915,
+   "share_right_low": 0.8681031145576462,
+   "share_right_high": 0.9462547005301477,
+   "dollars_per_request": 0.00181424622,
+   "seconds_mean": 2.603719106001,
+   "seconds_median": 1.8759000000000001,
+   "seconds_p95": 6.338699999999999,
+   "wrong_actions": 16,
+   "by_programs": 67,
+   "wrong_by_programs": 0
+  },
+  "loop": {
+   "requests": 200,
+   "right": 197,
+   "share_right": 0.985,
+   "share_right_low": 0.9568335194437211,
+   "share_right_high": 0.9948858548155076,
+   "dollars_per_request": 0.00236427801,
+   "seconds_mean": 2.508825,
+   "seconds_median": 2.4943999999999997,
+   "seconds_p95": 3.5684,
+   "wrong_actions": 1,
+   "by_programs": 0,
+   "wrong_by_programs": 0
+  }
+ },
+ "common_with_loop": {
+  "full": {
+   "requests": 800,
+   "right": 783,
+   "share_right": 0.97875,
+   "share_right_low": 0.9662330702856479,
+   "share_right_high": 0.9866909883846176,
+   "dollars_per_request": 0.0016134538949999998,
+   "seconds_mean": 2.1072028757497185,
+   "seconds_median": 1.68285,
+   "seconds_p95": 5.1103000000000005,
+   "wrong_actions": 10,
+   "by_programs": 270,
+   "wrong_by_programs": 1
+  },
+  "loop": {
+   "requests": 800,
+   "right": 768,
+   "share_right": 0.96,
+   "share_right_low": 0.9440776298309863,
+   "share_right_high": 0.9715256432516708,
+   "dollars_per_request": 0.00262457634,
+   "seconds_mean": 2.8023142500000002,
+   "seconds_median": 2.4034,
+   "seconds_p95": 4.1242,
+   "wrong_actions": 21,
+   "by_programs": 0,
+   "wrong_by_programs": 0
+  }
+ },
+ "payback_against_loop": 248,
+ "consistency": {
+  "full": {
+   "requests": 200,
+   "same_all_three": 192,
+   "share": 0.96,
+   "right_all_three": 178
+  },
+  "loop": {
+   "requests": 200,
+   "same_all_three": 194,
+   "share": 0.97,
+   "right_all_three": 193
+  }
+ },
+ "searches": [
+  {
+   "search": 1,
+   "admitted": true,
+   "rewrites": 5,
+   "outcomes": [
+    "refused on its own cases",
+    "refused on its own cases",
+    "refused on its own cases",
+    "admitted",
+    "proposal failed validation"
+   ],
+   "held_out_right": 52,
+   "held_out": 52,
+   "dollars_per_request": 0.002214507,
+   "seconds_per_request": 2.3633566730774542,
+   "served_by_programs": 5,
+   "wrong_program_actions": 0,
+   "night": [
+    "gap: the LLM spends $0.0021 and 2.6 s a request over 80 runs, and no program serves this work",
+    "program: component_llm wrote a program the gate refused: 13/26, 0 wrong actions",
+    "search: a proposal failed validation: ROUTER_PROMPT can't be filled: lab.fill takes plain names only, not {\"serve\"}. Write a literal brace as {{ or }}",
+    "search: designed_7bc5b07d885d wrote a program the gate admits",
+    "program: designed_7bc5b07d885d wrote decision_program@1; gate 26/26 passed, installed",
+    "program: memories book_one_meeting (program), book_multiple_meetings (none), meeting_question_or_non_booking_change (none, read-only), outside_the_job (none, read-only), book_one_meeting_notes (none)"
+   ]
+  },
+  {
+   "search": 2,
+   "admitted": true,
+   "rewrites": 2,
+   "outcomes": [
+    "refused on its own cases",
+    "admitted"
+   ],
+   "held_out_right": 52,
+   "held_out": 52,
+   "dollars_per_request": 0.0016206396923076924,
+   "seconds_per_request": 2.0917131384613854,
+   "served_by_programs": 16,
+   "wrong_program_actions": 0,
+   "night": [
+    "gap: the LLM spends $0.0021 and 2.6 s a request over 80 runs, and no program serves this work",
+    "program: component_llm wrote a program the gate refused: 20/26, 0 wrong actions",
+    "search: designed_2c5256c934cb wrote a program the gate admits",
+    "program: designed_2c5256c934cb wrote decision_program@1; gate 26/26 passed, installed",
+    "program: memories book_one_meeting (program), book_two_meetings (none), calendar_question_or_non_booking (none, read-only), outside_the_job (none, read-only)"
+   ]
+  },
+  {
+   "search": 3,
+   "admitted": true,
+   "rewrites": 3,
+   "outcomes": [
+    "wrote nothing",
+    "refused on its own cases",
+    "admitted"
+   ],
+   "held_out_right": 52,
+   "held_out": 52,
+   "dollars_per_request": 0.0014143316538461537,
+   "seconds_per_request": 2.066707332691682,
+   "served_by_programs": 19,
+   "wrong_program_actions": 0,
+   "night": [
+    "gap: the LLM spends $0.0021 and 2.6 s a request over 80 runs, and no program serves this work",
+    "program: component_llm wrote nothing (MechanismStopped: the mechanism failed: KeyError: 'acts')",
+    "search: designed_73e666fa3981 wrote a program the gate admits",
+    "program: designed_73e666fa3981 wrote decision_program@1; gate 26/26 passed, installed",
+    "program: memories book_single_meeting (program), book_two_meetings (low), meeting_question_or_no_booking (low, read-only), out_of_scope (low, read-only)"
+   ]
+  },
+  {
+   "search": 4,
+   "admitted": true,
+   "rewrites": 3,
+   "outcomes": [
+    "refused on its own cases",
+    "refused on its own cases",
+    "admitted"
+   ],
+   "held_out_right": 52,
+   "held_out": 52,
+   "dollars_per_request": 0.0010599379615384616,
+   "seconds_per_request": 1.4909313846150547,
+   "served_by_programs": 22,
+   "wrong_program_actions": 0,
+   "night": [
+    "gap: the LLM spends $0.0021 and 2.6 s a request over 80 runs, and no program serves this work",
+    "program: component_llm wrote a program the gate refused: 18/26, 0 wrong actions",
+    "search: designed_9eca214784c9 wrote a program the gate admits",
+    "program: designed_9eca214784c9 wrote decision_program@1; gate 26/26 passed, installed",
+    "program: memories book_one_meeting (program), book_several_meetings (none), meeting_question_or_non_booking (none, read-only), outside_the_job (none, read-only)"
+   ]
+  },
+  {
+   "search": 5,
+   "admitted": true,
+   "rewrites": 2,
+   "outcomes": [
+    "refused on its own cases",
+    "admitted"
+   ],
+   "held_out_right": 52,
+   "held_out": 52,
+   "dollars_per_request": 0.001163000423076923,
+   "seconds_per_request": 1.3917836673083654,
+   "served_by_programs": 24,
+   "wrong_program_actions": 0,
+   "night": [
+    "gap: the LLM spends $0.0021 and 2.6 s a request over 80 runs, and no program serves this work",
+    "program: component_llm wrote a program the gate refused: 16/26, 0 wrong actions",
+    "search: designed_45193d6254d8 wrote a program the gate admits",
+    "program: designed_45193d6254d8 wrote decision_program@1; gate 26/26 passed, installed",
+    "program: memories book_one_meeting (program), book_two_meetings (none), calendar_question_or_non_booking (none, read-only), off_topic_request (none, read-only)"
+   ]
+  }
+ ],
+ "common_with_alone": {
+  "full": {
+   "requests": 160,
+   "right": 155,
+   "share_right": 0.96875,
+   "share_right_low": 0.9289387218951194,
+   "share_right_high": 0.9865796812454749,
+   "dollars_per_request": 0.0015934345124999998,
+   "seconds_mean": 2.13207424937499,
+   "seconds_median": 1.8132000000000001,
+   "seconds_p95": 5.2048,
+   "wrong_actions": 2,
+   "by_programs": 48,
+   "wrong_by_programs": 1
+  },
+  "alone": {
+   "requests": 160,
+   "right": 118,
+   "share_right": 0.7375,
+   "share_right_low": 0.6643280015812724,
+   "share_right_high": 0.7995346560099622,
+   "dollars_per_request": 0.0193239028125,
+   "seconds_mean": 21.333109999999998,
+   "seconds_median": 15.274999999999999,
+   "seconds_p95": 65.1072,
+   "wrong_actions": 30,
+   "by_programs": 0,
+   "wrong_by_programs": 0
+  }
+ },
+ "worth_it": {
+  "cost": true,
+  "accuracy": true
+ },
+ "payback_against_alone": 1,
+ "verdict": "does not hold",
+ "days": [
+  {
+   "day": 1,
+   "requests": 200,
+   "right": 194,
+   "dollars_per_request": 0.00219134175,
+   "seconds_mean": 2.2433769999999997,
+   "by_programs": 0,
+   "wrong_by_programs": 0,
+   "wrong_actions": 4,
+   "read_only": 0,
+   "by_agent": 200
+  },
+  {
+   "day": 2,
+   "requests": 200,
+   "right": 200,
+   "dollars_per_request": 0.00142127115,
+   "seconds_mean": 1.7505990240002505,
+   "by_programs": 74,
+   "wrong_by_programs": 0,
+   "wrong_actions": 0,
+   "read_only": 76,
+   "by_agent": 50
+  },
+  {
+   "day": 3,
+   "requests": 200,
+   "right": 200,
+   "dollars_per_request": 0.00137856303,
+   "seconds_mean": 1.7846756299999442,
+   "by_programs": 73,
+   "wrong_by_programs": 0,
+   "wrong_actions": 0,
+   "read_only": 76,
+   "by_agent": 51
+  },
+  {
+   "day": 4,
+   "requests": 200,
+   "right": 200,
+   "dollars_per_request": 0.00140093985,
+   "seconds_mean": 1.8401975909999617,
+   "by_programs": 72,
+   "wrong_by_programs": 0,
+   "wrong_actions": 0,
+   "read_only": 76,
+   "by_agent": 52
+  },
+  {
+   "day": 5,
+   "requests": 200,
+   "right": 195,
+   "dollars_per_request": 0.00227897466,
+   "seconds_mean": 2.6963893425004932,
+   "by_programs": 77,
+   "wrong_by_programs": 2,
+   "wrong_actions": 3,
+   "read_only": 76,
+   "by_agent": 47
+  },
+  {
+   "day": 6,
+   "requests": 200,
+   "right": 200,
+   "dollars_per_request": 0.00142634223,
+   "seconds_mean": 1.841703741001006,
+   "by_programs": 73,
+   "wrong_by_programs": 0,
+   "wrong_actions": 0,
+   "read_only": 76,
+   "by_agent": 51
+  },
+  {
+   "day": 7,
+   "requests": 200,
+   "right": 200,
+   "dollars_per_request": 0.0015256278000000002,
+   "seconds_mean": 2.024624157499717,
+   "by_programs": 67,
+   "wrong_by_programs": 0,
+   "wrong_actions": 0,
+   "read_only": 76,
+   "by_agent": 57
+  },
+  {
+   "day": 8,
+   "requests": 200,
+   "right": 200,
+   "dollars_per_request": 0.00132793161,
+   "seconds_mean": 1.7090573049997946,
+   "by_programs": 76,
+   "wrong_by_programs": 0,
+   "wrong_actions": 0,
+   "read_only": 76,
+   "by_agent": 48
+  },
+  {
+   "day": 9,
+   "requests": 200,
+   "right": 200,
+   "dollars_per_request": 0.00142910169,
+   "seconds_mean": 1.8554056279995874,
+   "by_programs": 72,
+   "wrong_by_programs": 0,
+   "wrong_actions": 0,
+   "read_only": 76,
+   "by_agent": 52
+  },
+  {
+   "day": 10,
+   "requests": 200,
+   "right": 200,
+   "dollars_per_request": 0.00134159178,
+   "seconds_mean": 1.7541181604992022,
+   "by_programs": 77,
+   "wrong_by_programs": 0,
+   "wrong_actions": 0,
+   "read_only": 76,
+   "by_agent": 47
+  },
+  {
+   "day": 11,
+   "requests": 200,
+   "right": 185,
+   "dollars_per_request": 0.00145429695,
+   "seconds_mean": 1.936241095999709,
+   "by_programs": 69,
+   "wrong_by_programs": 0,
+   "wrong_actions": 0,
+   "read_only": 76,
+   "by_agent": 55
+  },
+  {
+   "day": 12,
+   "requests": 200,
+   "right": 200,
+   "dollars_per_request": 0.00136984047,
+   "seconds_mean": 1.8294261970002106,
+   "by_programs": 74,
+   "wrong_by_programs": 0,
+   "wrong_actions": 0,
+   "read_only": 76,
+   "by_agent": 50
+  },
+  {
+   "day": 13,
+   "requests": 200,
+   "right": 200,
+   "dollars_per_request": 0.0014093554499999999,
+   "seconds_mean": 1.7934108279994114,
+   "by_programs": 77,
+   "wrong_by_programs": 0,
+   "wrong_actions": 0,
+   "read_only": 76,
+   "by_agent": 47
+  },
+  {
+   "day": 14,
+   "requests": 200,
+   "right": 198,
+   "dollars_per_request": 0.00171585024,
+   "seconds_mean": 2.422086246500905,
+   "by_programs": 65,
+   "wrong_by_programs": 0,
+   "wrong_actions": 1,
+   "read_only": 65,
+   "by_agent": 70
+  },
+  {
+   "day": 15,
+   "requests": 200,
+   "right": 198,
+   "dollars_per_request": 0.0015783826500000001,
+   "seconds_mean": 2.2346631604997635,
+   "by_programs": 67,
+   "wrong_by_programs": 0,
+   "wrong_actions": 1,
+   "read_only": 65,
+   "by_agent": 68
+  },
+  {
+   "day": 16,
+   "requests": 200,
+   "right": 199,
+   "dollars_per_request": 0.00158777958,
+   "seconds_mean": 2.1818126690007755,
+   "by_programs": 68,
+   "wrong_by_programs": 0,
+   "wrong_actions": 1,
+   "read_only": 65,
+   "by_agent": 67
+  },
+  {
+   "day": 17,
+   "requests": 200,
+   "right": 179,
+   "dollars_per_request": 0.00222968262,
+   "seconds_mean": 3.0809248795004422,
+   "by_programs": 60,
+   "wrong_by_programs": 0,
+   "wrong_actions": 11,
+   "read_only": 65,
+   "by_agent": 75
+  },
+  {
+   "day": 18,
+   "requests": 200,
+   "right": 179,
+   "dollars_per_request": 0.0019226204999999998,
+   "seconds_mean": 2.7684270889995126,
+   "by_programs": 62,
+   "wrong_by_programs": 0,
+   "wrong_actions": 15,
+   "read_only": 65,
+   "by_agent": 73
+  },
+  {
+   "day": 19,
+   "requests": 200,
+   "right": 186,
+   "dollars_per_request": 0.00187801035,
+   "seconds_mean": 2.7252134019992296,
+   "by_programs": 62,
+   "wrong_by_programs": 0,
+   "wrong_actions": 10,
+   "read_only": 65,
+   "by_agent": 73
+  },
+  {
+   "day": 20,
+   "requests": 200,
+   "right": 185,
+   "dollars_per_request": 0.00172981131,
+   "seconds_mean": 2.479337152999175,
+   "by_programs": 67,
+   "wrong_by_programs": 0,
+   "wrong_actions": 12,
+   "read_only": 65,
+   "by_agent": 68
+  }
+ ],
+ "nights": [
+  {
+   "day": 1,
+   "events": [
+    "gap: the LLM spends $0.0022 and 2.2 s a request over 200 runs, and no program serves this work",
+    "program: component_llm wrote a program the gate refused: 10/16, 0 wrong actions",
+    "search: designed_4f54a173b483 wrote a program the gate admits",
+    "program: designed_4f54a173b483 wrote decision_program@1; gate 16/16 passed, installed",
+    "program: memories book_one_meeting (program), book_several_meetings (low), meeting_question_or_change_no_booking (none, read-only), outside_the_job (none, read-only)"
+   ]
+  },
+  {
+   "day": 2,
+   "events": []
+  },
+  {
+   "day": 3,
+   "events": []
+  },
+  {
+   "day": 4,
+   "events": []
+  },
+  {
+   "day": 5,
+   "events": []
+  },
+  {
+   "day": 6,
+   "events": []
+  },
+  {
+   "day": 7,
+   "events": []
+  },
+  {
+   "day": 8,
+   "events": []
+  },
+  {
+   "day": 9,
+   "events": []
+  },
+  {
+   "day": 10,
+   "events": []
+  },
+  {
+   "day": 11,
+   "events": []
+  },
+  {
+   "day": 12,
+   "events": []
+  },
+  {
+   "day": 13,
+   "events": []
+  },
+  {
+   "day": 14,
+   "events": []
+  },
+  {
+   "day": 15,
+   "events": []
+  },
+  {
+   "day": 16,
+   "events": []
+  },
+  {
+   "day": 17,
+   "events": []
+  },
+  {
+   "day": 18,
+   "events": []
+  },
+  {
+   "day": 19,
+   "events": []
+  },
+  {
+   "day": 20,
+   "events": []
+  }
+ ],
+ "learning": [
+  {
+   "name": "decision_program",
+   "mechanism": "component_llm",
+   "version": null,
+   "episodes": 80,
+   "writer_calls": 1,
+   "dollars": 0.463696,
+   "outcome": "refused",
+   "at_ord": 200
+  },
+  {
+   "name": "decision_program",
+   "mechanism": "designed_4f54a173b483",
+   "version": 1,
+   "episodes": 80,
+   "writer_calls": 3,
+   "dollars": 1.7709920000000001,
+   "outcome": "passed, installed",
+   "at_ord": 200
+  },
+  {
+   "name": "find_shared_starts",
+   "mechanism": "value_learning",
+   "version": 2,
+   "episodes": 6,
+   "writer_calls": 3,
+   "dollars": 0.581136,
+   "outcome": "passed, installed",
+   "at_ord": 811
+  },
+  {
+   "name": "decision_program",
+   "mechanism": "retest",
+   "version": 1,
+   "episodes": 0,
+   "writer_calls": 0,
+   "dollars": 0.0,
+   "outcome": "passed, switched back on",
+   "at_ord": 811
+  },
+  {
+   "name": "find_common_starts",
+   "mechanism": "value_learning",
+   "version": 1,
+   "episodes": 1,
+   "writer_calls": 1,
+   "dollars": 0.179344,
+   "outcome": "passed, installed",
+   "at_ord": 2609
+  },
+  {
+   "name": "find_shared_starts",
+   "mechanism": "value_learning",
+   "version": 3,
+   "episodes": 3,
+   "writer_calls": 2,
+   "dollars": 0.358392,
+   "outcome": "passed, installed",
+   "at_ord": 3215
+  },
+  {
+   "name": "find_common_starts",
+   "mechanism": "value_learning",
+   "version": 2,
+   "episodes": 1,
+   "writer_calls": 1,
+   "dollars": 0.197624,
+   "outcome": "passed, installed",
+   "at_ord": 3243
+  }
+ ]
+}

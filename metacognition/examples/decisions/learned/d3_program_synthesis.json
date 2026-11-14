@@ -1,0 +1,60 @@
+{
+  "trial": {
+    "mechanism": "program_synthesis",
+    "accepted": 62,
+    "total": 62,
+    "writer_calls": 3,
+    "dollars": 0.133433,
+    "note": ""
+  },
+  "by_style": {
+    "casual": {
+      "requests": 14,
+      "kept": 14,
+      "right": 14,
+      "wrong": 0,
+      "handoffs": 0
+    },
+    "shorthand": {
+      "requests": 14,
+      "kept": 14,
+      "right": 14,
+      "wrong": 0,
+      "handoffs": 0
+    },
+    "distractor": {
+      "requests": 14,
+      "kept": 14,
+      "right": 14,
+      "wrong": 0,
+      "handoffs": 0
+    },
+    "buried": {
+      "requests": 14,
+      "kept": 14,
+      "right": 14,
+      "wrong": 0,
+      "handoffs": 0
+    },
+    "question": {
+      "requests": 2,
+      "kept": 0,
+      "right": 0,
+      "wrong": 0,
+      "handoffs": 2
+    },
+    "out_of_scope": {
+      "requests": 4,
+      "kept": 0,
+      "right": 0,
+      "wrong": 0,
+      "handoffs": 4
+    }
+  },
+  "handled": 56,
+  "right": 56,
+  "handoffs": 6,
+  "requests": 62,
+  "dollars_per_request": 4.2467419354838715e-06,
+  "seconds_per_request": 0.022643548387096774
+}

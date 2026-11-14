@@ -12,7 +12,7 @@ import pytest
 from chapters.ch06.assistant.environment import SchedulingEnvironment, to_hhmm, to_minutes
 from chapters.ch06.assistant.generator import (CONVENTIONS, SPLITS, USER, face_value_starts, generate,
                                               solutions, task_set)
-from chapters.ch06.assistant.harness import (BOOTSTRAPPED_MEMORY, MEMORIES, PRICES, TEXT_PROCEDURE,
+from chapters.ch06.assistant.harness import (STARTING_MEMORY, MEMORIES, PRICES, TEXT_PROCEDURE,
                                             ReadOnlyCalendar, install_memory, run_task)
 from chapters.ch06.assistant.recording import Recording
 from chapters.ch06.assistant.tools import make_tools
@@ -203,7 +203,7 @@ def test_sweep_finds_a_lower_floor_with_the_skill_and_the_signal_measures_the_ga
         skills = await install_memory(TEXT_PROCEDURE)
         with patch("helix.agent.helix_acompletion", side_effect=scripted_model(tasks)):
             bare = await sweep("no_memory", tasks, lambda t, e: run_task(t, e), prices=PRICES)
-            skilled = await sweep("bootstrap_skill", tasks, lambda t, e: run_task(t, e, memory=skills),
+            skilled = await sweep("starting_skill", tasks, lambda t, e: run_task(t, e, memory=skills),
                                   prices=PRICES)
         return bare, skilled
 
@@ -259,10 +259,10 @@ def test_replay_fails_loudly_on_a_call_the_recording_lacks(tmp_path):
 
 
 def _source():
-    return (MEMORIES / BOOTSTRAPPED_MEMORY["file"]).read_text(encoding="utf-8")
+    return (MEMORIES / STARTING_MEMORY["file"]).read_text(encoding="utf-8")
 
 
-def test_the_bootstrapped_memory_finds_exactly_the_starts_the_checker_accepts():
+def test_the_starting_memory_finds_exactly_the_starts_the_checker_accepts():
     for task in task_set("dev"):
         env = SchedulingEnvironment(task)
         tool = skill_tool("find_shared_starts", "", _source(), bind={"api": ReadOnlyCalendar(env)})
@@ -281,7 +281,7 @@ def test_recalled_memory_reaches_the_model_as_a_function_and_a_line_of_context()
         return _reply("Done.")
 
     async def go():
-        skills = await install_memory(BOOTSTRAPPED_MEMORY)
+        skills = await install_memory(STARTING_MEMORY)
         with patch("helix.agent.helix_acompletion", side_effect=model):
             return await run_task(task, "none", memory=skills)
 
@@ -328,7 +328,7 @@ def test_only_a_recalled_function_becomes_callable():
 
     async def go():
         text = await install_memory(TEXT_PROCEDURE)
-        code = await install_memory(BOOTSTRAPPED_MEMORY)
+        code = await install_memory(STARTING_MEMORY)
         await code.save_skill("unrelated_helper", "Summarize an email thread.", "def unrelated_helper() -> str:\n"
                               "    return ''\n", body_kind="python")
         request = generate(1)["text"]

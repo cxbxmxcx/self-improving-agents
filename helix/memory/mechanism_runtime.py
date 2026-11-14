@@ -17,15 +17,26 @@ parsed first and refused for imports, private names, bare `except`, and
 `str.format` (whose field syntax can reach attributes; templates go through
 `lab.fill`). Like that guard, it contains honest mistakes in a teaching
 harness and is not a security sandbox; source from an untrusted designer
-belongs in a separate process or container.
+belongs in a separate process or container. `check_runnable` goes further,
+for a search to ask of a proposal: it refuses what would stop a design when
+it ran, a builtin the design does not have and a template `lab.fill` could
+never fill, so the proposal can go back to its author.
+
+A mechanism may also store memories beside the function it returns, with
+`lab.remember`. They travel with that function as a literal `MEMORIES`
+constant at the top of its source, so one text can be practiced, scored and
+handed to a search; whatever admits it unpacks them into a memory tier.
 """
 
 from __future__ import annotations
 
 import ast
+import json
 import string
 import sys
 import time
+from collections import Counter
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
 
@@ -40,6 +51,40 @@ MECHANISM_BUILTINS = dict(SAFE_BUILTINS)
 _TOP_LEVEL = (ast.FunctionDef, ast.AsyncFunctionDef, ast.Assign, ast.AnnAssign, ast.Expr)
 # str.format and format_map resolve "{x.attr}" and "{x[key]}" fields, a known way out of a namespace.
 _REFUSED_ATTRIBUTES = {"format", "format_map"}
+MEMORIES = "MEMORIES"
+
+
+def _literal(value: Any) -> str:
+    multiline = isinstance(value, str) and "\n" in value and '"""' not in value and "\\" not in value
+    return f'"""{value}"""' if multiline and not value.endswith('"') else repr(value)
+
+
+def pack_memories(source: str, memories: Sequence[dict[str, Any]]) -> str:
+    """`source` with `memories` as a literal constant ahead of it."""
+    if not memories:
+        return source
+    rows = ["    {" + ", ".join(f"{key!r}: {_literal(value)}" for key, value in memory.items()) + "},"
+            for memory in memories]
+    return f"{MEMORIES} = [\n" + "\n".join(rows) + f"\n]\n\n{source}"
+
+
+def unpack_memories(source: str) -> tuple[str, list[dict[str, Any]]]:
+    """`source` without its `MEMORIES` constant, and the memories it held (none if it holds no usable constant)."""
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return source, []
+    for node in tree.body:
+        if (isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name)
+                and node.targets[0].id == MEMORIES):
+            try:
+                memories = ast.literal_eval(node.value)
+            except ValueError:
+                return source, []
+            lines = source.splitlines(keepends=True)
+            rest = "".join([*lines[:node.lineno - 1], *lines[node.end_lineno:]]).lstrip("\r\n")
+            return rest, [m for m in memories if isinstance(m, dict)] if isinstance(memories, list) else []
+    return source, []
 
 
 class UnsafeMechanism(ValueError):
@@ -79,6 +124,63 @@ class MechanismBudget:
     seconds: float = 3600.0
 
 
+def template_fields(template: str) -> list[str]:
+    """The names a template takes, as `lab.fill` reads them. A field that is not a plain name raises ValueError."""
+    names = [name for _, name, _, _ in string.Formatter().parse(template) if name is not None]
+    for name in names:
+        if not name.isidentifier():
+            raise ValueError(f"lab.fill takes plain names only, not {{{name}}}")
+    return names
+
+
+def _bound_names(tree: ast.Module) -> Counter[str]:
+    """How many times each name is bound anywhere in the source: assigned, defined, or taken as an argument."""
+    bound: Counter[str] = Counter()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Name) and not isinstance(node.ctx, ast.Load):
+            bound[node.id] += 1
+        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.MatchAs, ast.MatchStar,
+                               ast.ExceptHandler)) and node.name:
+            bound[node.name] += 1
+        elif isinstance(node, ast.arg):
+            bound[node.arg] += 1
+        elif isinstance(node, ast.MatchMapping) and node.rest:
+            bound[node.rest] += 1
+    return bound
+
+
+def _check_names(tree: ast.Module, bound: Counter[str]) -> None:
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Name) and node.id not in bound and node.id not in MECHANISM_BUILTINS:
+            raise UnsafeMechanism(f"{node.id!r} is not defined, and the only builtins are "
+                                  f"{', '.join(sorted(MECHANISM_BUILTINS))}")
+
+
+def _check_fills(tree: ast.Module, bound: Counter[str]) -> None:
+    """Refuse a `lab.fill` that could never work, wherever the source shows which template it fills."""
+    constants = {node.targets[0].id: node.value.value for node in tree.body
+                 if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name)
+                 and isinstance(node.value, ast.Constant) and isinstance(node.value.value, str)
+                 and bound[node.targets[0].id] == 1}
+    for node in ast.walk(tree):
+        if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == "fill"
+                and isinstance(node.func.value, ast.Name) and node.func.value.id == "lab" and node.args):
+            continue
+        first = node.args[0]
+        template = (constants.get(first.id) if isinstance(first, ast.Name)
+                    else first.value if isinstance(first, ast.Constant) else None)
+        if not isinstance(template, str):
+            continue
+        label = first.id if isinstance(first, ast.Name) else "a template"
+        try:
+            fields = template_fields(template)
+        except ValueError as exc:
+            raise UnsafeMechanism(f"{label} can't be filled: {exc}. Write a literal brace as {{{{ or }}}}") from exc
+        missing = sorted(set(fields) - {keyword.arg for keyword in node.keywords})
+        if missing and all(keyword.arg is not None for keyword in node.keywords):  # **values could hold the rest
+            raise UnsafeMechanism(f"this lab.fill of {label} leaves out {', '.join(missing)}")
+
+
 def check_mechanism(source: str) -> None:
     """Refuse mechanism source the guard does not allow; return quietly when it passes."""
     try:
@@ -116,6 +218,14 @@ def check_mechanism(source: str) -> None:
         raise UnsafeMechanism(f"{ENTRY}() takes exactly one argument, the lab")
 
 
+def check_runnable(source: str) -> None:
+    """Refuse source that passes the guard but would stop when it ran; call `check_mechanism` first."""
+    tree = ast.parse(source)
+    bound = _bound_names(tree)
+    _check_names(tree, bound)
+    _check_fills(tree, bound)
+
+
 @dataclass
 class _MeteredWriter(Writer):
     # Writer.write calls ask once or twice; metering ask covers both.
@@ -137,8 +247,12 @@ class Lab:
     Refused = UnsafeSkill
 
     def __init__(self, episodes: list[Episode], act: Act, contract: Contract, writer: Writer,
-                 budget: MechanismBudget | None = None) -> None:
+                 budget: MechanismBudget | None = None, memories: Sequence[dict[str, Any]] = (),
+                 tests: Sequence[dict[str, Any]] = ()) -> None:
         self.episodes = list(episodes)
+        self.memories = [dict(memory) for memory in memories]  # what an earlier version of this mechanism stored
+        self.tests = [dict(test) for test in tests]  # labeled requests a search shares: id, request, should_act
+        self._remembered: dict[str, dict[str, Any]] = {}
         self.contract = contract_text(contract)
         self.entry = contract.name
         self._contract = contract
@@ -172,10 +286,10 @@ class Lab:
     # ------------------------------------------------------------ practice
 
     async def practice(self, source: str, task_id: str) -> tuple[float, str, str]:
-        """Try a function on one observed request: (reward, the user's reason, the calendars it read)."""
+        """Try a function on one observed request or shared test: (reward, the user's reason, the calendars it read)."""
         self._spend("practice")
         try:
-            return await self._act(source, task_id)
+            return await self._act(self._packed(source), task_id)
         except Exception as exc:
             raise _HarnessFault(exc) from exc
 
@@ -186,8 +300,9 @@ class Lab:
         return list(dict.fromkeys(e.task_id for e in self.episodes))
 
     def request(self, task_id: str) -> str:
-        """The request text of the first episode for a task."""
-        return next(e.request for e in self.episodes if e.task_id == task_id)
+        """The text of a shared test, or of the first episode for a task."""
+        shared = next((test["request"] for test in self.tests if test["id"] == task_id), None)
+        return next(e.request for e in self.episodes if e.task_id == task_id) if shared is None else shared
 
     def render(self, episode: Episode) -> str:
         """An episode as chapter 6's writers read it; a design may build its own view instead."""
@@ -195,14 +310,29 @@ class Lab:
 
     def fill(self, template: str, **values: Any) -> str:
         """str.format for plain names only, so a template cannot reach attributes or items."""
-        for _, name, _, _ in string.Formatter().parse(template):
-            if name is not None and not name.isidentifier():
-                raise ValueError(f"lab.fill takes plain names only, not {{{name}}}")
+        template_fields(template)
         return template.format(**values)
+
+    def parse(self, reply: str) -> Any:
+        """The JSON value in a writer's reply, with or without a code fence. Raises ValueError if there is none."""
+        text = reply.strip()
+        if "```" in text:
+            parts = text.split("```")
+            text = parts[1] if len(parts) >= 3 else text
+            text = text[4:] if text.startswith("json") else text
+        return json.loads(text)
+
+    def remember(self, name: str, description: str, body: str, route: str = "none", read_only: bool = False) -> None:
+        """Store a memory, or replace the one of that name: what it covers, what it holds, and how it is served."""
+        self._remembered[str(name)] = {"name": str(name), "description": str(description), "route": str(route),
+                                       "read_only": bool(read_only), "body": str(body)}
 
     def note(self, text: Any) -> None:
         """Something the design wants a person, or the designer, to read later."""
         self._notes.append(str(text))
+
+    def _packed(self, source: str) -> str:
+        return pack_memories(source, list(self._remembered.values()))
 
     # ------------------------------------------------------------ metering
 
@@ -266,4 +396,4 @@ async def run_mechanism(source: str, lab: Lab, *, name: str = "mechanism") -> Le
         result = result.get("source")
     if not isinstance(result, str) or not result.strip():
         raise MechanismStopped("the mechanism returned no function source", lab.writer_calls, lab.writer_usage)
-    return LearnedMemory(name, result, lab.writer_calls, list(lab._notes), values, lab.writer_usage)
+    return LearnedMemory(name, lab._packed(result), lab.writer_calls, list(lab._notes), values, lab.writer_usage)

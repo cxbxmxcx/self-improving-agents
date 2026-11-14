@@ -5,10 +5,11 @@ Tool construction and context injection retrieve skills separately through
 the same helper with matching inputs against fixed memory. The effort setting
 reaches every model call through a PRE_MODEL hook, leaving the loop unchanged.
 
-The bootstrapped memory is a hand-built function that computes valid starts.
-Learned functions use the same name and description for behavioral comparison.
-Agent sweeps then test whether those functions support successful execution
-at the selected effort setting.
+The starting memory is the function chapter 4's GEPA search found when we ran
+it over procedural memory, and a person promoted; the starting learner is chapter 5's value learning. Learned
+functions keep the same name and description, so the agent calls each one
+the same way. After four colleagues add rules to their calendar notes, their
+requests run in a calendar world that also honors each rule.
 """
 
 from __future__ import annotations
@@ -18,6 +19,8 @@ from typing import Any
 
 from chapters.ch05.personal.encoder import embed
 from chapters.ch06.assistant.environment import SchedulingEnvironment
+from chapters.ch06.assistant.generator_rules import PREFIX as TEAM_RULES
+from chapters.ch06.assistant.generator_rules import RulesEnvironment
 from chapters.ch06.assistant.recording import (
     recorded_seconds,
     restore_seconds,
@@ -38,10 +41,9 @@ MODEL = "gpt-5.4-mini"
 PRICES = {MODEL: (0.75, 4.50, 0.075)}
 MEMORIES = Path(__file__).parent / "memories"
 GLOBAL = ScopeKey(Scope.GLOBAL, "*")
-# The function every learned memory must match, and its contract. It is
-# the procedural memory listing 6.1's context search found and a person
-# promoted.
-BOOTSTRAPPED_MEMORY = {
+# The memory the harness holds when metacognition starts: the procedural
+# memory chapter 4's GEPA search found and a person promoted.
+STARTING_MEMORY = {
     "name": "find_shared_starts",
     "body_kind": "python",
     "file": "find_shared_starts.searched.py",
@@ -54,10 +56,10 @@ BOOTSTRAPPED_MEMORY = {
     ),
 }
 # The same contract written by hand, kept to check the searched memory.
-HAND_WRITTEN_MEMORY = {**BOOTSTRAPPED_MEMORY, "file": "find_shared_starts.py", "created_by": "human"}
-# The second task class's bootstrapped memory: one start that works on
+HAND_WRITTEN_MEMORY = {**STARTING_MEMORY, "file": "find_shared_starts.py", "created_by": "human"}
+# The second task class's starting memory: one start that works on
 # every day.
-BOOTSTRAPPED_SAME_TIME = {
+STARTING_SAME_TIME = {
     "name": "find_common_starts",
     "body_kind": "python",
     "file": "find_common_starts.py",
@@ -79,11 +81,21 @@ TEXT_PROCEDURE = {
     ),
     "file": "multi_attendee_scheduling.md",
 }
+# The learner the loop starts with: chapter 5's value learning, from the
+# bank of learners helix defines.
+STARTING_LEARNER = "value_learning"
 
 PROMPT = """You are Maya Rivera's calendar assistant. Complete the user's request
 with the calendar tools. Requests are about the current working week,
 Monday to Friday; the calendar shows its dates. Working hours are 09:00 to
 17:00. When you are done, reply with what you booked."""
+
+
+def environment(task: dict[str, Any]) -> SchedulingEnvironment:
+    """The calendar world a request runs in; after the colleagues add rules, it checks each one."""
+    if task["id"].startswith(TEAM_RULES):
+        return RulesEnvironment(task)
+    return SchedulingEnvironment(task)
 
 
 class ReadOnlyCalendar:
@@ -152,7 +164,7 @@ async def run_task(
     skill_k: int = DEFAULT_SKILL_K,
 ):
     """One task at one setting -> (solved, reason, trajectory)."""
-    env = SchedulingEnvironment(task)
+    env = environment(task)
     context = MemoryContext(user_id=env.user)
     # One k for both, so the functions the agent can call are the ones
     # its context names.
@@ -180,4 +192,8 @@ async def run_task(
     restore_seconds(trajectory, seconds)
     verdict = env.check()
     trajectory.metadata["check"] = verdict
+    # What the run left booked, so repeated runs of one request can be compared.
+    trajectory.metadata["booked"] = sorted(
+        f"{event['day']} {event['start']}" for event in (env.event(i) for i in env.booked) if event
+    )
     return verdict["success"], verdict["reason"], trajectory

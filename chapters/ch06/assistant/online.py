@@ -1,13 +1,13 @@
-"""The online metacognition loop's parts: recorder, controller, detector, gate.
+"""The online metacognitive loop's parts: recorder, controller, detector, gate, learner monitor.
 
-The offline search found a learning mechanism; this module runs it while the
-assistant serves requests. The recorder writes every run to episodic memory.
-The controller picks a reasoning setting by lookup, from the floors listing
-6.2 measured: the cheapest setting that clears the bar with the memory it
-has. The detector watches runs that used memory and quarantines the memory
-when they start failing. The learner, the mechanism the search kept, writes
-a new function from recent runs, and the gate admits it only when it clears
-the same bar on held-back cases.
+The recorder writes every run to episodic memory. The controller picks a
+reasoning setting by lookup, from the floors listing 6.1 measured: the
+cheapest setting that clears the bar with the memory it has. The detector
+watches runs that used memory and quarantines the memory when they start
+failing. The learner writes a new function from recent runs, and the gate
+admits it only when it clears the same bar on held-back cases. The learner
+monitor watches the gate's decisions: refusals in a row mean the learner,
+not one memory, falls short, and the loop searches the bank for another.
 
 None of these parts changes the agent loop. They sit in the harness around
 it and decide two things per request: which memory the agent may recall and
@@ -66,7 +66,7 @@ class Controller:
 
     @classmethod
     def from_floors(cls, path: Path, *, bar: float = ADEQUATE) -> Controller:
-        """Build the table from listing 6.2's sweeps.
+        """Build the table from listing 6.1's sweeps.
 
         Each arm gets the cheapest setting that clears the bar. An arm that
         never clears it gets the setting with the best record, since spending
@@ -79,7 +79,7 @@ class Controller:
             measured = [e for e in EFFORTS if e in sweep.cells]
             return sweep.floor(bar) or max(measured, key=lambda e: (sweep.cells[e].rate, EFFORTS.index(e)))
 
-        return cls({"memory": setting("bootstrapped_memory"), "no_memory": setting("no_memory")})
+        return cls({"memory": setting("starting_memory"), "no_memory": setting("no_memory")})
 
 
 @dataclass
@@ -119,3 +119,23 @@ class Gate:
             accepted += int(reward)
         total = len(self.cases)
         return accepted, total, accepted / total >= self.bar - 1e-9
+
+
+@dataclass
+class LearnerMonitor:
+    """Notice when the learner, not just one memory, falls short.
+
+    Each learning attempt ends at the gate. One refusal can mean the learner
+    saw too few runs; `limit` refusals in a row mean it cannot learn this
+    task, and the loop should look for another learner.
+    """
+
+    limit: int = 2
+    refusals: int = 0
+
+    def observe(self, passed: bool) -> bool:
+        self.refusals = 0 if passed else self.refusals + 1
+        return self.refusals >= self.limit
+
+    def reset(self) -> None:
+        self.refusals = 0
