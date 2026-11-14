@@ -92,9 +92,11 @@ async def main(args: argparse.Namespace) -> None:
             path = args.output / f"component_{args.method}.py"
             path.write_text(component["source"], encoding="utf-8",
                             newline="\n")
+        calls, dollars = models.used(BUILDER, PRICES)
         save(args.output, f"code_search_{args.method}", log, meta,
              summary=summarize(log), events=events,
-             search=meta.programs.search_log)
+             search=meta.programs.search_log,
+             builder={"calls": calls, "dollars": round(dollars, 6)})
         if args.record:
             usage = jev.live_usage()
             print(f"\n{models.live_calls} model calls,"

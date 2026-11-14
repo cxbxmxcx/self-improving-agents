@@ -132,6 +132,10 @@ class Models:
             return builder(kwargs)
         return careful_agent(copy.deepcopy(kwargs), self.careless)
 
+    def used(self, model: str, prices: Any = None) -> tuple[int, float]:
+        """The scripted builder's calls; scripted replies cost nothing."""
+        return (self.builder_calls if "claude" in model else 0), 0.0
+
     @contextmanager
     def active(self) -> Iterator[Models]:
         recording.install()
@@ -195,6 +199,7 @@ async def test_listing_3_searches_from_the_model_only_seed_and_installs_what_the
     assert served(out["summary"], "experience", "one meeting") == {"model at none": 48}
     assert served(out["summary"], "searched component", "one meeting") == {"program": 24}
     assert out["summary"]["searched component"]["wrong_actions"] == 0
+    assert out["builder"]["calls"] > 0  # the report saves what the builder was asked to do
 
 
 async def test_listing_3_runs_the_same_search_with_gepa_when_the_method_is_swapped(listing, tmp_path):

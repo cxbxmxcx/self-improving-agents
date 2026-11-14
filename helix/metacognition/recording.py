@@ -159,6 +159,7 @@ class Recording:
         self.rows: dict[str, dict[str, Any]] = {}
         self.live_calls = 0
         self.live_rows: list[dict[str, Any]] = []
+        self.used_rows: dict[str, dict[str, Any]] = {}  # every distinct reply served, live or replayed
         self._seen: dict[str, int] = {}
         if self.path.exists():
             for line in self.path.read_text(encoding="utf-8").splitlines():
@@ -187,6 +188,7 @@ class Recording:
             self.path.parent.mkdir(parents=True, exist_ok=True)
             with self.path.open("a", encoding="utf-8", newline="\n") as fh:  # LF on every platform
                 fh.write(json.dumps(row) + "\n")
+        self.used_rows.setdefault(key, row)
         served = _served.get()
         if served is not None:
             served.append(float(row.get("seconds") or 0.0))
@@ -201,6 +203,13 @@ class Recording:
             yield self
         finally:
             _transport.reset(token)
+
+    def used(self, model: str, prices: dict[str, tuple[float, ...]] | None = None) -> tuple[int, float]:
+        """Distinct calls to `model` this session served, live or replayed, and what they cost."""
+        from helix.signals.cost import call_dollars
+
+        rows = [row for row in self.used_rows.values() if row.get("model") == model]
+        return len(rows), sum(call_dollars(model, row.get("usage") or {}, prices) or 0.0 for row in rows)
 
     def spent(self, prices: dict[str, tuple[float, ...]] | None = None) -> float:
         """Dollars this session's live calls cost, from their recorded usage."""

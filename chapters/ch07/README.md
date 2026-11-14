@@ -42,7 +42,7 @@ Both agent rows have chapter 6's procedure. The agent alone acted on 4 of the 20
 
 ### The search, with two methods
 
-Both searches start from a component that keeps every request on the language model, which got 17 of its own 30 requests right. A rewrite reaches the hidden gate only by clearing the bar on its own requests and serving some of them with no language model. No six-word run from a gate or held-out request appears in any component, stored program, or reply from the builder. That rules out one narrow form of copying, not overfitting or other leakage, so the held-out requests stay the real test.
+Both searches start from a component that keeps every request on the language model, which got 17 of its own 30 requests right. A rewrite reaches the hidden gate only by clearing the bar on its own requests and serving some of them with no language model. No six-word run that appears only in gate or held-out requests appears in any reply from the builder, which holds every component and stored program; `tests/test_ch07_copy_check.py` repeats the check on the recording. That rules out one narrow form of copying, not overfitting or other leakage, so the held-out requests stay the real test.
 
 | Candidate | Right on its own requests | Right at the gate | Wrong actions | Outcome |
 |---|---:|---:|---:|---|

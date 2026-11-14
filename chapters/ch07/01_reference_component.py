@@ -72,7 +72,7 @@ async def main(args: argparse.Namespace) -> None:
     check_program(program)  # the guard every decision program passes
     print("Memories of the hand-written component")
     for memory in memories():
-        print(f"   {memory['name']:<17} {route_of(memory):<22}"
+        print(f"   {memory['name']:<17} {route_of(memory):<25}"
               f" {memory['description']}")
 
     procedure, _ = starting_procedure()
