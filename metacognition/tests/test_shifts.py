@@ -84,7 +84,8 @@ def test_a_shift_change_is_right_only_for_that_person_and_day():
 
 
 def test_the_search_sees_only_the_forms_used_in_development():
-    forms = {c["form"] for t in plans("dev") + [p for p in plans() if number(p) in range(201, 205)] for c in t["constraints"]}
+    forms = {c["form"] for t in plans("dev") + [p for p in plans() if number(p) in range(201, 205)]
+             for c in t["constraints"]}
     assert forms <= set(SEEN) and len(forms) == len(SEEN)
 
 
@@ -121,7 +122,8 @@ def test_wordings_differ_between_who_sees_them():
 @pytest.mark.parametrize("form", ["off", "fixed", "same", "either", "skill", "not_both", "exactly_two"])
 def test_each_form_can_say_no(form):
     rota = dict(zip(DAYS, ["Priya", "Omar", "Lena", "Sam", "Noor"], strict=True))
-    wrong = {"off": {"a": "Priya", "d": "Monday"}, "fixed": {"a": "Omar", "d": "Monday"}, "same": {"d": "Monday", "e": "Tuesday"},
+    wrong = {"off": {"a": "Priya", "d": "Monday"}, "fixed": {"a": "Omar", "d": "Monday"},
+             "same": {"d": "Monday", "e": "Tuesday"},
              "either": {"d": "Monday", "a": "Omar", "b": "Lena"}, "skill": {"d": "Thursday", "s": "databases"},
              "not_both": {"a": "Priya", "b": "Omar"}, "exactly_two": {"a": "Priya"}}[form]
     assert not holds({"form": form, **wrong}, rota)

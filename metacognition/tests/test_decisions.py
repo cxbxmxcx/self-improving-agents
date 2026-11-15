@@ -13,10 +13,10 @@ from helix.memory.learning_mechanisms import Contract
 from helix.memory.mechanism_runtime import UnsafeMechanism, check_runnable, pack_memories, unpack_memories
 from helix.metacognition import Controller, Gate, Metacognition, procedure
 from helix.metacognition.decide import KIT_GUIDE, RETURNS, Desk, Kit, frozen_change, run_program
-from helix.metacognition.gap import Attempt, Good, gap_of, outcome_of, report
 from helix.metacognition.decisions import DECISION, RUNG, ProgramSearch, ProgramTier, ServiceGap
-from helix.signal import Signal
+from helix.metacognition.gap import Attempt, Good, gap_of, outcome_of, report
 from helix.search.methods import METHODS
+from helix.signal import Signal
 
 from metacog import Agent, RunConfig, RunContextWrapper, Runner, function_tool
 from metacog.testing import RespondingModel, ScriptedModel, call, text
@@ -700,7 +700,8 @@ async def test_recall_finds_the_closest_memory_in_the_tier():
     return {"serve": found[0]["name"]}
 """
     packed = pack_memories(router, [
-        {"name": "ship_it", "description": "ship an order out", "route": "program", "read_only": False, "body": SHIP_IT},
+        {"name": "ship_it", "description": "ship an order out", "route": "program", "read_only": False,
+         "body": SHIP_IT},
         {"name": "other", "description": "questions about invoices and payments", "route": "none", "read_only": True,
          "body": "n"}])
     _, meta = build()
@@ -830,7 +831,8 @@ async def test_the_control_seed_writes_a_decision_memory_for_each_kind_that_acts
 
 async def test_a_search_learns_only_how_many_gate_requests_went_wrong():
     designer = RespondingModel(lambda request: text(mechanism(RECKLESS)))
-    agent, meta = build(RECKLESS, search=ProgramSearch(population=1, generations=1, seed=3), search_cases={"c201": task(201)})
+    agent, meta = build(RECKLESS, search=ProgramSearch(population=1, generations=1, seed=3),
+                        search_cases={"c201": task(201)})
     meta.agent = agent
     with designer.active():
         await meta.programs.improve([])
@@ -869,7 +871,8 @@ def test_the_gap_is_the_mean_distance_from_good():
 
 
 def test_the_gap_report_says_where_the_gap_is_and_shows_every_request():
-    tried = [attempt("llm", "ship_it"), attempt("llm", "ship_it"), attempt("program", "other"), attempt("wrong", "hold")]
+    tried = [attempt("llm", "ship_it"), attempt("llm", "ship_it"), attempt("program", "other"),
+             attempt("wrong", "hold")]
     written = report(tried, Good(wrong_action=3.0))
     assert "Gap from good: 0.95 over 4 requests" in written
     assert "- wrong actions: 1 requests, 0.75 of the gap" in written
@@ -1010,8 +1013,8 @@ async def test_a_hidden_gate_says_which_memory_made_the_wrong_actions():
     always = 'async def decide(request, kit):\n    return {"serve": "ship_it"}\n'
     designer = RespondingModel(lambda request: text(component(SHIPS, HOLDS, router=always)))
     spec = ProgramSearch(population=1, generations=1, seed=3)
-    agent, meta = build(mechanisms=[("seed", component(SHIPS, HOLDS, router=always))], route_practice=routed_right, search=spec,
-                        search_cases={"c201": task(201)})
+    agent, meta = build(mechanisms=[("seed", component(SHIPS, HOLDS, router=always))], route_practice=routed_right,
+                        search=spec, search_cases={"c201": task(201)})
     meta.agent = agent
     with designer.active():
         await meta.programs.improve([])
@@ -1020,7 +1023,8 @@ async def test_a_hidden_gate_says_which_memory_made_the_wrong_actions():
 
 
 def priced(costs: dict[str, float], right_at: set[str] | None = None) -> Any:
-    """The LLM on a request: what a run costs at each reasoning level, and the levels that get it right (all, if None)."""
+    """The LLM on a request: what a run costs at each reasoning level, and the levels that get it right
+    (all, if None)."""
 
     async def attempt(task_: dict[str, Any], effort: str, memory: str | None) -> tuple[bool, str, float, float]:
         accepted = right_at is None or effort in right_at
@@ -1029,7 +1033,8 @@ def priced(costs: dict[str, float], right_at: set[str] | None = None) -> Any:
     return attempt
 
 
-async def searched_on_the_llm(route_practice: Any, *, lower_reasoning: bool = True) -> tuple[Metacognition, RespondingModel, list[str]]:
+async def searched_on_the_llm(route_practice: Any, *,
+                              lower_reasoning: bool = True) -> tuple[Metacognition, RespondingModel, list[str]]:
     designer = RespondingModel(lambda request: text(component(ALL_LLM, HOLDS)))
     spec = ProgramSearch(population=1, generations=1, seed=3, lower_reasoning=lower_reasoning)
     agent, meta = build(mechanisms=[("seed", component(ALL_LLM, HOLDS))], route_practice=route_practice, search=spec,

@@ -13,7 +13,7 @@ MODEL = "gpt-5.4-mini"
 PROMPT = """You run a software company's support desk. Do what the request asks with the tools: triage a ticket, by reading
 its thread and the policy and then setting its severity and team once with triage_ticket, or assign a ticket to a named
 person. When you are done, reply in one short sentence. If a request asks for anything else, answer it if you can and change
-nothing."""
+nothing."""  # noqa: E501
 PLAN_OF = '''def ticket_plan(api, ticket_id: str) -> dict:
     return {"plan": api.read_account(ticket_id).get("plan")}
 '''

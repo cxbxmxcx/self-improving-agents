@@ -6,10 +6,12 @@ import string
 
 import pytest
 
-from examples.billing.world import BillingWorld, banks as billing_banks, credit_for, task_set
+from examples.billing.world import BillingWorld, credit_for, task_set
+from examples.billing.world import banks as billing_banks
 from examples.decisions.loop import split_near, split_test
 from examples.decisions.wordings import load
-from examples.triage.world import OWNERS, TriageWorld, banks as triage_banks, severity_of, team_of
+from examples.triage.world import OWNERS, TriageWorld, severity_of, team_of
+from examples.triage.world import banks as triage_banks
 
 
 def account(**changes: object) -> dict:
@@ -25,7 +27,8 @@ def account(**changes: object) -> dict:
     ({"promo_percent": 10}, 139.35),
     ({"change": {"type": "seat_reduction", "date": "2026-03-11", "seats_removed": 3}}, 46.45),
     ({"change": {"type": "cancellation", "date": "2026-03-02", "seats_removed": 10}}, 240.00),  # the first two days
-    ({"billing_day": 15, "change": {"type": "cancellation", "date": "2026-03-20", "seats_removed": 10}}, 193.54),  # 25 of 31
+    ({"billing_day": 15, "change": {"type": "cancellation", "date": "2026-03-20", "seats_removed": 10}},
+     193.54),  # 25 of 31
 ])
 def test_a_credit_follows_the_billing_policy(changes, credit):
     assert credit_for(account(**changes)) == credit
@@ -42,16 +45,26 @@ def test_the_billing_checker_accepts_the_credit_and_names_the_convention_missed(
 
 
 @pytest.mark.parametrize(("facts", "plan", "severity"), [
-    ({"environment": "production", "scope": "all", "workaround": "no", "data_loss": "no", "security": "no"}, "standard", "P1"),
-    ({"environment": "production", "scope": "some", "workaround": "no", "data_loss": "no", "security": "no"}, "standard", "P2"),
-    ({"environment": "production", "scope": "some", "workaround": "no", "data_loss": "no", "security": "no"}, "enterprise", "P1"),
-    ({"environment": "production", "scope": "all", "workaround": "yes", "data_loss": "no", "security": "no"}, "standard", "P3"),
-    ({"environment": "production", "scope": "one", "workaround": "yes", "data_loss": "no", "security": "no"}, "enterprise", "P2"),
-    ({"environment": "staging", "scope": "all", "workaround": "no", "data_loss": "no", "security": "no"}, "standard", "P4"),
-    ({"environment": "staging", "scope": "all", "workaround": "no", "data_loss": "no", "security": "no"}, "enterprise", "P3"),
-    ({"environment": "staging", "scope": "one", "workaround": "no", "data_loss": "yes", "security": "no"}, "standard", "P4"),
-    ({"environment": "staging", "scope": "one", "workaround": "yes", "data_loss": "no", "security": "yes"}, "standard", "P1"),
-    ({"environment": "production", "scope": "one", "workaround": "yes", "data_loss": "yes", "security": "no"}, "standard", "P1"),
+    ({"environment": "production", "scope": "all", "workaround": "no", "data_loss": "no", "security": "no"},
+     "standard", "P1"),
+    ({"environment": "production", "scope": "some", "workaround": "no", "data_loss": "no", "security": "no"},
+     "standard", "P2"),
+    ({"environment": "production", "scope": "some", "workaround": "no", "data_loss": "no", "security": "no"},
+     "enterprise", "P1"),
+    ({"environment": "production", "scope": "all", "workaround": "yes", "data_loss": "no", "security": "no"},
+     "standard", "P3"),
+    ({"environment": "production", "scope": "one", "workaround": "yes", "data_loss": "no", "security": "no"},
+     "enterprise", "P2"),
+    ({"environment": "staging", "scope": "all", "workaround": "no", "data_loss": "no", "security": "no"},
+     "standard", "P4"),
+    ({"environment": "staging", "scope": "all", "workaround": "no", "data_loss": "no", "security": "no"},
+     "enterprise", "P3"),
+    ({"environment": "staging", "scope": "one", "workaround": "no", "data_loss": "yes", "security": "no"},
+     "standard", "P4"),
+    ({"environment": "staging", "scope": "one", "workaround": "yes", "data_loss": "no", "security": "yes"},
+     "standard", "P1"),
+    ({"environment": "production", "scope": "one", "workaround": "yes", "data_loss": "yes", "security": "no"},
+     "standard", "P1"),
 ])
 def test_severity_follows_the_triage_policy(facts, plan, severity):
     assert severity_of(facts, plan) == severity
@@ -80,7 +93,8 @@ def test_the_billing_text_is_complete_and_uses_only_its_placeholders():
             assert len(words["requests"][audience][style]) == 2
             for text in words["requests"][audience][style]:
                 assert fields(text) <= {"account", "number", "other"}
-                assert ("number" in fields(text)) == (style == "shorthand") and ("account" in fields(text)) == (style != "shorthand")
+                assert (("number" in fields(text)) == (style == "shorthand")
+                        and ("account" in fields(text)) == (style != "shorthand"))
                 assert ("other" in fields(text)) == (style == "distractor")
     assert [len(words["near_miss"][a]) for a in ("dev", "search", "gate", "held")] == [6, 10, 10, 10]
     assert all(fields(text) == {"account"} for text in strings(words["near_miss"]) + strings(words["out_of_scope"]))
@@ -94,7 +108,8 @@ def test_the_triage_text_is_complete_and_uses_only_its_placeholders():
                 assert len(words[group][audience][style]) == 2
                 for text in words[group][audience][style]:
                     assert fields(text) <= {"ticket", "number", "other"} | extra and extra <= fields(text)
-                    assert ("number" in fields(text)) == (style == "shorthand") and ("ticket" in fields(text)) == (style != "shorthand")
+                    assert (("number" in fields(text)) == (style == "shorthand")
+                            and ("ticket" in fields(text)) == (style != "shorthand"))
                     assert ("other" in fields(text)) == (style == "distractor")
     assert [len(words["near_miss"][a]) for a in ("dev", "search", "gate", "held")] == [6, 10, 10, 10]
     assert all(fields(text) <= {"ticket", "owner"} and "ticket" in fields(text) for text in strings(words["near_miss"]))
@@ -103,7 +118,8 @@ def test_the_triage_text_is_complete_and_uses_only_its_placeholders():
         assert len(thread["openers"]) == len(thread["acks"]) == 3
         for voice in ("customer", "engineer"):
             assert all(len(texts) == 2 for values in thread[voice].values() for texts in values.values())
-            assert sorted(thread[voice]) == sorted(["environment", "scope", "workaround", "data_loss", "security", "area"])
+            assert sorted(thread[voice]) == sorted(["environment", "scope", "workaround", "data_loss", "security",
+                                                    "area"])
             assert all(not fields(text) for text in strings(thread[voice]))
 
 

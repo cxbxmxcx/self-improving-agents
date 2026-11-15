@@ -200,7 +200,8 @@ def test_a_declined_request_comes_back_empty_and_is_kept():
     from types import SimpleNamespace as NS
 
     usage = NS(input_tokens=10, output_tokens=0, cache_read_input_tokens=0, cache_creation_input_tokens=0)
-    message = NS(content=[], stop_reason="refusal", stop_details=NS(category="cyber", explanation="declined"), usage=usage)
+    message = NS(content=[], stop_reason="refusal", stop_details=NS(category="cyber", explanation="declined"),
+                 usage=usage)
     before = len(claude.refusals)
     reply = claude.to_response(message, "claude-fable-5-2")
     assert reply.choices[0].message.content == "" and reply.choices[0].finish_reason == "refusal"

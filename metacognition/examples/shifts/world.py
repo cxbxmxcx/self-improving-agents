@@ -52,52 +52,57 @@ TEXT = {
 PLAN_WORDS = {
     "dev": {"plan_list": ("Please plan next week's on-call rota and publish it.\n- ", "\n- ", ""),
             "plan_note": ("Can you sort out next week's on-call and publish it? ", " ", ""),
-            "plan_chat": ("hey, need next week's rota done and published. a few things to work around: ", " ", " thanks!"),
-            "plan_buried": ("The roadmap review ran long, so I'm only getting to this now. Please plan and publish next "
-                            "week's on-call. ", " ", " I'll tell the team once it's up.")},
+            "plan_chat": ("hey, need next week's rota done and published. a few things to work around: ", " ",
+                          " thanks!"),
+            "plan_buried": ("The roadmap review ran long, so I'm only getting to this now. Please plan and publish "
+                            "next week's on-call. ", " ", " I'll tell the team once it's up.")},
     "search": {"plan_list": ("Next week's on-call needs planning and publishing. Requirements:\n- ", "\n- ", ""),
                "plan_note": ("Please work out next week's rota and publish it. ", " ", ""),
                "plan_chat": ("could you get next week's on-call planned and out? notes: ", " ", " cheers"),
-               "plan_buried": ("We've had a busy sprint and a couple of people are juggling things. Could you plan next "
-                               "week's on-call and publish it? ", " ", " That should keep everyone happy.")},
+               "plan_buried": ("We've had a busy sprint and a couple of people are juggling things. Could you plan "
+                               "next week's on-call and publish it? ", " ", " That should keep everyone happy.")},
     "gate": {"plan_list": ("Time to set next week's on-call. Publish a rota that respects:\n- ", "\n- ", ""),
              "plan_note": ("I need next week's on-call rota published. ", " ", ""),
              "plan_chat": ("rota time again, can you publish next week's? ", " ", " ty"),
-             "plan_buried": ("Finance moved the quarter-end, which shuffled a few calendars. Please put together next "
-                             "week's on-call and publish it. ", " ", " Let me know when it's live.")},
+             "plan_buried": ("Finance moved the quarter-end, which shuffled a few calendars. Please put together "
+                             "next week's on-call and publish it. ", " ", " Let me know when it's live.")},
     "held": {"plan_list": ("Build next week's on-call schedule and publish it. It has to satisfy:\n- ", "\n- ", ""),
              "plan_note": ("Please publish a rota for next week. ", " ", ""),
-             "plan_chat": ("morning! next week's on-call still isn't done, can you publish one? ", " ", " appreciated"),
-             "plan_buried": ("The office move is next week, so people's availability is a bit unusual. Would you plan the "
-                             "on-call and publish it? ", " ", " Thanks for picking this up.")},
+             "plan_chat": ("morning! next week's on-call still isn't done, can you publish one? ", " ",
+                           " appreciated"),
+             "plan_buried": ("The office move is next week, so people's availability is a bit unusual. Would you plan "
+                             "the on-call and publish it? ", " ", " Thanks for picking this up.")},
 }
 ASSIGN_WORDS = {
     "dev": {"casual": ["hey can you put {person} on {day}?", "please have {person} take {day}"],
             "shorthand": ["{person} on {short}", "{short}: {person}"],
             "distractor": ["{other} is fine where they are, but please put {person} on {day}.",
                            "Leave {other} alone. Put {person} on {day}."],
-            "buried": ["We're moving a few things around after the offsite. {person} said they'd cover {day}, so please "
-                       "put them on it. That should settle next week.",
-                       "I talked to the team this morning. Please give {day}'s shift to {person}. Thanks for sorting it."]},
+            "buried": ["We're moving a few things around after the offsite. {person} said they'd cover {day}, so "
+                       "please put them on it. That should settle next week.",
+                       "I talked to the team this morning. Please give {day}'s shift to {person}. "
+                       "Thanks for sorting it."]},
     "search": {"casual": ["could you stick {person} on {day} for me", "{person} is taking {day}, please update it"],
                "shorthand": ["{short} -> {person}", "{person} for {short}"],
                "distractor": ["{other} doesn't need changing. {day} should go to {person}.",
                               "Put {person} on {day}, and nothing for {other}."],
                "buried": ["The release moved again, so we're reshuffling. Put {person} on {day}, please. I'll update "
-                          "the channel.", "Busy week ahead. {person} has offered to take {day}, so set that up. Thanks."]},
+                          "the channel.",
+                          "Busy week ahead. {person} has offered to take {day}, so set that up. Thanks."]},
     "gate": {"casual": ["pop {person} onto {day} when you can", "mind moving {day} to {person}?"],
              "shorthand": ["{person} covers {short}", "{short} = {person}"],
              "distractor": ["Ignore {other} for now and assign {day} to {person}.",
                             "{person} gets {day}. {other} stays as they are."],
              "buried": ["Quick one before standup. {day} needs to go to {person}, they've agreed. Thanks a lot.",
-                        "After yesterday's retro we agreed on a change. Assign {person} to {day}, please. That's all."]},
+                        "After yesterday's retro we agreed on a change. Assign {person} to {day}, please. "
+                        "That's all."]},
     "held": {"casual": ["can we have {person} on {day}", "go ahead and give {person} {day}"],
              "shorthand": ["{short} {person}", "{person}, {short}"],
              "distractor": ["{other} is sorted. All I need is {person} on {day}.",
                            "Not {other}, this is about {person}: put them on {day}."],
              "buried": ["Things have been hectic with the launch. {person} volunteered, so please make them {day}'s "
-                        "on-call. I appreciate it.", "Small update from the team sync. Set {person} on {day}. Nothing else "
-                        "is changing."]},
+                        "on-call. I appreciate it.",
+                        "Small update from the team sync. Set {person} on {day}. Nothing else is changing."]},
 }
 OUT_OF_SCOPE = {"dev": ["Who's the manager for {person}?", "Book {person} a meeting room for {day}.",
                         "What's the pager number for the on-call person?", "Send {person} a reminder about {day}."],
@@ -111,16 +116,20 @@ NEAR_MISS = ["Is {person} on call {day}?", "Don't put {person} on {day} yet, the
              "Would {person} be allowed to take {day}?", "Who has {day} at the moment?",
              "How many shifts does {person} have this week?", "I already put {person} on {day} myself, nothing needed.",
              "Remind me on Friday to give {person} {day}.", "Show me a possible rota for next week; publish nothing."]
-NEAR_MISS_GATE = ["Has anyone put {person} down for {day}?", "Please wait before changing {day}, I want {person}'s answer first.",
+NEAR_MISS_GATE = ["Has anyone put {person} down for {day}?",
+                  "Please wait before changing {day}, I want {person}'s answer first.",
                   "Could {person} even take {day}?", "Reverse whatever you did to {day}.",
                   "Which person is covering {day}?", "I only want to know {person}'s shift count, change nothing.",
-                  "{person} is sorting {day} out personally, leave it.", "Next month, not now, put {person} on a {day}.",
+                  "{person} is sorting {day} out personally, leave it.",
+                  "Next month, not now, put {person} on a {day}.",
                   "Tell me if {day} is empty.", "Sketch next week's rota for me to look at, without publishing."]
 NEAR_MISS_FRESH = ["Am I right that {person} has {day}?", "Keep {day} as it is until {person} confirms.",
                    "Remove {person} from {day}.", "Is there anyone free on {day}?",
                    "Was {person} ever on {day} last week?", "Is it OK for {person} to do {day}?",
-                   "No need to touch {day}, {person} already has it.", "After the holidays, please move {person} to {day}.",
-                   "What's {person}'s load next week?", "Give me a draft of next week's on-call; I'll publish it myself."]
+                   "No need to touch {day}, {person} already has it.",
+                   "After the holidays, please move {person} to {day}.",
+                   "What's {person}'s load next week?",
+                   "Give me a draft of next week's on-call; I'll publish it myself."]
 
 
 def _key(person: str) -> str:
@@ -188,7 +197,8 @@ def solutions(constraints: list[dict[str, Any]], leave: dict[str, list[str]]) ->
 
 
 # Every way to fill the week within the most shifts one person may take, so a search for answers starts from these.
-_ROTAS = [rota for rota in (dict(zip(DAYS, people, strict=True)) for people in itertools.product(PEOPLE, repeat=len(DAYS)))
+_ROTAS = [rota for rota in (dict(zip(DAYS, people, strict=True))
+                            for people in itertools.product(PEOPLE, repeat=len(DAYS)))
           if all(_count(rota, person) <= MOST_SHIFTS for person in rota.values())]
 
 
@@ -309,8 +319,8 @@ def _assign_base(number: int) -> dict[str, Any]:
     current = _rota(rng)
     while current[day] == person or _count(current, person) >= MOST_SHIFTS:  # the change has to be one the rules allow
         current = _rota(rng)
-    return {"id": f"S{number:03d}", "base": f"S{number:03d}", "kind": "assign", "person": person, "other": other, "day": day,
-            "rota": current, "leave": {}, "text": f"Put {person} on {day}."}
+    return {"id": f"S{number:03d}", "base": f"S{number:03d}", "kind": "assign", "person": person, "other": other,
+            "day": day, "rota": current, "leave": {}, "text": f"Put {person} on {day}."}
 
 
 def _assign_task(number: int, style: str) -> dict[str, Any]:
@@ -326,7 +336,8 @@ SPLITS = {"dev": range(1, 17), "test": range(201, 217)}
 
 def task_set(split: str) -> list[dict[str, Any]]:
     """A split's base requests: odd numbers change one shift, even numbers plan a week."""
-    return [_assign_base(n) if n % 2 else {"id": f"S{n:03d}", "base": f"S{n:03d}", "kind": "plan", "text": "Plan the week."}
+    return [_assign_base(n) if n % 2
+            else {"id": f"S{n:03d}", "base": f"S{n:03d}", "kind": "plan", "text": "Plan the week."}
             for n in SPLITS[split]]
 
 
@@ -353,7 +364,8 @@ def _near_misses(split: str, templates: list[str], tag: str) -> list[dict[str, A
 
 def load(split: str) -> list[dict[str, Any]]:
     """The requests of a split, by the names the decision loop uses for them."""
-    near_misses = {"gate": (NEAR_MISS_GATE, "gate"), "stress": (NEAR_MISS, "near"), "stress2": (NEAR_MISS_FRESH, "fresh")}
+    near_misses = {"gate": (NEAR_MISS_GATE, "gate"), "stress": (NEAR_MISS, "near"),
+                   "stress2": (NEAR_MISS_FRESH, "fresh")}
     if split in near_misses:
         return _near_misses("test", *near_misses[split])
     if split == "dev+near":

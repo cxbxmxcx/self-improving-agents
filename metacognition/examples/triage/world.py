@@ -1,11 +1,11 @@
 """D7, a support desk: assigning a ticket is routine, but triaging one means weighing what a thread really establishes.
 
-A ticket's thread has a customer's impressions, a first note from engineering that is sometimes wrong, and later notes that
-correct it. The severity follows from what engineering has established and from a policy written in prose, and the team
-follows from the part of the product that is affected, with one exception.
+A ticket's thread has a customer's impressions, a first note from engineering that is sometimes wrong, and later notes
+that correct it. The severity follows from what engineering has established and from a policy written in prose, and the
+team follows from the part of the product that is affected, with one exception.
 
-The words of the requests and the sentences of the threads come from banks.json, written by an agent that saw neither the
-method under test nor its results.
+The words of the requests and the sentences of the threads come from banks.json, written by an agent that saw neither
+the method under test nor its results.
 """
 
 from __future__ import annotations
@@ -22,16 +22,18 @@ TEAMS = {"billing": "payments", "login": "identity", "search": "discovery", "mob
 SECURITY_TEAM = "secops"
 SEVERITIES = ("P1", "P2", "P3", "P4")
 STYLES = ("casual", "shorthand", "distractor", "buried")
-POLICY = ["Judge a ticket by what engineering has established. A customer's impression doesn't count, and where engineering "
-          "has spoken more than once on a point, its latest statement stands.",
-          "P1: any security exposure, any loss of customer data in production, or production being down for all users with "
-          "no workaround.",
+POLICY = ["Judge a ticket by what engineering has established. A customer's impression doesn't count, and where "
+          "engineering has spoken more than once on a point, its latest statement stands.",
+          "P1: any security exposure, any loss of customer data in production, or production being down for all users "
+          "with no workaround.",
           "P2: anything else in production with no workaround.",
           "P3: anything else in production, where a workaround exists.",
           "P4: anything that affects only staging.",
-          "A ticket from an enterprise customer is one level more severe than these rules give, except that P1 stays P1.",
-          f"Team: a security exposure goes to {SECURITY_TEAM} whatever part of the product it is in. Otherwise billing goes to "
-          f"{TEAMS['billing']}, login to {TEAMS['login']}, search to {TEAMS['search']}, and the mobile app to {TEAMS['mobile']}."]
+          "A ticket from an enterprise customer is one level more severe than these rules give, except that P1 stays "
+          "P1.",
+          f"Team: a security exposure goes to {SECURITY_TEAM} whatever part of the product it is in. Otherwise billing "
+          f"goes to {TEAMS['billing']}, login to {TEAMS['login']}, search to {TEAMS['search']}, and the mobile app to "
+          f"{TEAMS['mobile']}."]
 SEARCH_BASES = range(201, 205)
 GATE_BASES = range(205, 209)
 SPLITS = {"dev": range(1, 17), "test": range(201, 217)}
@@ -96,7 +98,8 @@ def _thread(rng: random.Random, facts: dict[str, str], words: dict[str, Any]) ->
 
 
 def _quiet_thread(rng: random.Random, words: dict[str, Any]) -> list[dict[str, str]]:
-    return [{"from": "customer", "text": rng.choice(words["openers"])}, {"from": "support", "text": rng.choice(words["acks"])}]
+    return [{"from": "customer", "text": rng.choice(words["openers"])},
+            {"from": "support", "text": rng.choice(words["acks"])}]
 
 
 def _ticket(number: int, seed: str, audience: str) -> dict[str, Any]:
@@ -112,8 +115,8 @@ def _ticket(number: int, seed: str, audience: str) -> dict[str, Any]:
 def _assign_base(number: int) -> dict[str, Any]:
     rng = random.Random(f"assign-{number}")
     ticket = _ticket(number, f"ticket-{number}", _audience(number))
-    return {"id": f"K{number:03d}", "base": f"K{number:03d}", "kind": "assign", "owner": rng.choice(OWNERS), "ticket": ticket,
-            "text": f"Assign {ticket['ticket_id']}."}
+    return {"id": f"K{number:03d}", "base": f"K{number:03d}", "kind": "assign", "owner": rng.choice(OWNERS),
+            "ticket": ticket, "text": f"Assign {ticket['ticket_id']}."}
 
 
 def _triage_task(number: int, style: str) -> dict[str, Any]:
@@ -138,7 +141,8 @@ def _assign_task(number: int, style: str) -> dict[str, Any]:
 
 def task_set(split: str) -> list[dict[str, Any]]:
     """A split's base requests: odd numbers assign a ticket, even numbers triage one."""
-    return [_assign_base(n) if n % 2 else {"id": f"K{n:03d}", "base": f"K{n:03d}", "kind": "triage", "text": "Triage a ticket."}
+    return [_assign_base(n) if n % 2
+            else {"id": f"K{n:03d}", "base": f"K{n:03d}", "kind": "triage", "text": "Triage a ticket."}
             for n in SPLITS[split]]
 
 
@@ -200,7 +204,8 @@ class TriageWorld:
         return {"rules": list(POLICY)}
 
     def triage_ticket(self, ticket_id: str, severity: str, team: str) -> dict[str, Any]:
-        arguments = {"ticket_id": ticket_id.strip().upper(), "severity": severity.strip().upper(), "team": team.strip().lower()}
+        arguments = {"ticket_id": ticket_id.strip().upper(), "severity": severity.strip().upper(),
+                     "team": team.strip().lower()}
         self.actions.append(("triage_ticket", arguments))
         return {"status": "triaged", **arguments}
 
@@ -225,7 +230,8 @@ class TriageWorld:
         if name != "triage_ticket":
             return {"success": False, "reason": f"it called {name} on a request to triage the ticket"}
         if arguments["severity"] != self.ticket["severity"]:
-            return {"success": False, "reason": f"it set severity {arguments['severity']}, which isn't what the policy gives"}
+            return {"success": False,
+                    "reason": f"it set severity {arguments['severity']}, which isn't what the policy gives"}
         if arguments["team"] != self.ticket["team"]:
             return {"success": False, "reason": f"it sent the ticket to {arguments['team']}, the wrong team"}
         return {"success": True, "reason": "accepted"}

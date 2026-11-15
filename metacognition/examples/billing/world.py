@@ -1,10 +1,12 @@
 """D6, a billing desk: work out the prorated credit an account is owed after a plan change, under company conventions.
 
-The request is simple and the calculation is not. A credit depends on the billing cycle the change falls in, the term, the
-promotion, whether seats were removed or the account cancelled, and two exceptions. The conventions are written down in the
-billing policy, so a model that reads carefully can follow them, and a procedure learned from experience can compute them.
+The request is simple and the calculation is not. A credit depends on the billing cycle the change falls in, the term,
+the promotion, whether seats were removed or the account cancelled, and two exceptions. The conventions are written down
+in the billing policy, so a model that reads carefully can follow them, and a procedure learned from experience can
+compute them.
 
-The words of the requests come from banks.json, written by an agent that saw neither the method under test nor its results.
+The words of the requests come from banks.json, written by an agent that saw neither the method under test nor its
+results.
 """
 
 from __future__ import annotations
@@ -22,18 +24,20 @@ COMPANY = "Larkspur Software"
 PRICES = {"starter": 12.0, "team": 24.0, "business": 39.0, "enterprise": 68.0}
 STYLES = ("casual", "shorthand", "distractor", "buried")
 TOLERANCE = 0.01
-NOTES = ["A billing cycle starts on the account's billing day and ends the day before the billing day of the next month.",
-         "A credit covers the days after the change date through the end of the cycle. The change date itself counts as used.",
+NOTES = ["A billing cycle starts on the account's billing day and ends the day before the billing day of the next "
+         "month.",
+         "A credit covers the days after the change date through the end of the cycle. The change date itself counts "
+         "as used.",
          "A cycle's charge is the number of seats times the plan's price per seat. On a seat reduction, only the seats "
          "removed count.",
-         "Annual accounts pay for ten months out of twelve, so one cycle's charge on an annual account is ten twelfths of "
-         "what it would be on a monthly account.",
+         "Annual accounts pay for ten months out of twelve, so one cycle's charge on an annual account is ten twelfths "
+         "of what it would be on a monthly account.",
          "Any promotional discount comes off the cycle's charge first.",
-         "A credit is worked out per day: the cycle's charge divided by the number of days in that cycle, times the days "
-         "covered.",
+         "A credit is worked out per day: the cycle's charge divided by the number of days in that cycle, times the "
+         "days covered.",
          "A change made in the first two days of a cycle credits the whole of the cycle's charge.",
-         "On Enterprise plans the last three days of a cycle are not refundable, so three days come off the days covered, "
-         "never going below zero.",
+         "On Enterprise plans the last three days of a cycle are not refundable, so three days come off the days "
+         "covered, never going below zero.",
          "A credit is rounded down to the cent."]
 DIAGNOSES = {"seats": "on a seat reduction only the seats removed count",
              "annual": "an annual account's cycle is charged at ten twelfths",
@@ -103,8 +107,9 @@ def _account(rng: random.Random, account_id: str) -> dict[str, Any]:
         cancels = rng.random() < 0.5
         change = {"type": "cancellation" if cancels else "seat_reduction", "date": on.isoformat(),
                   "seats_removed": seats if cancels else rng.randint(1, seats - 1)}
-        account = {"account_id": account_id, "customer": rng.choice(["Halden Foods", "Corvid Labs", "Mirelle Studio", "Ostrand Freight",
-                                                                     "Tessel Health", "Quillon Press"]),
+        account = {"account_id": account_id,
+                   "customer": rng.choice(["Halden Foods", "Corvid Labs", "Mirelle Studio", "Ostrand Freight",
+                                           "Tessel Health", "Quillon Press"]),
                    "plan": plan, "term": rng.choice(["monthly", "annual"]), "seats": seats, "billing_day": billing_day,
                    "promo_percent": rng.choice([0, 0, 10, 20]), "change": change}
         if credit_for(account) >= 1.0:
@@ -116,7 +121,8 @@ def task(number: int) -> dict[str, Any]:
     account = _account(random.Random(f"billing-{number}"), account_id)
     change = "cancellation" if account["change"]["type"] == "cancellation" else "seat reduction"
     return {"id": f"B{number:03d}", "base": f"B{number:03d}", "kind": "credit", "account": account,
-            "expected_usd": credit_for(account), "text": f"Issue the credit {account_id} is owed for its recent {change}."}
+            "expected_usd": credit_for(account),
+            "text": f"Issue the credit {account_id} is owed for its recent {change}."}
 
 
 def task_by_id(task_id: str) -> dict[str, Any]:
@@ -192,8 +198,8 @@ class BillingWorld:
 
     def issue_credit(self, account_id: str, amount_usd: float) -> dict[str, Any]:
         self.credits.append((account_id.strip().upper(), float(amount_usd)))
-        return {"credit_id": f"CR-{len(self.credits)}", "account_id": account_id, "amount_usd": round(float(amount_usd), 2),
-                "status": "issued"}
+        return {"credit_id": f"CR-{len(self.credits)}", "account_id": account_id,
+                "amount_usd": round(float(amount_usd), 2), "status": "issued"}
 
     def check(self) -> dict[str, Any]:
         mine = [amount for account_id, amount in self.credits if account_id == self.account["account_id"]]
