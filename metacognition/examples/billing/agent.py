@@ -14,7 +14,7 @@ from metacog import Agent, RunContextWrapper, function_tool
 MODEL = "gpt-5.4-mini"
 PROMPT = f"""You are the billing desk's assistant at {COMPANY}. Issue the credits you are asked to issue with the tools: read
 the account, read the billing policy, work out the credit, and issue it once. When you are done, reply with the amount you
-issued. If a request asks for anything else, answer it if you can and issue nothing."""
+issued. If a request asks for anything else, answer it if you can and issue nothing."""  # noqa: E501
 
 
 @function_tool(read_only=True)
@@ -45,7 +45,8 @@ def credit_due(account_id: str) -> dict:
 
 
 def assistant(model: str = MODEL, **kwargs: Any) -> Agent:
-    return Agent(name="Billing desk", instructions=PROMPT, model=model, tools=[read_account, read_policy, issue_credit], **kwargs)
+    return Agent(name="Billing desk", instructions=PROMPT, model=model, tools=[read_account, read_policy, issue_credit],
+                 **kwargs)
 
 
 def check(ctx: RunContextWrapper[BillingWorld], result: Any) -> dict:
@@ -75,7 +76,8 @@ async def practice(source: str, case_id: str) -> tuple[float, str, str]:
     """Run a candidate on one case, issue what it returns, and ask the checker."""
     task = task_by_id(case_id)
     output = await run_on_case(source, task)
-    observed = f"called with account_id={task['account']['account_id']!r}; returned {json.dumps(output, default=str)[:600]}"
+    observed = (f"called with account_id={task['account']['account_id']!r}; "
+                f"returned {json.dumps(output, default=str)[:600]}")
     if isinstance(output, dict) and "error" in output:
         return 0.0, f"the function crashed when run: {output['error']}", observed
     amount = output.get("credit_usd") if isinstance(output, dict) else None

@@ -16,11 +16,11 @@ from chapters.ch06.assistant.harness import MEMORIES, STARTING_MEMORY
 from chapters.ch06.assistant.learning import (
     act,
     behavior_cases,
-    starting_source,
     gather_experience,
     recall_experience,
     remember,
     run_on_case,
+    starting_source,
 )
 from helix.metacognition import CALENDAR, Metacognition
 from helix.metacognition.offline import Case, calibrate, search_learners, search_procedure

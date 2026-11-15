@@ -20,6 +20,7 @@ def desk() -> Desk:
                 reads=lambda world: {"read_ticket": world.read_ticket, "read_account": world.read_account,
                                      "read_policy": world.read_policy},
                 procedures=procedures,
-                actions={"triage_ticket": lambda world, ticket_id, severity, team: world.triage_ticket(ticket_id, severity, team),
+                actions={"triage_ticket":
+                         lambda world, ticket_id, severity, team: world.triage_ticket(ticket_id, severity, team),
                          "assign_ticket": lambda world, ticket_id, owner: world.assign_ticket(ticket_id, owner)},
                 verdict=lambda world, reply: world.check())

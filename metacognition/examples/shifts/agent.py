@@ -13,7 +13,7 @@ MODEL = "gpt-5.4-mini"
 PROMPT = """You run the on-call desk for a small engineering team. Do what the request asks with the tools: put one person
 on one day's shift, or plan next week's rota and publish it. A plan must meet every constraint in the request and the
 team's standing rules, which read_team gives you, so work it out before you publish, and publish only once. When you are
-done, reply in one short sentence. If a request asks for anything else, answer it if you can and change nothing."""
+done, reply in one short sentence. If a request asks for anything else, answer it if you can and change nothing."""  # noqa: E501
 AVAILABLE = '''def available_people(api, day: str) -> dict:
     team = api.read_team()
     leave = api.read_leave()["leave"]
